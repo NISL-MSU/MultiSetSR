@@ -61,12 +61,7 @@ class SetEncoder(pl.LightningModule):
 
     def forward(self, xx):
         if self.bit16:
-            try:
-                xx = self.float2bit(xx)
-            except:
-                print(xx.shape)
-                print(xx)
-                print(xx.dtype)
+            xx = self.float2bit(xx)
             xx = xx.view(xx.shape[0], xx.shape[1], -1)
             if self.norm:
                 xx = (xx - 0.5) * 2
@@ -89,15 +84,3 @@ class SetEncoder(pl.LightningModule):
             xx = layer(xx)
         xx = self.outatt(xx)
         return xx
-
-
-if __name__ == "__main__":
-    model = SetEncoder(2, 2, 6, 2, 3, 1, 3, 1, 'linear', 0, 0, 1, 1, True)
-    # self, n_l,dim_input,dim_hidden,num_heads,num_inds,ln,num_features,linear,activation,bit16,norm,mean,std,input_normalization
-    print(model)
-    model.eval()
-    x = torch.Tensor([[1, 2, 3, 4, 5, 6], [7, 8, 9, 10, 11, 12]]).T.unsqueeze(0).float()
-    x1 = torch.Tensor([[6, 3, 2, 4, 5, 1], [12, 9, 8, 10, 11, 7]]).T.unsqueeze(0).float()
-    print(x.max())
-    print(model(x))
-    print(model(x1))

@@ -217,7 +217,6 @@ def remove_numeric_constants(expr):
 
 
 def add_constants(expr, placeholders, prev_expr=None):
-
     if not expr.args:
         if type(expr) == sp.core.numbers.NegativeOne or str(expr) == str(placeholders["cm"]):
             return expr
@@ -241,6 +240,10 @@ def add_constants(expr, placeholders, prev_expr=None):
         new_args.append(expr.args[1])
 
     new_xp = expr.func(*new_args)
+    # if len(new_xp.args) == 1:
+    #     if str(new_xp.args[0]) != 'ca + cm*x_1':
+    #         new_arg = placeholders["ca"] + new_xp.args[0] * placeholders["cm"]
+    #         new_xp = new_xp.func(new_arg)
     return new_xp
 
 

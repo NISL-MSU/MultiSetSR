@@ -1,8 +1,11 @@
 import pickle
+
+import numpy as np
 import omegaconf
 from tqdm import trange
 from src.utils import *
 from src.EquationLearning.Transformers.GenerateTransformerData import Dataset, evaluate_and_wrap
+import matplotlib.pyplot as plt
 
 
 def create_pickle_from_data(block, path, idx):
@@ -37,18 +40,27 @@ class SampleData:
         batch = []
         count = 0
         n_batch = 0
-        for step in trange(len(self.training_dataset)):  # Batch loop
-            # print(step)
-            try:
-                sampled_data = evaluate_and_wrap(self.training_dataset[step], self.cfg.dataset_train, self.word2id)
-            except:
-                sampled_data = None
+        for step in trange(len(self.validation_dataset)):  # Batch loop
+            # step = 174416. 175, 1455, 3294, 4360, 4390
+            # step = 2575
+            # try:
+            sampled_data = evaluate_and_wrap(self.validation_dataset[step], self.cfg.dataset_train, self.word2id)
+            # except Exception as e:
+            #     print("Problem in step = " + str(step) + " Exception = " + str(e))
+            #     sampled_data = None
 
             if sampled_data is not None:
+                # for i in range(sampled_data[0].shape[1]):
+                #     plt.figure()
+                #     plt.scatter(sampled_data[0][:, i], sampled_data[1][:, i])
+                #     plt.xticks(fontsize=16)
+                #     plt.yticks(fontsize=16)
+
                 count += 1
                 batch.append(sampled_data)
-                if count % 1000 == 0:
-                    create_pickle_from_data(batch, "src/EquationLearning/Data/sampled_data/training", n_batch)
+                if count % 5000 == 0:
+                    create_pickle_from_data(batch, "src/EquationLearning/Data/sampled_data/" + self.cfg.dataset +
+                                            "/training", n_batch)  # /mnt/data0/data/H5datasets/sampled_data/
                     n_batch += 1
                     batch = []
 

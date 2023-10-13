@@ -73,9 +73,9 @@ class Pipepile:
                 continue
 
     def create_lambda(self):
-        if self.is_timer:
-            signal.signal(signal.SIGALRM, self.handler)
-            signal.alarm(1)
+        # if self.is_timer:
+        #     signal.signal(signal.SIGALRM, self.handler)
+        #     signal.alarm(1)
         prefix, variables, f = self.env.generate_equation(np.random)
         prefix = self.env.add_identifier_constants(prefix)
         consts = self.env.return_constants(prefix)
@@ -83,6 +83,8 @@ class Pipepile:
         consts_elemns = {y: y for x in consts.values() for y in x}
         constants_expression = infix.format(**consts_elemns)
         infix = str(remove_dummy_constants(sympify(constants_expression)))
+        if infix == 'ca_0 + cm_0*(ca_1 + cm_1*x_1)':
+            infix = 'ca_0 + cm_0*x_1'
         # Try to convert infix back to prefix to check if there's an error
         try:
             _ = self.env.sympy_to_prefix(sympify(infix))
@@ -112,7 +114,7 @@ class Pipepile:
     default=5e4,
     help="Total number of equations to generate",
 )
-@click.option("--debug/--no-debug", default=True)
+@click.option("--debug/--no-debug", default=False)
 def creator(number_of_equations, eq_per_block, debug):
     copyreg.pickle(types.CodeType, code_pickler, code_unpickler)  # Needed for serializing code objects
     total_number = number_of_equations

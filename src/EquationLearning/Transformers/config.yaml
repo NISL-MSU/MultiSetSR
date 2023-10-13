@@ -1,9 +1,10 @@
-train_path: data/training
-val_path: data/validation
+train_path: data/dataset1/training
+val_path: data/dataset1/validation
+dataset: dataset1
 
-raw_test_path: data/raw_datasets/150
-test_path: data/validation
-model_path: /local/home/lbiggio/NeuralSymbolicRegressionThatScales/weights/10MCompleted.ckpt  
+#raw_test_path: data/raw_datasets/150
+#test_path: data/validation
+#model_path: /local/home/lbiggio/NeuralSymbolicRegressionThatScales/weights/10MCompleted.ckpt
 
 wandb: True
 num_of_workers: 32
@@ -16,7 +17,7 @@ gpu: 2
 dataset_train:
   total_variables: #Do not fill
   total_coefficients: #Do not fill
-  max_number_of_points: 1000  #2000 before
+  max_number_of_points: 5000  #2000 before
   number_of_sets: 10
   lambda_: 0.5
   type_of_sampling_points: constant
@@ -27,11 +28,11 @@ dataset_train:
   constants:
     num_constants: 5
     additive:
-      max: 10
-      min: -10
+      max: 5
+      min: -5
     multiplicative:
-      max: 10
-      min: -10
+      max: 5
+      min: -5
 
 dataset_val:
   total_variables: #Do not fill
@@ -46,11 +47,11 @@ dataset_val:
   constants:
     num_constants: 5
     additive:
-      max: 10
-      min: -10
+      max: 5
+      min: -5
     multiplicative:
-      max: 10
-      min: -10
+      max: 5
+      min: -5
 
 dataset_test:
   total_variables: #Do not fill
@@ -65,11 +66,11 @@ dataset_test:
   constants:
     num_constants: 5
     additive:
-      max: 10
-      min: -10
+      max: 5
+      min: -5
     multiplicative:
-      max: 10
-      min: -10
+      max: 5
+      min: -5
 
 architecture:
   sinuisodal_embeddings: False
@@ -83,9 +84,9 @@ architecture:
   N_p: 0
   num_inds: 50
   activation: "relu"
-  bit16: True
+  bit16: False
   norm: True
-  linear: False
+  linear: True
   input_normalization: False
   src_pad_idx: 0
   trg_pad_idx: 0

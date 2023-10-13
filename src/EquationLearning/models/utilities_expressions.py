@@ -105,6 +105,8 @@ def get_op_constant(xp, c):
                 if op is True:
                     if len(arg.args) == 1:  # It will return the first unary operation the constant is in
                         return str(arg.func)
+                    elif isinstance(arg, sp.Pow):  # In case it's Pow, return the exponent too
+                        return str(arg.func), arg.args[1]
                     else:
                         return op
                 else:
@@ -131,22 +133,22 @@ def add_constant_identifier(sk, cm_counter=1, ca_counter=1):
         elif isinstance(arg, sp.Symbol):
             new_args.append(arg)
         else:  # If it's composed, explore a lower level of the tree
-            deep_xp = add_constant_identifier(arg, cm_counter=cm_counter, ca_counter=ca_counter)
+            deep_xp, cm_counter, ca_counter = add_constant_identifier(arg, cm_counter=cm_counter, ca_counter=ca_counter)
             new_args.append(deep_xp)
 
     new_xp = sk.func(*new_args)
-    return new_xp
+    return new_xp, cm_counter, ca_counter
 
 
 def check_forbidden_combination(xp):
     args = xp.args
     res = []
 
-    forbidden_group1 = [sp.exp, sp.log]
-    forbidden_group2 = [sp.exp, sp.sinh, sp.cosh, sp.tanh, sp.tan]
+    forbidden_group1 = [sp.Abs]
+    forbidden_group2 = [sp.exp, sp.sinh, sp.cosh, sp.tanh, sp.tan, sp.log]
     forbidden_group3 = [sp.sin, sp.cos]
     forbidden_group4 = [sp.asin, sp.acos, sp.atan]
-    unary_ops = [sp.exp, sp.sinh, sp.cosh, sp.tanh, sp.sin, sp.cos, sp.tan, sp.asin, sp.acos, sp.atan, sp.sqrt]
+    unary_ops = [sp.Pow, sp.exp, sp.log, sp.sinh, sp.cosh, sp.tanh, sp.sin, sp.cos, sp.tan, sp.asin, sp.acos, sp.atan, sp.sqrt, 'sqrt']
 
     for arg in args:
         if arg.is_number or isinstance(arg, sp.Symbol):
@@ -154,8 +156,9 @@ def check_forbidden_combination(xp):
         else:
             g1 = any([arg.func == op for op in forbidden_group1])
             if g1:
-                args2 = arg.args
-                g12 = any([str(op)+'(' in str(args2) for op in forbidden_group1])
+                args = arg.args
+                g12 = any([(str(op)+'(' in str(args)) or ('sqrt' in str(args)) or ('**2' in str(args)) or
+                           ('**4' in str(args)) for op in forbidden_group1])
                 if g12:
                     return True
             g2 = any([(arg.func == op) or (arg.func == sp.Pow and (arg.args[1] > 2)) for op in forbidden_group2])
@@ -187,7 +190,7 @@ def check_forbidden_combination(xp):
             if g5:
                 args2 = arg.args
                 g52 = sum([str(op)+'(' in str(args2) for op in unary_ops])
-                if g52 >= 2:
+                if g52 >= 1:
                     return True
 
             res.append(check_forbidden_combination(arg))
@@ -343,7 +346,7 @@ def avoid_operations_between_constants(xp):
                 va = args2
             t_args = [va, sympy.sympify("1")]
 
-    if isinstance(xp, sp.Mul):
+    if isinstance(xp, sp.Mul) or isinstance(xp, sp.Add):
         t_args = []
         # Check if two or more of the arguments are constants and replace them for just one constant
         flag = False  # This flag turns to True when a constant was already found

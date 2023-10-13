@@ -3,6 +3,7 @@
 # The "_generate_expr" method was modified to avoid certain combinations of operations
 
 import numpy as np
+import sympy
 import sympy as sp
 from collections import Counter
 from .sympy_utils import simplify
@@ -312,45 +313,28 @@ class Generator(object):
         nb_empty = 1  # number of empty nodes
         l_leaves = 0  # left leaves - None states reserved for leaves
         t_leaves = 1  # total number of leaves (just used for sanity check)
-        op = ''
-
-        # forbidden_group1 = ['exp', 'ln']
-        # forbidden_group2 = ['exp', 'pow3', 'pow4', 'pow5', 'sinh', 'cosh', 'tanh']
 
         # create tree
-        n_consecutive_unary = 0  # Counts how many consecutive unary operations have been stacked so far
         una_ops_copy, una_ops_probs_copy = self.una_ops.copy(), self.una_ops_probs.copy()
         for nb_ops in range(nb_total_ops, 0, -1):
 
             # next operator, arity and position
             skipped, arity = self.sample_next_pos_ubi(nb_empty, nb_ops, rng)
-            if arity == 1:
-                # n_consecutive_unary += 1
-                # if n_consecutive_unary == 3:
-                #     # We avoid operations that are too nested; e.g., tan(exp(sqrt(x)))
-                #     while arity == 1:
-                #         skipped, arity = self.sample_next_pos_ubi(nb_empty, nb_ops, rng)
-                #     op = rng.choice(self.bin_ops, p=self.bin_ops_probs)
-                #     n_consecutive_unary = 0
-                # else:
-                #     una_ops, una_ops_probs = np.array(una_ops_copy), np.array(una_ops_probs_copy)
-                #     # if op in forbidden_group1:
-                #     #     f_ops_inds = np.array([io for io, iop in enumerate(una_ops) if iop not in forbidden_group1])
-                #     #     una_ops, una_ops_probs = una_ops[f_ops_inds], una_ops_probs[f_ops_inds]
-                #     # if op in forbidden_group2:
-                #     #     f_ops_inds = np.array([io for io, iop in enumerate(una_ops) if iop not in forbidden_group2])
-                #     #     una_ops, una_ops_probs = una_ops[f_ops_inds], una_ops_probs[f_ops_inds]
 
+            # Next operator, arity and position
+            # arity = np.random.choice([1, 2], p=[1/3, 2/3])
+            # free_pos = [i for i, x in enumerate(stack) if x is None]
+            # which_None = np.random.choice(np.arange(0, len(free_pos)))
+            # pos = free_pos[which_None]
+
+            if arity == 1:
                 una_ops, una_ops_probs = np.array(una_ops_copy), np.array(una_ops_probs_copy)
-                op2 = rng.choice(una_ops, p=una_ops_probs/np.sum(una_ops_probs))
-                op = op2
+                op = rng.choice(una_ops, p=una_ops_probs/np.sum(una_ops_probs))
                 # Remove the current operation from the list of options
                 f_ops_inds = np.array([io for io, iop in enumerate(una_ops_copy) if iop != op])
                 una_ops_copy, una_ops_probs_copy = np.array(una_ops_copy)[f_ops_inds], np.array(una_ops_probs_copy)[f_ops_inds]
-
             else:
                 op = rng.choice(self.bin_ops, p=self.bin_ops_probs)
-                n_consecutive_unary = 0
 
             nb_empty += (self.OPERATORS[op] - 1 - skipped)  # created empty nodes - skipped future leaves
             t_leaves += self.OPERATORS[op] - 1  # update number of total leaves
@@ -642,21 +626,18 @@ class Generator(object):
             if isinstance(expr, op_type):
                 # If expression has a negative exponent, rewrite it as an inversion
                 if isinstance(expr, sp.Pow):
-                    try:
-                        if expr.args[1] < 0:
-                            expr = 1 / expr
-                            if isinstance(expr, sp.Pow) and expr.args[1] == 1:
-                                expr = expr.args[0]
-                            # Find new op_name after division
-                            if isinstance(expr, sp.Symbol):
-                                return ["div"] + ["1"] + [str(expr)]
-                            else:
-                                for op_type2, op_name2 in cls.SYMPY_OPERATORS.items():
-                                    if isinstance(expr, op_type2):
-                                        op_name = op_name2
-                            return ["div"] + ["1"] + cls._sympy_to_prefix(op_name, expr)
-                    except:
-                        print()
+                    if expr.args[1] < 0:
+                        expr = 1 / expr
+                        if isinstance(expr, sp.Pow) and expr.args[1] == 1:
+                            expr = expr.args[0]
+                        # Find new op_name after division
+                        if isinstance(expr, sp.Symbol):
+                            return ["div"] + ["1"] + [str(expr)]
+                        else:
+                            for op_type2, op_name2 in cls.SYMPY_OPERATORS.items():
+                                if isinstance(expr, op_type2):
+                                    op_name = op_name2
+                        return ["div"] + ["1"] + cls._sympy_to_prefix(op_name, expr)
                 return cls._sympy_to_prefix(op_name, expr)
         # unknown operator
         raise UnknownSymPyOperator(f"Unknown SymPy operator: {expr}")
@@ -718,7 +699,7 @@ class Generator(object):
                     new_args.append(arg)
                 f2 = f2.func(*new_args)
 
-        if 'zoo' in str(f) or 'oo' in str(f):
+        if 'zoo' in str(f2) or 'oo' in str(f2):
             return sp.sympify('1')
         return f2
 

@@ -53,7 +53,7 @@ def sample_symbolic_constants(eq: Equation, cfg=None) -> Tuple:
     consts = dummy_consts.copy()
     if cfg:
         # Use at least 2 constants if there are 2 or more constants in the equation
-        used_consts = random.randint(min(len(eq.coeff_dict), 3), min(len(eq.coeff_dict), cfg.num_constants))
+        used_consts = random.randint(min(len(eq.coeff_dict), 2), min(len(eq.coeff_dict), cfg.num_constants))
         symbols_used = random.sample(set(eq.coeff_dict.keys()), used_consts)
         while 'ca_0' not in symbols_used:  # Make sure that the first additive constant is in the selection
             symbols_used = random.sample(set(eq.coeff_dict.keys()), used_consts)

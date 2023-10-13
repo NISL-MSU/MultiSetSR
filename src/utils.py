@@ -136,11 +136,11 @@ def load_eq_raw(path_folder, idx, num_eqs_per_set):
 
 def load_eq(path_folder, idx, num_eqs_per_set) -> Equation:
     index_file = str(int(idx / num_eqs_per_set))
-    if 'train' in str(path_folder):
-        f = h5py.File('src/EquationLearning/Data/data/training/' + f"{index_file}.h5", 'r')
-    else:
-        f = h5py.File('src/EquationLearning/Data/data/validation/' + f"{index_file}.h5", 'r')
-    # f = h5py.File(os.path.join(path_folder, f"{index_file}.h5"), 'r')
+    # if 'train' in str(path_folder):
+    #     f = h5py.File('src/EquationLearning/Data/data/training/' + f"{index_file}.h5", 'r')
+    # else:
+    #     f = h5py.File('src/EquationLearning/Data/data/validation/' + f"{index_file}.h5", 'r')
+    f = h5py.File(os.path.join(path_folder, f"{index_file}.h5"), 'r')
     dataset_metadata = f[str(idx - int(index_file) * int(num_eqs_per_set))]
     raw_metadata = np.array(dataset_metadata)
     metadata = pickle.loads(raw_metadata.tobytes())
