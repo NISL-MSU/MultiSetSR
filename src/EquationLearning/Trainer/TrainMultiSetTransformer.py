@@ -1,4 +1,6 @@
 import glob
+
+import numpy as np
 import torch
 import omegaconf
 from torch import nn
@@ -9,7 +11,7 @@ import matplotlib.pyplot as plt
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.tensorboard import SummaryWriter
 from src.EquationLearning.Transformers.model import Model
-from src.EquationLearning.Transformers.GenerateTransformerData import Dataset
+from src.EquationLearning.Transformers.GenerateTransformerData import Dataset, de_tokenize
 
 # import time
 
@@ -18,6 +20,32 @@ def open_pickle(path):
     with open(path, 'rb') as file:
         block = pickle.load(file)
     return block
+
+
+def open_h5(path):
+    block = []
+    with h5py.File(path, "r") as hf:
+        # Iterate through the groups in the HDF5 file (assuming group names are integers)
+        for group_name in hf:
+            group = hf[group_name]
+            # Read data from the group
+            X = group["X"][:]
+            Y = group["Y"][:]
+            # Load 'tokenized' as a list of integers
+            tokenized = list(group["tokenized"])
+            # Load 'exprs' as a string
+            exprs = group["exprs"][()].tobytes().decode("utf-8")
+            # Load 'sampled_exprs' as a list of sympy expressions
+            sampled_exprs = [expr_str for expr_str in group["sampled_exprs"][:].astype(str)]
+            block.append([X, Y, tokenized, exprs, sampled_exprs])
+    return block
+
+
+def seq2equation(tokenized, id2word):
+    prefix = de_tokenize(tokenized, id2word)
+    env, param, config_dict = create_env(os.path.join(get_project_root(), "dataset_configuration.json"))
+    infix = env.prefix_to_infix(prefix, coefficients=env.coefficients, variables=env.variables)
+    return infix
 
 
 def loss_sample(output, trg):
@@ -56,6 +84,7 @@ class TransformerTrainer:
         self.data_train_path = self.cfg.train_path
         self.training_dataset = Dataset(self.data_train_path, self.cfg.dataset_train, mode="train")
         self.word2id = self.training_dataset.word2id
+        self.id2word = self.training_dataset.id2word
 
         # Load model
         self.model = Model(cfg=self.cfg.architecture, cfg_inference=self.cfg.inference, word2id=self.word2id)
@@ -71,12 +100,12 @@ class TransformerTrainer:
         epochs = self.cfg.epochs
         batch_size = self.cfg.batch_size
         # Get names of training and val blocks
-        train_files = glob.glob(os.path.join(self.sampledData_train_path, '*.pkl'))
-        val_files = glob.glob(os.path.join(self.sampledData_val_path, '*.pkl'))
+        train_files = glob.glob(os.path.join(self.sampledData_train_path, '*.h5'))
+        val_files = glob.glob(os.path.join(self.sampledData_val_path, '*.h5'))
         # Prepare list of indexes for shuffling
         indexes = np.arange(len(train_files))
 
-        # self.model.load_state_dict(torch.load('src/EquationLearning/models/saved_models/Model1'))
+        self.model.load_state_dict(torch.load('src/EquationLearning/models/saved_models/Model-datasetdataset0'))
         print("""""""""""""""""""""""""""""")
         print("Start training")
         print("""""""""""""""""""""""""""""")
@@ -86,9 +115,9 @@ class TransformerTrainer:
             np.random.shuffle(indexes)
 
             batch_count = 0
-            for b_ind in indexes:  # Block loop (each block contains 1000 inputs)
+            for b_ind in indexes[:0]:  # Block loop (each block contains 1000 inputs)
                 # Read block
-                block = open_pickle(train_files[b_ind])
+                block = open_h5(train_files[b_ind])
                 T = np.ceil(1.0 * len(block) / batch_size).astype(np.int32)
 
                 # Format elements in the block as torch Tensors
@@ -96,12 +125,17 @@ class TransformerTrainer:
                 skeletons_block = []
                 for ib, b in enumerate(block):
                     Xs, Ys, tokenized, xpr, equations = b
+                    # Normalize data
+                    Xs = Xs[:, :self.cfg.architecture.number_of_sets]
+                    Ys = Ys[:, :self.cfg.architecture.number_of_sets]
+                    means, std = np.mean(Ys, axis=0), np.std(Ys, axis=0)
+                    Ys = (Ys - means) / std
                     if isinstance(Xs, np.ndarray):  # Some blocks were stored as numpy arrays and others as tensors
                         Xs, Ys = torch.from_numpy(Xs), torch.from_numpy(Ys)
                     Xs = Xs.to(self.device)
                     Ys = Ys.to(self.device)
-                    XY_block[ib, :, 0, :] = Xs[:, :self.cfg.architecture.number_of_sets]
-                    XY_block[ib, :, 1, :] = Ys[:, :self.cfg.architecture.number_of_sets]
+                    XY_block[ib, :, 0, :] = Xs
+                    XY_block[ib, :, 1, :] = Ys
                     skeletons_block.append(torch.tensor(tokenized).long().to(self.device))
                     # print(xpr)
 
@@ -155,6 +189,8 @@ class TransformerTrainer:
                         self.writer.add_scalar('training loss', running_loss / 5, global_batch_count)
                         running_loss = 0.0
 
+            if epoch == 0:  # Save model at the end of the first epoch in case there's an error during validation
+                torch.save(self.model.state_dict(), 'src/EquationLearning/models/saved_models/Model-' + self.cfg.dataset)
             #########################################################################
             # Validation step
             #########################################################################
@@ -166,7 +202,7 @@ class TransformerTrainer:
 
             for b_ind in indexes:  # Block loop (each block contains 1000 inputs)
                 # Read block
-                block = open_pickle(val_files[b_ind])
+                block = open_h5(val_files[b_ind])
                 T = np.ceil(1.0 * len(block) / batch_val_size).astype(np.int32)
 
                 # Format elements in the block as torch Tensors
@@ -174,6 +210,11 @@ class TransformerTrainer:
                 skeletons_block = []
                 for ib, b in enumerate(block):
                     Xs, Ys, tokenized, xpr, equations = b
+                    # Normalize data
+                    Xs = Xs[:, :self.cfg.architecture.number_of_sets]
+                    Ys = Ys[:, :self.cfg.architecture.number_of_sets]
+                    means, std = np.mean(Ys, axis=0), np.std(Ys, axis=0)
+                    Ys = (Ys - means) / std
                     if isinstance(Xs, np.ndarray):  # Some blocks were stored as numpy arrays and others as tensors
                         Xs, Ys = torch.from_numpy(Xs), torch.from_numpy(Ys)
                     Xs = Xs.to(self.device)
@@ -181,6 +222,7 @@ class TransformerTrainer:
                     XY_block[ib, :, 0, :] = Xs[:, :self.cfg.architecture.number_of_sets]
                     XY_block[ib, :, 1, :] = Ys[:, :self.cfg.architecture.number_of_sets]
                     skeletons_block.append(torch.tensor(tokenized).long().to(self.device))
+                    # print(xpr)
 
                 inds = np.arange(len(block))
                 for step in range(T):  # Batch loop
@@ -203,14 +245,16 @@ class TransformerTrainer:
                     skeletons_batch = pad_sequence(padded_tensors, batch_first=True).type(torch.int)
                     # Forward pass
                     # R = self.model.inference(XY_batch[0:1, :, :, :])
-                    output = self.model.validation_step(XY_batch)
+                    output, seqs = self.model.validation_step(XY_batch)
                     # Loss calculation
-                    for bi in range(output.shape[1]):
-                        out = output[:, bi, :].contiguous().view(-1, output.shape[-1])
+                    for bi in range(len(output)):
+                        out = output[bi].contiguous().view(-1, output[bi].shape[-1])
                         tokenized = skeletons_batch[bi, :][1:].contiguous().view(-1)
-                        padding_size = np.abs(output.size(0) - tokenized.size(0))
-                        if output.size(0) > tokenized.size(0):
+                        padding_size = np.abs(output[bi].size(0) - tokenized.size(0))
+                        if out.size(0) > tokenized.size(0):
                             tokenized = nn.functional.pad(tokenized, (0, padding_size))
+                        else:
+                            out = nn.functional.pad(out, pad=(0, 0, 0, padding_size))
                         L1s = loss_sample(out, tokenized.long())
                         L1v += L1s
                         iv += 1
@@ -221,7 +265,7 @@ class TransformerTrainer:
             self.writer.add_scalar('validation loss', loss, global_batch_count)
             if loss < prev_loss:
                 prev_loss = loss
-                torch.save(self.model.state_dict(), 'src/EquationLearning/models/saved_models/Model1')
+                torch.save(self.model.state_dict(), 'src/EquationLearning/models/saved_models/Model-' + self.cfg.dataset)
                 with open('src/EquationLearning/models/saved_models/validation_performance.txt', 'w') as file:
                     file.write(str(loss))
             print('[%d] validation loss: %.5f. Best validation loss: %.5f' % (epoch + 1, loss, prev_loss))

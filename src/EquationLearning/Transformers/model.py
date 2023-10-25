@@ -124,52 +124,61 @@ class Model(nn.Module):
             # enc_output = torch.sum(z_sets, dim=0, keepdim=True)
 
             #############################################################
-            # DECODER AND BEAM SEARCH
+            # DECODER
             #############################################################
-            # Separate target skeleton, mask it, and create embeddings
-            generated = torch.zeros([batch.shape[0], self.cfg.length_eq], dtype=torch.long, device=self.device, )
-            generated[:, 0] = 1  # Initialize with SOS symbol
-            trg_mask1, trg_mask2 = self.make_trg_mask(generated)
-            pos = self.pos_embedding(
-                torch.arange(0, generated.shape[1])
-                .unsqueeze(0)
-                .repeat(generated.shape[0], 1)
-                .type_as(generated)
-            )
-            te = self.tok_embedding(generated)
-            trg_ = self.dropout(te + pos)
-            output = self.decoder_transfomer(
-                trg_.permute(1, 0, 2),
-                enc_output.permute(1, 0, 2),
-                trg_mask2.bool(),
-                tgt_key_padding_mask=trg_mask1.bool()
-            )
-            output = self.fc_out(output)
+            # # Separate target skeleton, mask it, and create embeddings
+            # generated = torch.zeros([batch.shape[0], self.cfg.length_eq], dtype=torch.long, device=self.device, )
+            # generated[:, 0] = 1  # Initialize with SOS symbol
+            # trg_mask1, trg_mask2 = self.make_trg_mask(generated)
+            # pos = self.pos_embedding(
+            #     torch.arange(0, generated.shape[1])
+            #     .unsqueeze(0)
+            #     .repeat(generated.shape[0], 1)
+            #     .type_as(generated)
+            # )
+            # te = self.tok_embedding(generated)
+            # trg_ = self.dropout(te + pos)
+            # output = self.decoder_transfomer(
+            #     trg_.permute(1, 0, 2),
+            #     enc_output.permute(1, 0, 2),
+            #     trg_mask2.bool(),
+            #     tgt_key_padding_mask=trg_mask1.bool()
+            # )
+            # output = self.fc_out(output)
 
-            # # Perform autoregressive generation
-            # tgt = torch.tensor([1]).to(self.device)[None, :]
-            # for i in range(self.cfg.length_eq):
-            #     pos = self.pos_embedding(
-            #         torch.arange(0, tgt.shape[1])
-            #         .unsqueeze(0)
-            #         # .repeat(skeleton.shape[0], 1)
-            #         .type_as(tgt)
-            #     )
-            #     te = self.tok_embedding(tgt)
-            #     tgt_ = self.dropout(te + pos)
-            #     # Forward pass through the decoder using tgt and memory
-            #     output = self.decoder_transfomer(tgt_.permute(1, 0, 2), memory=enc_output.permute(1, 0, 2))
-            #     output = self.fc_out(output)
-            #
-            #     # Sample the next token from the probability distribution
-            #     next_token = torch.argmax(output[-1, :, :], dim=-1)
-            #
-            #     if i < self.cfg.length_eq - 1:
-            #         # Append the next token to tgt for the next step
-            #         tgt = torch.cat([tgt, next_token[None, :]], dim=-1)
-            #     if next_token == 2:
-            #         break
-        return output
+            # Perform autoregressive generation
+            outputs = []
+            seqs = []
+            for b in range(batch.size(0)):
+                tgt = torch.tensor([1]).to(self.device)[None, :]
+                seq = []
+                scores = torch.Tensor().to(self.device)
+                for i in range(self.cfg.length_eq):
+                    pos = self.pos_embedding(
+                        torch.arange(0, tgt.shape[1])
+                        .unsqueeze(0)
+                        .type_as(tgt)
+                    )
+                    te = self.tok_embedding(tgt)
+                    tgt_ = self.dropout(te + pos)
+                    # Forward pass through the decoder using tgt and memory
+                    output = self.decoder_transfomer(tgt_.permute(1, 0, 2),
+                                                     memory=enc_output[b:b+1, :, :].permute(1, 0, 2))
+                    output = self.fc_out(output)
+                    scores = torch.cat((scores, output[-1, :, :]), dim=0)
+
+                    # Sample the next token from the probability distribution
+                    next_token = torch.argmax(output[-1, :, :], dim=-1)
+                    seq.append(int(next_token.cpu()))
+
+                    if i < self.cfg.length_eq - 1:
+                        # Append the next token to tgt for the next step
+                        tgt = torch.cat([tgt, next_token[None, :]], dim=-1)
+                    if next_token == 2:
+                        break
+                outputs.append(scores)
+                seqs.append(seq)
+        return outputs, seqs
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.cfg.lr)
@@ -196,8 +205,8 @@ class Model(nn.Module):
             shape_enc_src = (self.cfg_inference.beam_size,) + src_enc.shape[1:]
             enc_src = src_enc.unsqueeze(1).expand((1, self.cfg_inference.beam_size) + src_enc.shape[1:]).contiguous().view(
                 shape_enc_src)
-            print("Memory footprint of the encoder: {}GB \n".
-                  format(enc_src.element_size() * enc_src.nelement() / 10 ** 9))
+            # print("Memory footprint of the encoder: {}GB \n".
+            #       format(enc_src.element_size() * enc_src.nelement() / 10 ** 9))
 
             #############################################################
             # DECODER AND BEAM SEARCH
@@ -278,7 +287,7 @@ class Model(nn.Module):
                 # Update current length
                 cur_len += torch.tensor(1, device=self.device, dtype=torch.int64)
 
-            return sorted(generated_hyps.hyp, key=lambda x: x[0], reverse=True)
+            return sorted(generated_hyps.hyp, key=lambda x: x[0], reverse=False)
 
     def get_equation(self, ):
         return self.eq

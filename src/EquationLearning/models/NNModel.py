@@ -1,5 +1,6 @@
 import pickle
 import random
+
 from src import utils
 from tqdm import trange
 from torch import optim
@@ -16,6 +17,11 @@ torch.backends.cudnn.benchmark = False
 #######################################################################################################################
 # Static functions and Loss functions
 #######################################################################################################################
+def enable_dropout(model):
+    """ Function to enable the dropout layers during test-time."""
+    for m in model.modules():
+        if m.__class__.__name__.startswith('Dropout'):
+            m.train()
 
 
 #######################################################################################################################
@@ -176,6 +182,26 @@ class NNModel:
                 ypred_batch = self.model.network(torch.from_numpy(valxn[inds]).float().to(self.device))
                 ypred = ypred + (ypred_batch.cpu().numpy()).tolist()
         return np.array(ypred)
+
+    def evaluateFoldMC(self, valxn, maxs=None, mins=None, batch_size=96, MC_samples=100):
+        """Retrieve point predictions using MC-Dropout."""
+        if maxs is not None and mins is not None:
+            valxn = utils.reverseMinMaxScale(valxn, maxs, mins)
+
+        preds_MC = np.zeros((len(valxn), MC_samples))
+        for it in range(0, MC_samples):  # Test the model 'MC_samples' times
+            ypred = []
+            with torch.no_grad():
+                self.model.network.eval()
+                enable_dropout(self.model.network)
+                Teva = np.ceil(1.0 * len(valxn) / batch_size).astype(np.int32)
+                indtest = np.arange(len(valxn))
+                for b in range(Teva):
+                    inds = indtest[b * batch_size:(b + 1) * batch_size]
+                    ypred_batch = self.model.network(torch.from_numpy(valxn[inds]).float().to(self.device))
+                    ypred = ypred + (ypred_batch.cpu().numpy()).tolist()
+                preds_MC[:, it] = np.array(ypred)[:, 0]
+        return np.mean(preds_MC, axis=1)
 
     def loadModel(self, path):
         self.model.network.load_state_dict(torch.load(path))

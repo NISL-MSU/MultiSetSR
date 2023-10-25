@@ -50,7 +50,7 @@ class Trainer:
 
         # If the folder does not exist, create it
         root = get_project_root()
-        folder = os.path.join(root, "src//EquationLearning//models//saved_NNs//" + self.dataset + "//" + self.method)
+        folder = os.path.join(root, "src//EquationLearning//models//saved_NNs//" + self.dataset)
         if not os.path.exists(os.path.join(root, "src//EquationLearning//models//saved_NNs//" + self.dataset)):
             os.mkdir(os.path.join(root, "src//EquationLearning//models//saved_NNs//" + self.dataset))
         if not os.path.exists(folder):
@@ -90,7 +90,7 @@ class Trainer:
 
 
 if __name__ == '__main__':
-    names = ['E5']
+    names = ['E4']
     for name in names:
         predictor = Trainer(dataset=name)
-        predictor.train(scratch=True, batch_size=128, epochs=5000, printProcess=True)
+        predictor.train(scratch=True, batch_size=128, epochs=1000, printProcess=True)

@@ -40,9 +40,9 @@ class SampleData:
         batch = []
         count = 0
         n_batch = 0
-        for step in trange(len(self.validation_dataset)):  # Batch loop
-            # step = 174416. 175, 1455, 3294, 4360, 4390
-            # step = 2575
+        for step in trange(46, len(self.validation_dataset)):  # Batch loop
+            # step = 174416. 175, 1455, 3294, 4360, 4390 2537
+            # step = 46
             # try:
             sampled_data = evaluate_and_wrap(self.validation_dataset[step], self.cfg.dataset_train, self.word2id)
             # except Exception as e:
@@ -50,6 +50,8 @@ class SampleData:
             #     sampled_data = None
 
             if sampled_data is not None:
+                if np.isnan(sampled_data[1]).any():
+                    print()
                 # for i in range(sampled_data[0].shape[1]):
                 #     plt.figure()
                 #     plt.scatter(sampled_data[0][:, i], sampled_data[1][:, i])

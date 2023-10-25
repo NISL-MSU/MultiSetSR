@@ -84,7 +84,7 @@ def constants_to_placeholder(s, coeffs, symbol="c"):
 def tokenize(prefix_expr: list, word2id: dict) -> list:
     tokenized_expr = [word2id["S"]]
     for i in prefix_expr:
-        if 'x' in i:
+        if 'x' in i and i != 'exp':
             i = 'x_1'
         tokenized_expr.append(word2id[i])
     tokenized_expr.append(word2id["F"])
@@ -165,7 +165,6 @@ def sample_constants(eq, cfg):
     return eq2
 
 
-# @timeout(18)  # Set a 40-second timeout
 def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
     """
     Given a list of skeleton equations, sample their inputs and corresponding constants and evaluate their results
@@ -178,7 +177,7 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
     exprs = eq.expr
     curr_p = cfg.max_number_of_points
     # # Uncomment the code below if you have a specific skeleton from which you want to sample data as an example
-    # sk = sympy.sympify('c*x_1/log(c*x_1**2 + c) + c')
+    # sk = sympy.sympify('c + exp(c*x_1)/(c*x_1 + c)')
     # sk, _, _ = add_constant_identifier(sk)
     # coeff_dict = dict()
     # var = None
@@ -195,7 +194,7 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
     is_bounded = False
     if any([b in str(exprs) for b in list(bounded.keys())]) or \
             any([b in str(exprs) for b in list(double_bounded.keys())]) or '/' in str(exprs) or \
-            any([b in str(exprs) for b in list(op_with_singularities)]) or '**0.5' in str(exprs):
+            any([b in str(exprs) for b in list(op_with_singularities)]) or '**0.5' in str(exprs) or '**(-0.5)' in str(exprs):
         is_bounded = True
 
     # Create "cfg.number_of_sets" vectors to store the evaluations
@@ -233,7 +232,6 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
             new_expr = set_args(new_expr, args)
 
         # If the expression contains a bounded operation, modify the constants to avoid NaN values
-        # new_expr = sympify('-3.8967919334523*x_1*log(-0.183763376889317*x_1)/sin(0.124550801335169*x_1) + 0.238240379581665')
         if is_bounded:
             result = modify_constants_avoidNaNs(new_expr, support, bounded_operations(), cfg, variable=eq.variables, extrapolate=extrapolate)
             if result is None:
@@ -299,7 +297,7 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
                 t = tokenize(eq_sympy_prefix2, word2id)
                 # Calculate how much time has passed
                 toc = time.time()
-                if toc - tic > 10:
+                if toc - tic > 15:
                     restart = True
                     break
 
@@ -321,35 +319,6 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
             function = lambdify(flatten(eq.variables), new_expr)
             # Evaluate values from the support vector into the new expression
             vals = np.array(function(*list(support)))
-            # # Drop input-output pairs containing NaNs and entries with an absolute value of y above 10000
-            # isnans, indices_to_remove = is_nan(vals), []
-            # if any(isnans):
-            #     indices_to_remove = np.where(isnans)[0]
-            # new_support = np.delete(np.array(support), indices_to_remove)
-            # vals = np.delete(np.array(vals), indices_to_remove)
-            #
-            # # If some elements have been dropped, keep sampling until reaching a population of 'curr_p' size
-            # tic = time.time()  # Start Time
-            # while len(vals) < curr_p:
-            #     missing = curr_p - len(vals)
-            #     # Sample constants "cfg.number_of_sets/2" times and remove NaNs from them
-            #     extra_support = sample_support(eq, int(curr_p/2), cfg, extrapolate)
-            #     extra_vals = np.array(function(*list(extra_support)))
-            #     isnans, indices_to_remove = is_nan(extra_vals), []
-            #     if any(isnans):
-            #         indices_to_remove = np.where(isnans)[0]
-            #     extra_support = np.delete(np.array(extra_support), indices_to_remove)
-            #     extra_vals = np.delete(np.array(extra_vals), indices_to_remove)
-            #     if len(extra_support) >= missing:
-            #         new_support = np.append(new_support, extra_support[:missing])
-            #         vals = np.append(vals, extra_vals[:missing])
-            #     else:
-            #         new_support = np.append(new_support, extra_support)
-            #         vals = np.append(vals, extra_vals)
-            #     # If more than 20 seconds time has passed, skip this equation
-            #     toc = time.time()
-            #     if toc - tic > 10:
-            #         return None
 
             X[:, n_set] = support
             Y[:, n_set] = vals
@@ -386,7 +355,6 @@ def is_nan(x, bound=None):
         return np.iscomplex(x) + np.isnan(x) + np.isinf(x) + (np.abs(x) > 20000) + (np.abs(x) > bound) + np.array(outliers)
 
 
-# @timeout(8)
 def modify_constants_avoidNaNs(expr, x, bounded_ops, cfg, variable=sympy.sympify('x_1'), extrapolate=False, avoid_x=None):
     """Modifies the constants inside unary bounded operations to avoid generating NaN values
     :param expr: Original expression
@@ -529,13 +497,8 @@ def modify_constants_avoidNaNs(expr, x, bounded_ops, cfg, variable=sympy.sympify
     return x, new_xp, avoid_x
 
 
-# @timeout(15)
 def handle_singularities(expr, variable, cfg, minb, maxb, pre_solutions=None):
     """Sample a support that avoid generating undefined or too extreme values for the case o division or tangent"""
-    # def expr_fun(xv):
-    # is_div = True
-    # expr = sympy.sympify('tan(4.09849323432333 * x_1)')
-    # expr = sympy.sympify('1 / (-4.09849323432333 * x_1 - tan(4.09849323432333 * x_1))')
 
     arg = 1 / expr
     if isinstance(arg, sympy.Mul):
