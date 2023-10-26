@@ -6,7 +6,6 @@ import sympy
 import warnings
 import numpy as np
 from pathlib import Path
-# import matplotlib.pyplot as plt
 from sympy import sympify, lambdify
 from sympy.utilities.iterables import flatten
 from src.EquationLearning.Data.dclasses import Equation
@@ -177,7 +176,7 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
     exprs = eq.expr
     curr_p = cfg.max_number_of_points
     # # Uncomment the code below if you have a specific skeleton from which you want to sample data as an example
-    # sk = sympy.sympify('c + exp(c*x_1)/(c*x_1 + c)')
+    # sk = sympy.sympify('c*x_1 / sin(c*x_1) + c')
     # sk, _, _ = add_constant_identifier(sk)
     # coeff_dict = dict()
     # var = None
@@ -324,14 +323,11 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
             Y[:, n_set] = vals
             sampled_exprs[n_set] = new_expr
             n_set += 1
-            # print(n_set)
 
     if return_exprs:
         return X, Y, tokenized, exprs, sampled_exprs
     else:
         return X, Y, tokenized, exprs
-    # else:
-    #     return None
 
 
 def is_nan(x, bound=None):
@@ -507,15 +503,14 @@ def handle_singularities(expr, variable, cfg, minb, maxb, pre_solutions=None):
         else:
             arg = arg.args[0]
     expr_fun = lambdify(flatten(variable), arg)
-    # return function(xv)
 
     x_range = np.linspace(minb - .1, maxb + .1, 1000)  # Declare initial potential solutions
     y_range = expr_fun(x_range)
     solutions = []
+    # Find the values of x where the equation equals 0
     for i in range(1, len(x_range) - 1):
         if np.sign(expr_fun(x_range[i])) != np.sign(y_range[i - 1]):  # If the sign change, it means it's crossed the x axis
             solutions.append(x_range[i])
-    # Find the values of x where the equation equals 0
     valid_solutions = [np.round(x, 3) for x in solutions if minb <= x <= maxb]
     if pre_solutions is not None:
         valid_solutions = valid_solutions + list(pre_solutions)

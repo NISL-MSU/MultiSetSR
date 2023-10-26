@@ -41,22 +41,18 @@ class SampleData:
         count = 0
         n_batch = 0
         for step in trange(46, len(self.validation_dataset)):  # Batch loop
-            # step = 174416. 175, 1455, 3294, 4360, 4390 2537
-            # step = 46
-            # try:
-            sampled_data = evaluate_and_wrap(self.validation_dataset[step], self.cfg.dataset_train, self.word2id)
-            # except Exception as e:
-            #     print("Problem in step = " + str(step) + " Exception = " + str(e))
-            #     sampled_data = None
+            try:
+                sampled_data = evaluate_and_wrap(self.validation_dataset[step], self.cfg.dataset_train, self.word2id)
+            except Exception as e:
+                print("Problem in step = " + str(step) + " Exception = " + str(e))
+                sampled_data = None
 
             if sampled_data is not None:
-                if np.isnan(sampled_data[1]).any():
-                    print()
-                # for i in range(sampled_data[0].shape[1]):
-                #     plt.figure()
-                #     plt.scatter(sampled_data[0][:, i], sampled_data[1][:, i])
-                #     plt.xticks(fontsize=16)
-                #     plt.yticks(fontsize=16)
+                for i in range(sampled_data[0].shape[1]):
+                    plt.figure()
+                    plt.scatter(sampled_data[0][:, i], sampled_data[1][:, i])
+                    plt.xticks(fontsize=16)
+                    plt.yticks(fontsize=16)
 
                 count += 1
                 batch.append(sampled_data)
@@ -69,23 +65,23 @@ class SampleData:
         ########################################################################
         # Validation step
         ########################################################################
-        # batch = []
-        # count = 0
-        # n_batch = 0
-        # for step in trange(5000, len(self.validation_dataset)):
-        #     try:
-        #         sampled_data = evaluate_and_wrap(self.validation_dataset[step], self.cfg.dataset_train, self.word2id)
-        #     except:
-        #         sampled_data = None
-        #
-        #     if sampled_data is not None:
-        #         count += 1
-        #         batch.append(sampled_data)
-        #         if count % 1000 == 0:
-        #             len(batch)
-        #             create_pickle_from_data(batch, "src/EquationLearning/Data/sampled_data/validation", n_batch)
-        #             n_batch += 1
-        #             batch = []
+        batch = []
+        count = 0
+        n_batch = 0
+        for step in trange(5000, len(self.validation_dataset)):
+            try:
+                sampled_data = evaluate_and_wrap(self.validation_dataset[step], self.cfg.dataset_train, self.word2id)
+            except:
+                sampled_data = None
+
+            if sampled_data is not None:
+                count += 1
+                batch.append(sampled_data)
+                if count % 1000 == 0:
+                    len(batch)
+                    create_pickle_from_data(batch, "src/EquationLearning/Data/sampled_data/validation", n_batch)
+                    n_batch += 1
+                    batch = []
 
 
 if __name__ == '__main__':
