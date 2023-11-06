@@ -379,7 +379,7 @@ class Generator(object):
         # Explore the expression tree and check if there's a ramification with two operators that belong to the same
         # forbidden group
         inf = self.prefix_to_infix(new_stack, coefficients=self.coefficients, variables=self.variables)
-        if check_forbidden_combination(2 * sp.sympify(inf)):
+        if check_forbidden_combination(2 * sp.sympify(inf)) or len(new_stack) <= 2:
             new_stack = self._generate_expr(nb_total_ops, rng)
 
         return new_stack

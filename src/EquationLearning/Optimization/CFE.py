@@ -1,6 +1,7 @@
 from pymoo.core.problem import Problem
 from pymoo.core.variable import Real
 from src.EquationLearning.models.utilities_expressions import *
+import numpy as np
 
 
 #############################################################################

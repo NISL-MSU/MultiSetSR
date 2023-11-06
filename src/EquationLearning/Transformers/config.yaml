@@ -8,7 +8,7 @@ model_path: /local/home/lbiggio/NeuralSymbolicRegressionThatScales/weights/10MCo
 
 wandb: True
 num_of_workers: 32
-batch_size: 8
+batch_size: 9
 epochs: 20
 val_check_interval: 1.0
 precision: 16

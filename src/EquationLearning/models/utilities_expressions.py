@@ -1,14 +1,17 @@
 import sympy
 import sympy as sp
+from src.EquationLearning.Data.sympy_utils import numeric_to_placeholder
 from scipy.stats import pearsonr
 from sympy.utilities.iterables import flatten
+
+
 # from src.EquationLearning.models.functions import *
 # from src.EquationLearning.models.NNModel import NNModel
 # from src.EquationLearning.models.symbolic_expression import round_expr
 
 
 def get_args(xp, return_symbols=False):
-    """Extract all numeric arguments of an expression
+    """Extract all numeric arguments and coefficients of an expression
     :param xp: Symbolic expression
     :param return_symbols: If True, it also returns the symbols in the expression"""
     args = xp.args
@@ -22,7 +25,7 @@ def get_args(xp, return_symbols=False):
             args = args.args
 
     for arg in args:
-        if arg.is_number or (isinstance(arg, sp.Symbol) and str(arg) == 'c'):  # If it's a number, add it to the list
+        if arg.is_number or (isinstance(arg, sp.Symbol) and 'c' in str(arg)):  # If it's a number or coeff, add it to the list
             num_args.append(arg)
         elif isinstance(arg, sp.Symbol) and return_symbols:
             num_args.append(arg)
@@ -37,7 +40,8 @@ def set_args(xp, target_args, return_symbols=False):
     new_args = []
 
     if isinstance(xp, sp.Pow):  # If it's a power function, ignore the power and focus only on the base
-        if xp.args[0].is_number or (isinstance(xp.args[0], sp.Symbol) and str(xp.args[0]) == 'c'):  # If it's a number, add it to the list
+        if xp.args[0].is_number or (
+                isinstance(xp.args[0], sp.Symbol) and str(xp.args[0]) == 'c'):  # If it's a number, add it to the list
             new_args.append(target_args.pop(0))
         elif isinstance(xp.args[0], sp.Symbol):
             new_args.append(xp.args[0])
@@ -46,7 +50,8 @@ def set_args(xp, target_args, return_symbols=False):
         new_args.append(xp.args[1])
     else:
         for arg in args:
-            if arg.is_number or (isinstance(arg, sp.Symbol) and str(arg) == 'c'):  # If it's a number, add it to the list
+            if arg.is_number or (
+                    isinstance(arg, sp.Symbol) and 'c' in str(arg)):  # If it's a number or coeff, add it to the list
                 new_args.append(target_args.pop(0))
             elif isinstance(arg, sp.Symbol) and not return_symbols:
                 new_args.append(arg)
@@ -66,14 +71,14 @@ def get_op(xp, n):
 
     if isinstance(xp, sp.Pow):  # If it's a power function, ignore the power and focus only on the base
         args = args[0]
-        if args.is_number or isinstance(args, sp.Symbol) or (isinstance(args, sp.Symbol) and str(args) == 'c'):
+        if args.is_number or isinstance(args, sp.Symbol) or (isinstance(args, sp.Symbol) and 'c' in str(args)):
             args = [args]
         else:
             args = args.args
 
     ops = []
     for arg in args:
-        if arg.is_number or (isinstance(arg, sp.Symbol) and str(arg) == 'c'):  # If it's a number, add it to the list
+        if arg.is_number or (isinstance(arg, sp.Symbol) and 'c' in str(arg)):  # If it's a number, add it to the list
             if n == 0:
                 return str(xp.func)
             else:
@@ -148,7 +153,8 @@ def check_forbidden_combination(xp):
     forbidden_group2 = [sp.exp, sp.sinh, sp.cosh, sp.tanh, sp.tan, sp.log]
     forbidden_group3 = [sp.sin, sp.cos]
     forbidden_group4 = [sp.asin, sp.acos, sp.atan]
-    unary_ops = [sp.Pow, sp.exp, sp.log, sp.sinh, sp.cosh, sp.tanh, sp.sin, sp.cos, sp.tan, sp.asin, sp.acos, sp.atan, sp.sqrt, 'sqrt']
+    unary_ops = [sp.Pow, sp.exp, sp.log, sp.sinh, sp.cosh, sp.tanh, sp.sin, sp.cos, sp.tan, sp.asin, sp.acos, sp.atan,
+                 sp.sqrt, 'sqrt']
 
     for arg in args:
         if arg.is_number or isinstance(arg, sp.Symbol):
@@ -157,14 +163,14 @@ def check_forbidden_combination(xp):
             g1 = any([arg.func == op for op in forbidden_group1])
             if g1:
                 args = arg.args
-                g12 = any([(str(op)+'(' in str(args)) or ('sqrt' in str(args)) or ('**2' in str(args)) or
+                g12 = any([(str(op) + '(' in str(args)) or ('sqrt' in str(args)) or ('**2' in str(args)) or
                            ('**4' in str(args)) for op in forbidden_group1])
                 if g12:
                     return True
             g2 = any([(arg.func == op) or (arg.func == sp.Pow and (arg.args[1] > 2)) for op in forbidden_group2])
             if g2:
                 args2 = arg.args
-                g22 = any([(str(op)+'(' in str(args2)) or ('**3' in str(args2)) or ('**4' in str(args2)) or
+                g22 = any([(str(op) + '(' in str(args2)) or ('**3' in str(args2)) or ('**4' in str(args2)) or
                            ('**5' in str(args2)) for op in forbidden_group2])
                 if g22:
                     return True
@@ -176,31 +182,27 @@ def check_forbidden_combination(xp):
                     return True
             if arg.func == sp.tan:
                 args2 = arg.args
-                g32 = any([str(op)+'(' in str(args2) for op in forbidden_group3])
+                g32 = any([str(op) + '(' in str(args2) for op in forbidden_group3])
                 if g32:
                     return True
             g4 = any([arg.func == op for op in forbidden_group4])
             if g4:
                 args2 = arg.args
-                g42 = any([str(op)+'(' in str(args2) for op in forbidden_group4])
+                g42 = any([str(op) + '(' in str(args2) for op in forbidden_group4])
                 if g42:
                     return True
             # Lastly, check if there are more than 3 nested unary operations
             g5 = any([arg.func == op for op in unary_ops])
             if g5:
                 args2 = arg.args
-                g52 = sum([str(op)+'(' in str(args2) for op in unary_ops])
-                if g52 >= 1:
+                g52 = sum([str(op) + '(' in str(args2) for op in unary_ops])
+                g52 += str(args2).count('**')
+                if g52 > 0:
                     return True
 
             res.append(check_forbidden_combination(arg))
 
     return any(res)
-
-
-
-
-
 
 
 # def verify_dependency(xp_orig, list_symbols, gen_fun, values, limits, variable, resample_var, r_orig):
@@ -289,8 +291,6 @@ def check_forbidden_combination(xp):
 #     x1 = [coeff[k] for k in range(2, 6)]
 #     x2 = [coeff[k] for k in range(6, 10)]
 #
-#     # TODO: if operator 2 is sin, apply mod
-#
 #     xp = get_sym_function(operator1)[0]((x1[0] * variable + x1[1]) ** inv1 + x1[2]) + x1[3]
 #     xp = get_sym_function(operator2)[0]((x2[0] * xp + x2[1]) ** inv2 + x2[2])
 #
@@ -326,7 +326,7 @@ def check_forbidden_combination(xp):
 #         return round_expr(xp, 4)
 
 
-def avoid_operations_between_constants(xp):
+def _avoid_operations_between_constants(xp):
     """ Simplify exponent of constants inside symbolic expression and constant multiplied by constants.
     E.g., constant ** 3 = constant or cons1 * cons2 * cons3 = cons1
     :param xp: Symbolic expression"""
@@ -337,8 +337,10 @@ def avoid_operations_between_constants(xp):
     if isinstance(xp, sp.Pow):  # If it's a power function, ignore the power and focus only on the base
         args1 = args[0]
         args2 = args[1]
-        if (args1.is_number or (isinstance(args1, sp.Symbol) and ("cm" in str(args1) or "ca" in str(args1) or "c" in str(args1)))) and \
-                (args2.is_number or (isinstance(args2, sp.Symbol) and ("cm" in str(args2) or "ca" in str(args2) or "c" in str(args2)))):
+        if (args1.is_number or (
+                isinstance(args1, sp.Symbol) and ("cm" in str(args1) or "ca" in str(args1) or "c" in str(args1)))) and \
+                (args2.is_number or (isinstance(args2, sp.Symbol) and (
+                        "cm" in str(args2) or "ca" in str(args2) or "c" in str(args2)))):
             va = None
             if isinstance(args1, sp.Symbol) and ("cm" in str(args1) or "ca" in str(args1) or "c" in str(args1)):
                 va = args1
@@ -350,7 +352,13 @@ def avoid_operations_between_constants(xp):
         t_args = []
         # Check if two or more of the arguments are constants and replace them for just one constant
         flag = False  # This flag turns to True when a constant was already found
-        for arg in args:
+        for ia, arg in enumerate(args):
+            if arg.is_number and any([(isinstance(co, sp.Symbol) and 'c' in str(co)) for co in (args[0:ia] + args[ia + 1:])]):
+                # If the current number is summed or multiplied by other constants, replace it by 0 or one
+                if isinstance(xp, sp.Mul):
+                    arg = sympy.sympify("1")
+                else:
+                    arg = sympy.sympify("0")
             if isinstance(arg, sp.Symbol) and ("cm" in str(arg) or "ca" in str(arg) or "c" in str(arg)):
                 if not flag:
                     flag = True
@@ -364,17 +372,46 @@ def avoid_operations_between_constants(xp):
         elif isinstance(arg, sp.Symbol):
             new_args.append(arg)
         else:  # If it's composed, explore a lower level of the tree
-            new_args.append(avoid_operations_between_constants(arg))
+            new_args.append(_avoid_operations_between_constants(arg))
 
     if len(new_args) > 0:
         new_xp = xp.func(*new_args)
     else:
         new_xp = xp
 
-    if len(new_args) == 1 and new_args[0] == sp.sympify('c'):  # If it's a unary operation and it's argument is a constant
+    if len(new_args) == 1 and 'c' == str(new_args[0]):  # If it's a unary operation and it's argument is a constant
         new_xp = sp.sympify('c')
 
     return new_xp
+
+
+def avoid_operations_between_constants(xp):
+    """Repeat the _avoid_operations_between_constants function until no change is found"""
+    xp2 = None
+    while xp != xp2:
+        xp2 = xp
+        xp = _avoid_operations_between_constants(xp)
+    return xp
+
+
+def get_skeletons(expr, var_names):
+    # Get a skeleton for each variable present in the expression
+    skeletons = []
+    for var in var_names:
+        skeleton = numeric_to_placeholder(expr, var=var)
+        for v in var_names:
+            if v != var:
+                skeleton = skeleton.subs(sp.sympify(v), sp.sympify('c'))
+        skeleton2 = None
+        skeleton = sp.expand(skeleton)
+        while skeleton != skeleton2:
+            skeleton2 = skeleton
+            skeleton = avoid_operations_between_constants(skeleton)
+            skeleton = numeric_to_placeholder(skeleton, var=var)
+        if 'x' in str(skeleton):  # If there are no variables in the expression, skip adding identifiers
+            skeleton = add_constant_identifier(skeleton)[0]
+        skeletons.append(skeleton)
+    return skeletons
 
 
 if __name__ == '__main__':

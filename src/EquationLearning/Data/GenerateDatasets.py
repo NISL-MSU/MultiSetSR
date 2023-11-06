@@ -45,7 +45,13 @@ class DataLoader:
             self.modelType = "NN2"
         elif name == "E5":
             self.E5()
+            self.modelType = "NN"
+        elif name == "S1":
+            self.S1()
             self.modelType = "NN3"
+        elif name == "S2":
+            self.S2()
+            self.modelType = "NN"
         else:  # If not one of the previous names, it probably comes from the Feynman database
             self.import_Feynman(name)
             self.modelType = "NN"
@@ -71,6 +77,40 @@ class DataLoader:
             data = data.iloc[:, :-1]
         self.Y = np.array(data.iloc[:, -1])
         self.X = np.array(data.iloc[:, :-1])
+
+    def S1(self, n=10000):
+        np.random.seed(7)
+        # Define features
+        if not self.extrapolation:
+            x1 = np.random.uniform(-5, 5, size=n)
+            x2 = np.random.uniform(-5, 5, size=n)
+        else:
+            x1 = sample_exclude(-10, 10, n, -5, 5)
+            x2 = sample_exclude(-10, 10, n, -5, 5)
+        self.X = np.array([x1, x2]).T
+        # Calculate output
+        self.Y = (3.0375 * x1 * x2 + 5.5 * np.sin(9/4 * (x1 - 2/3) * (x2 - 2/3))) / 5
+        self.names = ['x0', 'x1']
+        symb = sp.symbols("{}:{}".format('x', 2))
+        self.expr = (3.0375 * symb[0] * symb[1] + 5.5 * sp.sin(9/4 * (symb[0] - 2/3) * (symb[1] - 2/3))) / 5
+
+    def S2(self, n=10000):
+        np.random.seed(7)
+        # Define features
+        if not self.extrapolation:
+            x1 = np.random.uniform(-10, 10, size=n)
+            x2 = np.random.uniform(-10, 10, size=n)  # x2 \in [-10, 10]
+            x3 = np.random.uniform(-10, 10, size=n)  # x3 \in [-10, 10]
+        else:
+            x1 = sample_exclude(-20, 20, n, -10, 10)
+            x2 = sample_exclude(-20, 20, n, -10, 10)
+            x3 = sample_exclude(-20, 20, n, -10, 10)
+        self.X = np.array([x1, x2, x3]).T
+        # Calculate output
+        self.Y = 5.5 + (1 - x1 / 4) ** 2 + (np.sqrt(x2 + 10)) * np.sin(x3 / 5)
+        self.names = ['x0', 'x1', 'x2']
+        symb = sp.symbols("{}:{}".format('x', 3))
+        self.expr = 5.5 + (1 - symb[0] / 4) ** 2 + (sp.sqrt(symb[1] + 10)) * sp.sin(symb[2] / 5)
 
     def E1(self, n=10000):
         np.random.seed(7)
@@ -108,17 +148,17 @@ class DataLoader:
         np.random.seed(7)
         # Define features
         if not self.extrapolation:
-            x1 = np.random.uniform(-10, 10, size=n)
-            x2 = np.random.uniform(-10, 10, size=n)  # x2 \in [-10, 10]
+            x1 = np.random.uniform(-5, 5, size=n)
+            x2 = np.random.uniform(-5, 5, size=n)
         else:
-            x1 = sample_exclude(-20, 20, n, -10, 10)
-            x2 = sample_exclude(-20, 20, n, -10, 10)
+            x1 = sample_exclude(-10, 10, n, -5, 5)
+            x2 = sample_exclude(-10, 10, n, -5, 5)
         self.X = np.array([x1, x2]).T
         # Calculate output
-        self.Y = (1.5 * np.exp(0.15 * x1) + 5 * np.cos(2 * x2)) / 10
+        self.Y = (1.5 * np.exp(1.5 * x1) + 5 * np.cos(3 * x2))/10
         self.names = ['x0', 'x1']
         symb = sp.symbols("{}:{}".format('x', 2))
-        self.expr = (1.5 * sp.exp(0.15 * symb[0]) + 5 * sp.cos(2 * symb[1])) / 10
+        self.expr = (1.5 * sp.exp(1.5 * symb[0]) + 5 * sp.cos(3 * symb[1]))/10
 
     def E4(self, n=50000):
         np.random.seed(7)
@@ -141,25 +181,25 @@ class DataLoader:
         self.expr = ((1 - symb[0]) ** 2 + (1 - symb[2]) ** 2 + 100 * (symb[1] - symb[0] ** 2) ** 2 +
                      100 * (symb[3] - symb[2] ** 2) ** 2) / 10000
 
-    def E5(self, n=50000):
+    def E5(self, n=10000):
         np.random.seed(7)
         # Define features
         if not self.extrapolation:
-            x1 = np.random.uniform(-10, 10, size=n)
-            x2 = np.random.uniform(-10, 10, size=n)
-            x3 = np.random.uniform(-10, 10, size=n)
-            x4 = np.random.uniform(-10, 10, size=n)
+            x1 = np.random.uniform(-2, 2, size=n)
+            x2 = np.random.uniform(-2, 2, size=n)
+            x3 = np.random.uniform(-2, 2, size=n)
+            x4 = np.random.uniform(-2, 2, size=n)
         else:
-            x1 = sample_exclude(-20, 20, n, -10, 10)
-            x2 = sample_exclude(-20, 20, n, -10, 10)
-            x3 = sample_exclude(-20, 20, n, -10, 10)
-            x4 = sample_exclude(-20, 20, n, -10, 10)
+            x1 = sample_exclude(-10, 10, n, -2, 2)
+            x2 = sample_exclude(-10, 10, n, -2, 2)
+            x3 = sample_exclude(-10, 10, n, -2, 2)
+            x4 = sample_exclude(-10, 10, n, -2, 2)
         self.X = np.array([x1, x2, x3, x4]).T
         # Calculate output
-        self.Y = np.sin(0.4 * x1 + x2) + np.sinh(x3/10) + np.exp(0.1 * x1)
+        self.Y = np.sin(2 * x1 + x2 * x3) + np.exp(1.2 * x4)
         self.names = ['x0', 'x1', 'x2', 'x3']
         symb = sp.symbols("{}:{}".format('x', 4))
-        self.expr = sp.sin(0.4 * symb[0] + symb[1] * symb[2]) + sp.exp(0.1 * symb[3])
+        self.expr = sp.sin(2 * symb[0] + symb[1] * symb[2]) + sp.exp(1.2 * symb[3])
 
     def E6(self, n=50000):
         np.random.seed(7)

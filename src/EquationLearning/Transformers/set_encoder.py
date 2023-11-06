@@ -1,10 +1,9 @@
 import torch
 import torch.nn as nn
-import pytorch_lightning as pl
 from .set_transformer import ISAB, PMA
 
 
-class SetEncoder(pl.LightningModule):
+class SetEncoder(nn.Module):
     def __init__(self, cfg):
         super(SetEncoder, self).__init__()
         self.linear = cfg.linear
@@ -29,6 +28,8 @@ class SetEncoder(pl.LightningModule):
         # Pooling by multi-head attention
         self.outatt = PMA(cfg.dim_hidden, cfg.num_heads, cfg.num_features, ln=cfg.ln)
 
+        self.dummy_param = nn.Parameter(torch.empty(0))
+
     def float2bit(self, f, num_e_bits=5, num_m_bits=10, bias=127., dtype=torch.float32):
         # SIGN BIT
         s = (torch.sign(f + 0.001) * -1 + 1) * 0.5  # Swap plus and minus => 0 is plus and 1 is minus
@@ -47,14 +48,14 @@ class SetEncoder(pl.LightningModule):
 
     def remainder2bit(self, remainder, num_bits=127):
         dtype = remainder.type()
-        exponent_bits = torch.arange(num_bits, device=self.device).type(dtype)
+        exponent_bits = torch.arange(num_bits, device=self.dummy_param.device).type(dtype)
         exponent_bits = exponent_bits.repeat(remainder.shape + (1,))
         out = (remainder.unsqueeze(-1) * 2 ** exponent_bits) % 1
         return torch.floor(2 * out)
 
     def integer2bit(self, integer, num_bits=8):
         dtype = integer.type()
-        exponent_bits = -torch.arange(-(num_bits - 1), 1, device=self.device).type(dtype)
+        exponent_bits = -torch.arange(-(num_bits - 1), 1, device=self.dummy_param.device).type(dtype)
         exponent_bits = exponent_bits.repeat(integer.shape + (1,))
         out = integer.unsqueeze(-1) / 2 ** exponent_bits
         return (out - (out % 1)) % 2

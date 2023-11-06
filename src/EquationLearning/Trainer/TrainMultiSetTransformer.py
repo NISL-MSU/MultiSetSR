@@ -13,8 +13,6 @@ from torch.utils.tensorboard import SummaryWriter
 from src.EquationLearning.Transformers.model import Model
 from src.EquationLearning.Transformers.GenerateTransformerData import Dataset, de_tokenize
 
-# import time
-
 
 def open_pickle(path):
     with open(path, 'rb') as file:
@@ -52,6 +50,7 @@ def loss_sample(output, trg):
     """Loss function that combines cross-entropy and information entropy for a single sample"""
     # Cross-entropy
     ce = nn.CrossEntropyLoss(ignore_index=0)
+    ce.cuda()
     L1 = ce(output, trg)
 
     # Information entropy
@@ -87,8 +86,14 @@ class TransformerTrainer:
         self.id2word = self.training_dataset.id2word
 
         # Load model
-        self.model = Model(cfg=self.cfg.architecture, cfg_inference=self.cfg.inference, word2id=self.word2id)
+        self.model = Model(cfg=self.cfg.architecture, cfg_inference=self.cfg.inference, word2id=self.word2id,
+                           loss=loss_sample)
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+        self.model.cuda()
+        if torch.cuda.device_count() > 1:
+            print("Let's use", torch.cuda.device_count(), "GPUs!")
+            self.model = nn.DataParallel(self.model)
 
         # Training parameters
         self.optimizer = optim.Adadelta(self.model.parameters(), lr=self.cfg.architecture.lr)
@@ -105,12 +110,12 @@ class TransformerTrainer:
         # Prepare list of indexes for shuffling
         indexes = np.arange(len(train_files))
 
-        self.model.load_state_dict(torch.load('src/EquationLearning/models/saved_models/Model-datasetdataset0'))
+        self.model.load_state_dict(torch.load('src/EquationLearning/models/saved_models/Model-' + self.cfg.dataset))
         print("""""""""""""""""""""""""""""")
         print("Start training")
         print("""""""""""""""""""""""""""""")
         global_batch_count = 0
-        for epoch in trange(epochs):  # Epoch loop
+        for epoch in range(epochs):  # Epoch loop
             # Shuffle indices
             np.random.shuffle(indexes)
 
@@ -121,8 +126,10 @@ class TransformerTrainer:
                 T = np.ceil(1.0 * len(block) / batch_size).astype(np.int32)
 
                 # Format elements in the block as torch Tensors
-                XY_block = torch.zeros((len(block), block[0][0].shape[0], 2, self.cfg.architecture.number_of_sets)).to(self.device)
+                XY_block = torch.zeros(
+                    (len(block), block[0][0].shape[0], 2, self.cfg.architecture.number_of_sets)).cuda()
                 skeletons_block = []
+                xpr_block = []
                 for ib, b in enumerate(block):
                     Xs, Ys, tokenized, xpr, equations = b
                     # Normalize data
@@ -132,48 +139,62 @@ class TransformerTrainer:
                     Ys = (Ys - means) / std
                     if isinstance(Xs, np.ndarray):  # Some blocks were stored as numpy arrays and others as tensors
                         Xs, Ys = torch.from_numpy(Xs), torch.from_numpy(Ys)
-                    Xs = Xs.to(self.device)
-                    Ys = Ys.to(self.device)
+                    Xs = Xs.cuda()
+                    Ys = Ys.cuda()
                     XY_block[ib, :, 0, :] = Xs
                     XY_block[ib, :, 1, :] = Ys
-                    skeletons_block.append(torch.tensor(tokenized).long().to(self.device))
+                    skeletons_block.append(torch.tensor(tokenized).long().cuda())
+                    xpr_block.append(xpr)
                     # print(xpr)
 
-                self.model.set_train()  # Sets training mode
+                if torch.cuda.device_count() > 1:
+                    self.model.module.set_train()  # Sets training mode
+                else:
+                    self.model.set_train()  # Sets training mode
                 running_loss = 0.0
                 inds = np.arange(len(block))
                 np.random.shuffle(inds)
                 for step in range(T):  # Batch loop
-                    # Zero the parameter gradients
-                    self.optimizer.zero_grad()
 
                     # Generate indexes of the batch
                     batch_inds = inds[step * batch_size:(step + 1) * batch_size]
+                    print("Block " + str(train_files[b_ind]) + " Sample " + str(batch_inds[0]) + " Expr: " + str(
+                        xpr_block[batch_inds[0]]))
                     # Extract slices
                     XY_batch = XY_block[batch_inds, :, :, :]
                     skeletons_batch = [skeletons_block[i] for i in batch_inds]
                     # Check that there's no skeleton larger than the maximum length
-                    valid_inds = [i for i in range(len(skeletons_batch)) if len(skeletons_batch[i]) < self.cfg.architecture.length_eq]
+                    valid_inds = [i for i in range(len(skeletons_batch)) if
+                                  len(skeletons_batch[i]) < self.cfg.architecture.length_eq]
                     XY_batch = XY_batch[valid_inds, :, :, :]
                     skeletons_batch = [skeletons_batch[i] for i in valid_inds]
 
                     # Find the maximum skeleton length
                     max_length = max(len(sk) for sk in skeletons_batch)
                     # Pad the skeletons to match the maximum length
-                    padded_tensors = [torch.cat((sk, torch.zeros(max_length - len(sk)).to(self.device))) for sk in skeletons_batch]
+                    padded_tensors = [torch.cat((sk, torch.zeros(max_length - len(sk)).cuda())) for sk in
+                                      skeletons_batch]
                     # Combine the padded skeletons into a single tensor
-                    skeletons_batch = pad_sequence(padded_tensors, batch_first=True).type(torch.int)
+                    skeletons_batch = pad_sequence(padded_tensors, batch_first=True).type(torch.int).cuda()
+
+                    # Zero the parameter gradients
+                    self.optimizer.zero_grad()
 
                     # Forward pass
-                    output, z_sets = self.model.forward(XY_batch, skeletons_batch)
-                    # Loss calculation
-                    L1 = torch.zeros(1).to(self.device)
-                    for bi in range(output.shape[1]):
-                        out = output[:, bi, :].contiguous().view(-1, output.shape[-1])
-                        tokenized = skeletons_batch[bi, :][1:].contiguous().view(-1)
-                        L1s = loss_sample(out, tokenized.long())
-                        L1 += L1s
-                    # Aggregate loss terms in the batch
+                    if torch.cuda.device_count() > 1:
+                        output, z_sets, L1 = self.model.forward(XY_batch.cuda(), skeletons_batch.cuda())
+                        # Aggregate loss terms in the batch
+                        L1 = L1.sum()
+                    else:
+                        output, z_sets = self.model.forward(XY_batch.cuda(), skeletons_batch.cuda())
+                        # Loss calculation
+                        L1 = torch.zeros(1).cuda()
+                        for bi in range(output.shape[1]):
+                            out = output[:, bi, :].contiguous().view(-1, output.shape[-1])
+                            tokenized = skeletons_batch[bi, :][1:].contiguous().view(-1)
+                            L1s = loss_sample(out, tokenized.long())
+                            L1 += L1s
+
                     loss = L1 / len(valid_inds)  # + self.lambda_ * L2) / (batch_size - skipped)
                     # Gradient computation
                     loss.backward()
@@ -188,25 +209,32 @@ class TransformerTrainer:
                         print('[%d, %5d] loss: %.5f' % (epoch + 1, batch_count, running_loss / 5))
                         self.writer.add_scalar('training loss', running_loss / 5, global_batch_count)
                         running_loss = 0.0
+                # 12/0
 
             if epoch == 0:  # Save model at the end of the first epoch in case there's an error during validation
-                torch.save(self.model.state_dict(), 'src/EquationLearning/models/saved_models/Model-' + self.cfg.dataset)
+                torch.save(self.model.state_dict(),
+                           'src/EquationLearning/models/saved_models/Model-' + self.cfg.dataset)
             #########################################################################
             # Validation step
             #########################################################################
-            indexes = np.arange(len(val_files))
-            batch_val_size = 50
-            self.model.set_eval()
+            indexes2 = np.arange(len(val_files))
+            batch_val_size = 1
+            if torch.cuda.device_count() > 1:
+                self.model.module.set_eval()
+            else:
+                self.model.set_eval()
             L1v, L2v, iv = 0, 0, 0
             prev_loss = np.inf
 
-            for b_ind in indexes:  # Block loop (each block contains 1000 inputs)
+            cc = 0
+            for b_ind in indexes2:  # Block loop (each block contains 1000 inputs)
                 # Read block
                 block = open_h5(val_files[b_ind])
                 T = np.ceil(1.0 * len(block) / batch_val_size).astype(np.int32)
 
                 # Format elements in the block as torch Tensors
-                XY_block = torch.zeros((len(block), block[0][0].shape[0], 2, self.cfg.architecture.number_of_sets)).to(self.device)
+                XY_block = torch.zeros(
+                    (len(block), block[0][0].shape[0], 2, self.cfg.architecture.number_of_sets)).cuda()
                 skeletons_block = []
                 for ib, b in enumerate(block):
                     Xs, Ys, tokenized, xpr, equations = b
@@ -217,13 +245,12 @@ class TransformerTrainer:
                     Ys = (Ys - means) / std
                     if isinstance(Xs, np.ndarray):  # Some blocks were stored as numpy arrays and others as tensors
                         Xs, Ys = torch.from_numpy(Xs), torch.from_numpy(Ys)
-                    Xs = Xs.to(self.device)
-                    Ys = Ys.to(self.device)
+                    Xs = Xs.cuda()
+                    Ys = Ys.cuda()
                     XY_block[ib, :, 0, :] = Xs[:, :self.cfg.architecture.number_of_sets]
                     XY_block[ib, :, 1, :] = Ys[:, :self.cfg.architecture.number_of_sets]
-                    skeletons_block.append(torch.tensor(tokenized).long().to(self.device))
-                    # print(xpr)
-
+                    skeletons_block.append(torch.tensor(tokenized).long().cuda())
+                import sympy
                 inds = np.arange(len(block))
                 for step in range(T):  # Batch loop
                     # Generate indexes of the batch
@@ -232,47 +259,65 @@ class TransformerTrainer:
                     XY_batch = XY_block[batch_inds, :, :, :]
                     skeletons_batch = [skeletons_block[i] for i in batch_inds]
                     # Check that there's no skeleton larger than the maximum length
-                    valid_inds = [i for i in range(len(skeletons_batch)) if len(skeletons_batch[i]) < self.cfg.architecture.length_eq]
+                    valid_inds = [i for i in range(len(skeletons_batch)) if
+                                  len(skeletons_batch[i]) < self.cfg.architecture.length_eq]
                     XY_batch = XY_batch[valid_inds, :, :, :]
                     skeletons_batch = [skeletons_batch[i] for i in valid_inds]
 
                     # Find the maximum skeleton length
                     max_length = max(len(sk) for sk in skeletons_batch)
                     # Pad the skeletons to match the maximum length
-                    padded_tensors = [torch.cat((sk, torch.zeros(max_length - len(sk)).to(self.device))) for sk in
+                    padded_tensors = [torch.cat((sk, torch.zeros(max_length - len(sk)).cuda())) for sk in
                                       skeletons_batch]
                     # Combine the padded skeletons into a single tensor
                     skeletons_batch = pad_sequence(padded_tensors, batch_first=True).type(torch.int)
                     # Forward pass
                     # R = self.model.inference(XY_batch[0:1, :, :, :])
-                    output, seqs = self.model.validation_step(XY_batch)
+                    output = self.model.validation_step(XY_batch, skeletons_batch)
                     # Loss calculation
-                    for bi in range(len(output)):
-                        out = output[bi].contiguous().view(-1, output[bi].shape[-1])
+                    for bi in range(output.shape[1]):
+                        # out = output[bi].contiguous().view(-1, output[bi].shape[-1])
+                        # tokenized = skeletons_batch[bi, :][1:].contiguous().view(-1)
+                        # padding_size = np.abs(output[bi].size(0) - tokenized.size(0))
+                        # if out.size(0) > tokenized.size(0):
+                        #     tokenized = nn.functional.pad(tokenized, (0, padding_size))
+                        # else:
+                        #     out = nn.functional.pad(out, pad=(0, 0, 0, padding_size))
+                        out = output[:, bi, :].contiguous().view(-1, output.shape[-1])
                         tokenized = skeletons_batch[bi, :][1:].contiguous().view(-1)
-                        padding_size = np.abs(output[bi].size(0) - tokenized.size(0))
-                        if out.size(0) > tokenized.size(0):
-                            tokenized = nn.functional.pad(tokenized, (0, padding_size))
-                        else:
-                            out = nn.functional.pad(out, pad=(0, 0, 0, padding_size))
                         L1s = loss_sample(out, tokenized.long())
                         L1v += L1s
                         iv += 1
+
+                        try:
+                            res = output.cpu().numpy()[:, 0, :]
+                            max_indices = np.argmax(res, axis=1)
+                            # prefix = self.model.inference(XY_batch[step:step + 1, :, :, :])[1][1].cpu().numpy()[1:]
+                            infix = sympy.sympify(seq2equation(max_indices, self.id2word))
+                            # detok = de_tokenize(list(skeletons_block[step].cpu().numpy())[1:], self.id2word)
+                            infixT = sympy.sympify(
+                                seq2equation(list(skeletons_block[step].cpu().numpy())[1:], self.id2word))
+                            print("Target: " + str(infixT) + " . Pred: " + str(infix))
+                        except:
+                            print()
+
                         print("\tValidation " + str(iv), end='\r')
+                cc += 1
+                with open('src/EquationLearning/models/saved_models/validation_performance.txt', 'w') as file:
+                    file.write(str(L1v / (5000 * cc)))
 
             # Aggregate loss terms in the batch
             loss = L1v / iv
             self.writer.add_scalar('validation loss', loss, global_batch_count)
             if loss < prev_loss:
                 prev_loss = loss
-                torch.save(self.model.state_dict(), 'src/EquationLearning/models/saved_models/Model-' + self.cfg.dataset)
+                torch.save(self.model.state_dict(),
+                           'src/EquationLearning/models/saved_models/Model-' + self.cfg.dataset)
                 with open('src/EquationLearning/models/saved_models/validation_performance.txt', 'w') as file:
                     file.write(str(loss))
             print('[%d] validation loss: %.5f. Best validation loss: %.5f' % (epoch + 1, loss, prev_loss))
 
 
 if __name__ == '__main__':
-    plt.figure()
-
     trainer = TransformerTrainer()
     trainer.fit()

@@ -19,7 +19,7 @@ class MAB(nn.Module):
 
     def forward(self, Q, K):
         Q = self.fc_q(Q)
-        K, V = self.fc_k(K), self.fc_k(K)
+        K, V = self.fc_k(K), self.fc_v(K)
 
         dim_split = self.dim_V // self.num_heads
         Q_ = torch.cat(Q.split(dim_split, 2), 0)
@@ -37,7 +37,7 @@ class MAB(nn.Module):
 class SAB(nn.Module):
     def __init__(self, dim_in, dim_out, num_heads, ln=False):
         super(SAB, self).__init__()
-        self.mab = MAB(dim_in, dim_in, dim_out, num_heads, ln=ln)
+        self.mab = MAB(dim_in, dim_in, dim_out, num_heads, ln=ln) # .cuda()
 
     def forward(self, X):
         return self.mab(X, X)

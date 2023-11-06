@@ -114,7 +114,7 @@ class Pipepile:
     default=5e4,
     help="Total number of equations to generate",
 )
-@click.option("--debug/--no-debug", default=False)
+@click.option("--debug/--no-debug", default=True)
 def creator(number_of_equations, eq_per_block, debug):
     copyreg.pickle(types.CodeType, code_pickler, code_unpickler)  # Needed for serializing code objects
     total_number = number_of_equations

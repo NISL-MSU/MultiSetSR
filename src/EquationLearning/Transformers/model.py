@@ -7,14 +7,14 @@ from .beam_search import BeamHypotheses
 
 
 class Model(nn.Module):
-    def __init__(self, cfg, cfg_inference, word2id):
+    def __init__(self, cfg, cfg_inference, word2id, loss=None):
         super(Model, self).__init__()
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.enc = SetEncoder(cfg).to(self.device)
+        # self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.enc = SetEncoder(cfg)
         self.trg_pad_idx = cfg.trg_pad_idx
         self.cfg = cfg
-        self.tok_embedding = nn.Embedding(self.cfg.output_dim, self.cfg.dim_hidden).to(self.device)
-        self.pos_embedding = nn.Embedding(self.cfg.length_eq, self.cfg.dim_hidden).to(self.device)
+        self.tok_embedding = nn.Embedding(self.cfg.output_dim, self.cfg.dim_hidden)
+        self.pos_embedding = nn.Embedding(self.cfg.length_eq, self.cfg.dim_hidden)
         if cfg.sinuisodal_embeddings:
             self.create_sinusoidal_embeddings(
                 self.cfg.length_eq, self.cfg.dim_hidden, out=self.pos_embedding.weight
@@ -24,14 +24,17 @@ class Model(nn.Module):
             nhead=self.cfg.num_heads,
             dim_feedforward=self.cfg.dec_pf_dim,
             dropout=self.cfg.dropout,
-        ).to(self.device)
-        self.decoder_transfomer = nn.TransformerDecoder(decoder_layer, num_layers=cfg.dec_layers).to(self.device)
-        self.fc_out = nn.Linear(cfg.dim_hidden, cfg.output_dim).to(self.device)
-        self.aggregator = PMA(self.cfg.dim_hidden, self.cfg.num_heads, 1).to(self.device)
+        )
+        self.decoder_transfomer = nn.TransformerDecoder(decoder_layer, num_layers=cfg.dec_layers)
+        self.fc_out = nn.Linear(cfg.dim_hidden, cfg.output_dim)
+        self.aggregator = PMA(self.cfg.dim_hidden, self.cfg.num_heads, 1)
         self.cfg_inference = cfg_inference
         self.word2id = word2id
         self.dropout = nn.Dropout(cfg.dropout)
         self.eq = None
+        self.loss = loss
+
+        self.dummy_param = nn.Parameter(torch.empty(0))
 
     def set_train(self):
         self.enc.train()
@@ -85,9 +88,9 @@ class Model(nn.Module):
 
         # Separate input sets and apply the encoder layer to each one
         n_sets = batch.shape[-1]
-        z_sets = torch.Tensor().to(self.device)
+        z_sets = torch.Tensor().to(self.dummy_param.device)
         for i_set in range(n_sets):
-            enc_src = self.enc(batch[:, :, :, i_set])
+            enc_src = self.enc(batch[:, :, :, i_set].to(self.dummy_param.device))
             assert not torch.isnan(enc_src).any()
             z_sets = torch.cat((z_sets, enc_src), dim=1)
 
@@ -103,9 +106,22 @@ class Model(nn.Module):
         )
 
         output = self.fc_out(output)
-        return output, z_sets
 
-    def validation_step(self, batch):
+        if torch.cuda.device_count() > 1:
+            # Calcualte loss
+            L1 = torch.zeros(1).to(self.dummy_param.device)
+            output2 = torch.clone(output)
+            # print(output.shape)
+            for bi in range(output.shape[1]):
+                out = output[:, bi, :].contiguous().view(-1, output.shape[-1])
+                tokenized = skeleton[bi, :][1:].contiguous().view(-1)
+                L1s = self.loss(out, tokenized.long())
+                L1 += L1s
+            return output2, z_sets, L1
+        else:
+            return output, z_sets
+
+    def validation_step(self, batch, skeleton):
         """Perform validation"""
         with torch.no_grad():
             #############################################################
@@ -113,7 +129,7 @@ class Model(nn.Module):
             #############################################################
             # Separate input sets and apply the encoder layer to each one
             n_sets = batch.shape[-1]
-            z_sets = torch.Tensor().to(self.device)
+            z_sets = torch.Tensor().to(self.dummy_param.device)
             for i_set in range(n_sets):
                 enc_src = self.enc(batch[:, :, :, i_set])
                 assert not torch.isnan(enc_src).any()
@@ -126,59 +142,58 @@ class Model(nn.Module):
             #############################################################
             # DECODER
             #############################################################
-            # # Separate target skeleton, mask it, and create embeddings
-            # generated = torch.zeros([batch.shape[0], self.cfg.length_eq], dtype=torch.long, device=self.device, )
-            # generated[:, 0] = 1  # Initialize with SOS symbol
-            # trg_mask1, trg_mask2 = self.make_trg_mask(generated)
-            # pos = self.pos_embedding(
-            #     torch.arange(0, generated.shape[1])
-            #     .unsqueeze(0)
-            #     .repeat(generated.shape[0], 1)
-            #     .type_as(generated)
-            # )
-            # te = self.tok_embedding(generated)
-            # trg_ = self.dropout(te + pos)
-            # output = self.decoder_transfomer(
-            #     trg_.permute(1, 0, 2),
-            #     enc_output.permute(1, 0, 2),
-            #     trg_mask2.bool(),
-            #     tgt_key_padding_mask=trg_mask1.bool()
-            # )
-            # output = self.fc_out(output)
+            # Separate target skeleton, mask it, and create embeddings
+            trg = skeleton
+            trg_mask1, trg_mask2 = self.make_trg_mask(trg[:, :-1])
+            pos = self.pos_embedding(
+                torch.arange(0, int(skeleton.shape[1] - 1))
+                .unsqueeze(0)
+                .repeat(skeleton.shape[0], 1)
+                .type_as(trg)
+            )
+            te = self.tok_embedding(trg[:, :-1])
+            trg_ = self.dropout(te + pos)
+            output = self.decoder_transfomer(
+                trg_.permute(1, 0, 2),
+                enc_output.permute(1, 0, 2),
+                trg_mask2.bool(),
+                tgt_key_padding_mask=trg_mask1.bool()
+            )
+            outputs = self.fc_out(output)
 
-            # Perform autoregressive generation
-            outputs = []
-            seqs = []
-            for b in range(batch.size(0)):
-                tgt = torch.tensor([1]).to(self.device)[None, :]
-                seq = []
-                scores = torch.Tensor().to(self.device)
-                for i in range(self.cfg.length_eq):
-                    pos = self.pos_embedding(
-                        torch.arange(0, tgt.shape[1])
-                        .unsqueeze(0)
-                        .type_as(tgt)
-                    )
-                    te = self.tok_embedding(tgt)
-                    tgt_ = self.dropout(te + pos)
-                    # Forward pass through the decoder using tgt and memory
-                    output = self.decoder_transfomer(tgt_.permute(1, 0, 2),
-                                                     memory=enc_output[b:b+1, :, :].permute(1, 0, 2))
-                    output = self.fc_out(output)
-                    scores = torch.cat((scores, output[-1, :, :]), dim=0)
-
-                    # Sample the next token from the probability distribution
-                    next_token = torch.argmax(output[-1, :, :], dim=-1)
-                    seq.append(int(next_token.cpu()))
-
-                    if i < self.cfg.length_eq - 1:
-                        # Append the next token to tgt for the next step
-                        tgt = torch.cat([tgt, next_token[None, :]], dim=-1)
-                    if next_token == 2:
-                        break
-                outputs.append(scores)
-                seqs.append(seq)
-        return outputs, seqs
+            # # Perform autoregressive generation
+            # outputs = []
+            # seqs = []
+            # for b in range(batch.size(0)):
+            #     tgt = torch.tensor([1]).to(self.dummy_param.device)[None, :]
+            #     seq = []
+            #     scores = torch.Tensor().to(self.dummy_param.device)
+            #     for i in range(self.cfg.length_eq):
+            #         pos = self.pos_embedding(
+            #             torch.arange(0, tgt.shape[1])
+            #             .unsqueeze(0)
+            #             .type_as(tgt)
+            #         )
+            #         te = self.tok_embedding(tgt)
+            #         tgt_ = self.dropout(te + pos)
+            #         # Forward pass through the decoder using tgt and memory
+            #         output = self.decoder_transfomer(tgt_.permute(1, 0, 2),
+            #                                          memory=enc_output[b:b+1, :, :].permute(1, 0, 2))
+            #         output = self.fc_out(output)
+            #         scores = torch.cat((scores, output[-1, :, :]), dim=0)
+            #
+            #         # Sample the next token from the probability distribution
+            #         next_token = torch.argmax(output[-1, :, :], dim=-1)
+            #         seq.append(int(next_token.cpu()))
+            #
+            #         if i < self.cfg.length_eq - 1:
+            #             # Append the next token to tgt for the next step
+            #             tgt = torch.cat([tgt, next_token[None, :]], dim=-1)
+            #         if next_token == 2:
+            #             break
+            #     outputs.append(scores)
+            #     seqs.append(seq)
+        return outputs  # , seqs
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.cfg.lr)
@@ -192,7 +207,7 @@ class Model(nn.Module):
             #############################################################
             # Separate input sets and apply the encoder layer to each one
             n_sets = batch.shape[-1]
-            z_sets = torch.Tensor().to(self.device)
+            z_sets = torch.Tensor().to(self.dummy_param.device)
             for i_set in range(n_sets):
                 enc_src = self.enc(batch[:, :, :, i_set])
                 assert not torch.isnan(enc_src).any()
@@ -203,7 +218,8 @@ class Model(nn.Module):
 
             src_enc = enc_output
             shape_enc_src = (self.cfg_inference.beam_size,) + src_enc.shape[1:]
-            enc_src = src_enc.unsqueeze(1).expand((1, self.cfg_inference.beam_size) + src_enc.shape[1:]).contiguous().view(
+            enc_src = src_enc.unsqueeze(1).expand(
+                (1, self.cfg_inference.beam_size) + src_enc.shape[1:]).contiguous().view(
                 shape_enc_src)
             # print("Memory footprint of the encoder: {}GB \n".
             #       format(enc_src.element_size() * enc_src.nelement() / 10 ** 9))
@@ -211,16 +227,17 @@ class Model(nn.Module):
             #############################################################
             # DECODER AND BEAM SEARCH
             #############################################################
-            generated = torch.zeros([self.cfg_inference.beam_size, self.cfg.length_eq], dtype=torch.long, device=self.device, )
+            generated = torch.zeros([self.cfg_inference.beam_size, self.cfg.length_eq], dtype=torch.long,
+                                    device=self.dummy_param.device, )
             generated[:, 0] = 1  # Initialize with SOS symbol
             cache = {"slen": 0}
             generated_hyps = BeamHypotheses(self.cfg_inference.beam_size, self.cfg.length_eq, 1.0, 1)
             done = False
             # Beam Scores
-            beam_scores = torch.zeros(self.cfg_inference.beam_size, device=self.device, dtype=torch.long)
+            beam_scores = torch.zeros(self.cfg_inference.beam_size, device=self.dummy_param.device, dtype=torch.long)
             beam_scores[1:] = -1e9
 
-            cur_len = torch.tensor(1, device=self.device, dtype=torch.int64)
+            cur_len = torch.tensor(1, device=self.dummy_param.device, dtype=torch.int64)
             # Repeat until maximum length is reached
             while cur_len < self.cfg.length_eq:
                 # Create masks
@@ -275,9 +292,9 @@ class Model(nn.Module):
                 if len(next_sent_beam) == 0:
                     next_sent_beam = [(0, self.trg_pad_idx, 0)] * self.cfg_inference.beam_size  # pad the batch
 
-                beam_scores = torch.tensor([x[0] for x in next_sent_beam], device=self.device)
-                beam_words = torch.tensor([x[1] for x in next_sent_beam], device=self.device)
-                beam_idx = torch.tensor([x[2] for x in next_sent_beam], device=self.device)
+                beam_scores = torch.tensor([x[0] for x in next_sent_beam], device=self.dummy_param.device)
+                beam_words = torch.tensor([x[1] for x in next_sent_beam], device=self.dummy_param.device)
+                beam_idx = torch.tensor([x[2] for x in next_sent_beam], device=self.dummy_param.device)
                 generated = generated[beam_idx, :]
                 generated[:, cur_len] = beam_words
                 for k in cache.keys():
@@ -285,9 +302,9 @@ class Model(nn.Module):
                         cache[k] = (cache[k][0][beam_idx], cache[k][1][beam_idx])
 
                 # Update current length
-                cur_len += torch.tensor(1, device=self.device, dtype=torch.int64)
+                cur_len += torch.tensor(1, device=self.dummy_param.device, dtype=torch.int64)
 
-            return sorted(generated_hyps.hyp, key=lambda x: x[0], reverse=False)
+            return sorted(generated_hyps.hyp, key=lambda x: x[0], reverse=True)
 
     def get_equation(self, ):
         return self.eq

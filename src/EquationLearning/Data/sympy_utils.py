@@ -247,10 +247,11 @@ def add_constants(expr, placeholders, prev_expr=None):
     return new_xp
 
 
-def numeric_to_placeholder(expr):
-    """Given an expression with numeric constants, replace all constants with placeholder 'c' """
+def numeric_to_placeholder(expr, var=None):
+    """Given an expression with numeric constants, replace all constants with placeholder 'c'
+   If var is not None, consider any variable different from 'var' a numeric constant"""
     if not expr.args:
-        if expr.is_number:
+        if expr.is_number or (var is not None and expr.is_Symbol and str(expr) != var):
             return sp.sympify('c')
         else:
             return expr
@@ -260,7 +261,7 @@ def numeric_to_placeholder(expr):
         if iarg == len(expr.args) - 1:
             if isinstance(expr, sp.Pow):  # If it's a power function, ignore the power and focus only on the base
                 continue
-        new_args.append(numeric_to_placeholder(sub_expr))
+        new_args.append(numeric_to_placeholder(sub_expr, var=var))
 
     if isinstance(expr, sp.Pow):
         new_args.append(expr.args[1])

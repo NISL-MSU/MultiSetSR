@@ -79,10 +79,10 @@ def bounded_operations():
 
     bounded = {'sqrt': ('min', 0.01),
                'log': ('min', 0.001),
-               'exp': ('max', 6),
-               'sinh': ('max', 6),
-               'cosh': ('max', 6),
-               'tanh': ('max', 6)}
+               'exp': ('max', 10),
+               'sinh': ('max', 10),
+               'cosh': ('max', 10),
+               'tanh': ('max', 10)}
     double_bounded = {'asin': [-0.999, 0.999],
                       'acos': [-0.999, 0.999]}
     op_with_singularities = {'tan': 50, 'div': 50}
