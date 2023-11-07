@@ -90,7 +90,7 @@ class Trainer:
 
 
 if __name__ == '__main__':
-    names = ['E5']
+    names = ['I.6.2']
     for name in names:
         predictor = Trainer(dataset=name)
-        predictor.train(scratch=True, batch_size=32, epochs=1000, printProcess=True)
+        predictor.train(scratch=True, batch_size=128, epochs=50, printProcess=True)

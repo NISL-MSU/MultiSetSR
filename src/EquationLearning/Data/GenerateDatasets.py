@@ -3,6 +3,7 @@ import sympy as sp
 import numpy as np
 import pandas as pd
 from src.utils import get_project_root
+from src.EquationLearning.Data.FeynmanReader import FeynmanReader
 
 
 def sigmoid(x):
@@ -53,7 +54,8 @@ class DataLoader:
             self.S2()
             self.modelType = "NN"
         else:  # If not one of the previous names, it probably comes from the Feynman database
-            self.import_Feynman(name)
+            Freader = FeynmanReader(name)
+            self.X, self.Y, self.names, self.expr = Freader.X, Freader.Y, Freader.names, Freader.expr
             self.modelType = "NN"
 
         # Shuffle dataset
@@ -68,15 +70,6 @@ class DataLoader:
             self.limits = (np.min(self.X), np.max(self.X))
         else:
             self.limits = [(np.min(self.X[:, xdim]), np.max(self.X[:, xdim])) for xdim in range(self.X.shape[1])]
-
-    def import_Feynman(self, name):
-        path = get_project_root().parent
-        path = str(path) + '\\Feynman_with_units\\' + name
-        data = pd.read_csv(path, sep=' ')
-        if data.iloc[:, -1].isnull().values.any():
-            data = data.iloc[:, :-1]
-        self.Y = np.array(data.iloc[:, -1])
-        self.X = np.array(data.iloc[:, :-1])
 
     def S1(self, n=10000):
         np.random.seed(7)
@@ -224,6 +217,6 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
     plt.figure()
-    dataLoader = DataLoader(name='E5', extrapolation=False)
+    dataLoader = DataLoader(name='I.6.2', extrapolation=False)
     X, Y, var_names = dataLoader.X, dataLoader.Y, dataLoader.names
-    plt.scatter(X[:, 3], Y)
+    # plt.scatter(X[:, 3], Y)

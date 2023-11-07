@@ -1,0 +1,2 @@
+c*exp(c*x0) + c
+c*sin(c*x1 + c) + c

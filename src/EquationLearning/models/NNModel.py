@@ -122,7 +122,7 @@ class NNModel:
                 # print statistics
                 running_loss += loss.item()
                 if printProcess and epoch % 10 == 0:
-                    print('[%d, %5d] loss: %.5f' % (epoch + 1, step + 1, loss.item()))
+                    print('[%d, %5d] loss: %.10f' % (epoch + 1, step + 1, loss.item()))
 
             # Validation step
             with torch.no_grad():
@@ -145,17 +145,18 @@ class NNModel:
                 msetr = utils.mse(Ytrain_original, ypredtr[:, 0])
                 mse = utils.mse(Yval_original, ypred[:, 0])
                 MSEtr.append(msetr)
-                MSE.append(mse)  # np.concatenate((np.reshape(Yval_original, (len(Yval_original), 1)), ypred), axis=1)
+                MSE.append(mse)  # np.concatenate((Yval_original[:, None], ypred), axis=1)
 
             # Save model if MSE decreases
             if mse < val_mse:
                 val_mse = mse
                 if filepath is not None:
+                    torch.save(self.model.network, filepath.replace("weights", "NNModel") + '.pth')  # Save full model
                     torch.save(self.model.network.state_dict(), filepath)
 
             # Print every 10 epochs
             if printProcess and epoch % 10 == 0:
-                print('VALIDATION: Training_MSE: %.6f. MSE val: %.6f. Best_MSE: %.6f' % (msetr, mse, val_mse))
+                print('VALIDATION: Training_MSE: %.10f. MSE val: %.10f. Best_MSE: %.10f' % (msetr, mse, val_mse))
 
         # Save model
         if filepath is not None:
