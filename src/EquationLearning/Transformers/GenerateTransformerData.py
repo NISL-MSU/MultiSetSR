@@ -15,7 +15,8 @@ from src.EquationLearning.Data.dclasses import SimpleEquation
 from src.utils import load_metadata_hdf5, load_eq, get_project_root
 from src.EquationLearning.Data.sympy_utils import numeric_to_placeholder
 from src.EquationLearning.Data.data_utils import sample_symbolic_constants, bounded_operations
-from src.EquationLearning.models.utilities_expressions import add_constant_identifier, avoid_operations_between_constants, get_op_constant
+from src.EquationLearning.models.utilities_expressions import add_constant_identifier, \
+    avoid_operations_between_constants, get_op_constant
 from src.EquationLearning.models.utilities_expressions import get_args, set_args
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -165,7 +166,6 @@ def sample_constants(eq, cfg):
     return eq2
 
 
-# @timeout(18)  # Set a 40-second timeout
 def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
     """
     Given a list of skeleton equations, sample their inputs and corresponding constants and evaluate their results
@@ -178,7 +178,7 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
     exprs = eq.expr
     curr_p = cfg.max_number_of_points
     # # Uncomment the code below if you have a specific skeleton from which you want to sample data as an example
-    # sk = sympy.sympify('1 / (sin(x_1) + c)')
+    # sk = sympy.sympify('c + c*sin(c*x_1 + c)**4/x_1**3')
     # sk, _, _ = add_constant_identifier(sk)
     # coeff_dict = dict()
     # var = None
@@ -196,11 +196,11 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
     Xbounds = [minX, maxX]
 
     # Check if there's any bounded operation in the expression
-    bounded, double_bounded, op_with_singularities = bounded_operations()
+    bounded, double_bounded, op_with_singularities, trig_functions = bounded_operations()
     is_bounded = False
-    if any([b in str(exprs) for b in list(bounded.keys())]) or \
+    if any([b in str(exprs) for b in list(bounded.keys())]) or any([b in str(exprs) for b in trig_functions]) or \
             any([b in str(exprs) for b in list(double_bounded.keys())]) or '/' in str(exprs) or \
-            any([b in str(exprs) for b in list(op_with_singularities)]) or '**0.5' in str(exprs) or '**(-0.5)' in str(exprs):
+            any([b in str(exprs) for b in list(op_with_singularities)]) or '**0.5' in str(exprs) or '**(-' in str(exprs):
         is_bounded = True
 
     # Create "cfg.number_of_sets" vectors to store the evaluations
@@ -240,7 +240,8 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
         # If the expression contains a bounded operation, modify the constants to avoid NaN values
         # new_expr = sympify('-3.8967919334523*x_1*log(-0.183763376889317*x_1)/sin(0.124550801335169*x_1) + 0.238240379581665')
         if is_bounded:
-            result = modify_constants_avoidNaNs(new_expr, support, bounded_operations(), cfg, Xbounds, variable=eq.variables, extrapolate=extrapolate)
+            result = modify_constants_avoidNaNs(new_expr, support, bounded_operations(), curr_p, Xbounds,
+                                                variable=eq.variables, extrapolate=extrapolate)
             if result is None:
                 n_set = 0
                 continue
@@ -286,7 +287,8 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
                     new_expr = set_args(new_expr, args)
                 # If the expression contains a bounded operation, modify the constants to avoid NaN values
                 if is_bounded:
-                    support, new_expr, _ = modify_constants_avoidNaNs(new_expr, support, bounded_operations(), cfg, Xbounds,
+                    support, new_expr, _ = modify_constants_avoidNaNs(new_expr, support, bounded_operations(), curr_p,
+                                                                      Xbounds,
                                                                       variable=eq.variables, extrapolate=extrapolate)
                 # If the new expression needs coefficients that are too large, try again
                 if any(np.abs(get_args(new_expr)) > 100):
@@ -304,7 +306,7 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
                 t = tokenize(eq_sympy_prefix2, word2id)
                 # Calculate how much time has passed
                 toc = time.time()
-                if toc - tic > 15:
+                if toc - tic > 18:
                     restart = True
                     break
 
@@ -356,15 +358,117 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
             #     if toc - tic > 10:
             #         return None
 
+            scaling_factor = 20 / (np.max(support) - np.min(support))
+            support = (support - np.min(support)) * scaling_factor - 10
             X[:, n_set] = support
             Y[:, n_set] = vals
+            indices = np.arange(X.shape[0])
+            np.random.shuffle(indices)
+            X[:, n_set] = X[indices, n_set]
+            Y[:, n_set] = Y[indices, n_set]
             sampled_exprs[n_set] = new_expr
-            n_set += 1
+
+            if np.std(vals) > 0.01:  # If the result is too flat, try again
+                if np.isnan(vals).any() or np.isinf(vals).any() or np.isnan(np.mean(vals)) or \
+                        np.isinf(np.mean(vals)) or np.isnan(np.std(vals)) or np.isinf(np.std(vals)):
+                    return None
+
+                # With a chance of 0.3, fix all sets to the same function
+                if np.random.random(1) < 0.3 and n_set == 0:
+                    X[:, 1:] = X[:, 0][:, np.newaxis]
+                    Y[:, 1:] = Y[:, 0][:, np.newaxis]
+                    sampled_exprs = [new_expr] * cfg.number_of_sets
+                    break
+
+                n_set += 1
 
     if return_exprs:
         return X, Y, tokenized, exprs, sampled_exprs
     else:
         return X, Y, tokenized, exprs
+
+
+def skeleton2dataset(sk, Xbounds, cfg, word2id, extrapolate=False):
+    """
+    Given a symbolic skeleton, sample their inputs and corresponding constants and evaluate their results
+    :param sk: List of skeleton equations
+    :param Xbounds: Minimum and maximum support values
+    :param cfg: configuration file
+    :param word2id: Dictionary used to tokenize equations
+    :param extrapolate: If True, sample support values that go beyond the training domain
+    """
+    # Read skeleton and identify numeric constants
+    sk = sympy.sympify(sk)
+    sk, _, _ = add_constant_identifier(sk)
+    coeff_dict = dict()
+    var = None
+    for constant in sk.free_symbols:
+        if 'c' in str(constant):
+            coeff_dict[str(constant)] = constant
+        if 'x' in str(constant):
+            var = constant
+    eq = SimpleEquation(expr=sk, coeff_dict=coeff_dict, variables=[var])
+    exprs = eq.expr
+    curr_p = cfg.max_number_of_points
+
+    # Check if there's any bounded operation in the expression
+    bounded, double_bounded, op_with_singularities, trig_functions = bounded_operations()
+    is_bounded = False
+    if any([b in str(exprs) for b in list(bounded.keys())]) or any([b in str(exprs) for b in trig_functions]) or \
+            any([b in str(exprs) for b in list(double_bounded.keys())]) or '/' in str(exprs) or \
+            any([b in str(exprs) for b in list(op_with_singularities)]) or '**0.5' in str(exprs) or '**(-' in str(exprs):
+        is_bounded = True
+
+    # Sample constants "cfg.number_of_sets" times
+    support = sample_support(curr_p, cfg, Xbounds, extrapolate)
+
+    ###########################################################
+    # Start sampling process
+    ###########################################################
+    consts = sample_constants(eq, cfg)
+    new_expr = consts.expr
+    # If there's a coefficient that is too big, clip it to 50
+    if any(np.abs(get_args(new_expr)) > 50):
+        args = get_args(new_expr)
+        args = [arg if np.abs(arg) <= 50 else 50 * np.sign(arg) for arg in args]
+        new_expr = set_args(new_expr, args)
+
+    # If the expression contains a bounded operation, modify the constants to avoid NaN values
+    if is_bounded:
+        result = modify_constants_avoidNaNs(new_expr, support, bounded_operations(), curr_p, Xbounds,
+                                            variable=eq.variables, extrapolate=extrapolate)
+        support, new_expr, _ = result
+
+    # Convert expression to prefix format and tokenize
+    expr_with_placeholder = numeric_to_placeholder(new_expr)
+    eq_sympy_infix = constants_to_placeholder(expr_with_placeholder, coeff_dict)
+    eq_sympy_infix = sympify(str(eq_sympy_infix).replace('*(c + x_1)', '*(c*x_1 + c)'))
+    # eq_sympy_infix = sympify(str(eq_sympy_infix).replace('(x_1', '(c*x_1'))
+    eq_sympy_infix = sympify(str(eq_sympy_infix).replace('+ (c*x_1 + c)**', '+ c*(c*x_1 + c)**'))
+    eq_sympy_infix = sympify(str(eq_sympy_infix).replace('+ Abs(c*x_1)', '+ c*Abs(x_1)'))
+    eq_sympy_infix = sympify(str(eq_sympy_infix).replace('c*Abs(c*x_1)', 'c*Abs(x_1)'))
+    eq_sympy_prefix = Generator.sympy_to_prefix(eq_sympy_infix)
+    t = tokenize(eq_sympy_prefix, word2id)
+    skeleton, _, _ = add_constant_identifier(eq_sympy_infix)
+    exprs = eq_sympy_infix
+
+    # If there's a coefficient that is too small, replace it by zero
+    if any(np.abs(get_args(new_expr)) < 0.0001):
+        args = get_args(new_expr)
+        args = [arg if np.abs(arg) >= 0.0001 else 0 for arg in args]
+        new_expr2 = set_args(new_expr, args)
+        # If after simplification of the new expression, the variable is removed, do not consider this equation
+        if 'x' not in str(new_expr2):
+            return None
+        else:
+            new_expr = new_expr2
+
+    # Lambdify new function
+    function = lambdify(flatten(eq.variables), new_expr)
+    # Evaluate values from the support vector into the new expression
+    vals = np.array(function(*list(support)))
+
+    return support[0, :], vals, t, exprs, new_expr
 
 
 def is_nan(x, bound=None):
@@ -385,19 +489,22 @@ def is_nan(x, bound=None):
     if bound is None:
         return np.iscomplex(x) + np.isnan(x) + np.isinf(x) + (np.abs(x) > 100000) + np.array(outliers)
     else:
-        return np.iscomplex(x) + np.isnan(x) + np.isinf(x) + (np.abs(x) > 100000) + (np.abs(x) > bound) + np.array(outliers)
+        return np.iscomplex(x) + np.isnan(x) + np.isinf(x) + (np.abs(x) > 100000) + (np.abs(x) > bound) + np.array(
+            outliers)
 
 
-def modify_constants_avoidNaNs(expr, x, bounded_ops, cfg, Xbounds, variable=sympy.sympify('x_1'), extrapolate=False, avoid_x=None):
+def modify_constants_avoidNaNs(expr, x, bounded_ops, npoints, Xbounds, variable=sympy.sympify('x_1'), extrapolate=False,
+                               avoid_x=None, threshold=0.05):
     """Modifies the constants inside unary bounded operations to avoid generating NaN values
     :param expr: Original expression
     :param x: Support vector of variable x values
     :param bounded_ops: Dictionary including the admissible values inside each bounded operation
-    :param cfg: Configuration yaml
+    :param npoints: Number of points used for support
     :param Xbounds: Minimimum and maximum support values
     :param variable: Name of the Sympy variable contained in the expression. Default: 'x_1'
     :param extrapolate: If True, sample support values that go beond the training domain
     :param avoid_x:List of points that the support should avoid
+    :param threshold: Minimum distance w.r.t. a point that causes undefined values
     """
     args = expr.args
     new_args = []
@@ -405,9 +512,10 @@ def modify_constants_avoidNaNs(expr, x, bounded_ops, cfg, Xbounds, variable=symp
     for arg in args:
         # Check if there's any unary and bounded function inside this argument
         contains_unary_bounded = False
-        if any([f in str(arg) for f in list(bounded_ops[0].keys())]) or \
+        if any([f in str(arg) for f in list(bounded_ops[0].keys())]) or any([f in str(arg) for f in bounded_ops[-1]]) or \
                 any([f in str(arg) for f in list(bounded_ops[1].keys())]) or '/' in str(arg) or \
-                any([f in str(arg) for f in list(bounded_ops[2].keys())]) or '**0.5' in str(arg) or '**(-0.5)' in str(arg):
+                any([f in str(arg) for f in list(bounded_ops[2].keys())]) or '**0.5' in str(arg) or \
+                '**(-' in str(arg):
             contains_unary_bounded = True
 
         if not contains_unary_bounded:
@@ -424,18 +532,21 @@ def modify_constants_avoidNaNs(expr, x, bounded_ops, cfg, Xbounds, variable=symp
             # Check if the function at the current level of the tree is unary and bounded
             if any([f in str(arg.func) for f in list(bounded_ops[0].keys())]) or \
                     any([f in str(arg.func) for f in list(bounded_ops[1].keys())]) or \
-                    any([f in str(arg.func) for f in list(bounded_ops[2].keys())]) or is_sqrt or is_div:
+                    any([f in str(arg.func) for f in list(bounded_ops[2].keys())]) or \
+                    any([f in str(arg.func) for f in bounded_ops[3]]) or is_sqrt or is_div:
                 # Now check if there's any other unary and bounded function inside the current function
                 # Note that inside this IF statement, it is true that arg is a unary and bounded function, so it has
                 # only one argument
                 arg_init = copy.deepcopy(arg)
                 if any([f in str(arg.args[0]) for f in list(bounded_ops[0].keys())]) or \
-                        any([f in str(arg.args[0]) for f in list(bounded_ops[1].keys())]) or\
+                        any([f in str(arg.args[0]) for f in list(bounded_ops[1].keys())]) or \
                         any([f in str(arg.args[0]) for f in list(bounded_ops[2].keys())]) or \
+                        any([f in str(arg.args[0]) for f in bounded_ops[3]]) or \
                         '**0.5' in str(arg.args[0]) or '**(-' in str(arg.args[0]) or '/' in str(arg.args[0]):
                     # If that's the case, go to a deeper level of the tree to obtain new function arguments
-                    x, arg, avoid_x = modify_constants_avoidNaNs(arg, x, bounded_ops, cfg, Xbounds, variable,
-                                                                 extrapolate=extrapolate, avoid_x=avoid_x)
+                    x, arg, avoid_x = modify_constants_avoidNaNs(arg, x, bounded_ops, npoints, Xbounds, variable,
+                                                                 extrapolate=extrapolate, avoid_x=avoid_x,
+                                                                 threshold=threshold)
 
                 # Check if the operation function has changed. If yes, the new argument must be a number
                 # For example, suppose the original expr is (4x + 7)**.5 and it changes to (4x + 16)**.5, then Sympy will
@@ -455,7 +566,8 @@ def modify_constants_avoidNaNs(expr, x, bounded_ops, cfg, Xbounds, variable=symp
                 vals = np.array(function(*list(x)))
 
                 if any(is_nan(vals)) or ('exp' in str(arg_init.func) and 0 in vals) or \
-                        any([f in str(arg_init.func) for f in list(bounded_ops[2].keys())]):
+                        any([f in str(arg_init.func) for f in list(bounded_ops[2].keys())]) or \
+                        any([f in str(arg_init.func) for f in ['sin', 'cos', 'tan']]):
                     # If NaN values were found, evaluate the values of the arguments inside the current function
                     arg_function = lambdify(flatten(variable), args2)
                     vals_arg = np.array(arg_function(*list(x)))
@@ -465,7 +577,8 @@ def modify_constants_avoidNaNs(expr, x, bounded_ops, cfg, Xbounds, variable=symp
                         if is_sqrt:
                             bound_type, bound = bounded_ops[0].get('sqrt')
                         else:
-                            find = np.where(np.array([f in str(arg_init.func) for f in list(bounded_ops[0].keys())]))[0][0]
+                            find = \
+                                np.where(np.array([f in str(arg_init.func) for f in list(bounded_ops[0].keys())]))[0][0]
                             current_function = list(bounded_ops[0].keys())[find]
                             bound_type, bound = bounded_ops[0].get(current_function)
                         if bound_type == 'min':
@@ -479,7 +592,7 @@ def modify_constants_avoidNaNs(expr, x, bounded_ops, cfg, Xbounds, variable=symp
                                 # If that's the case, add a horizontal offset
                                 minVal = np.min(vals_arg)
                                 offset = bound - minVal
-                                args2 = args2 + (bound - minVal)
+                                args2 = args2 + offset + 0.1
                                 if offset > 10:
                                     args2 = args2 / offset * 10
                         else:
@@ -494,7 +607,8 @@ def modify_constants_avoidNaNs(expr, x, bounded_ops, cfg, Xbounds, variable=symp
                         [min_bound, max_bound] = bounded_ops[1].get(current_function)
                         # Min-max normalization
                         # with sympy.evaluate(False):  # This prevents factorization, which would create more constants
-                        args2 = (args2 - np.min(vals_arg)) / (np.max(vals_arg) - np.min(vals_arg))  # Scaled between 0 and 1
+                        args2 = (args2 - np.min(vals_arg)) / (
+                                np.max(vals_arg) - np.min(vals_arg))  # Scaled between 0 and 1
                         args2 = args2 * (max_bound - min_bound) + min_bound  # Scaled between min_bound and max_bound
 
                     else:
@@ -505,10 +619,17 @@ def modify_constants_avoidNaNs(expr, x, bounded_ops, cfg, Xbounds, variable=symp
                         else:
                             minb, maxb = Xbounds[0], Xbounds[1]
 
-                        new_support, avoid_x = handle_singularities(expr=arg, variable=variable, cfg=cfg,
-                                                                    minb=minb, maxb=maxb, pre_solutions=avoid_x)
+                        new_support, avoid_x = handle_singularities(expr=arg, variable=variable, n_points=npoints,
+                                                                    minb=minb, maxb=maxb, pre_solutions=avoid_x,
+                                                                    threshold=threshold)
                         x = new_support
                         x = x[None, :]
+
+                    if any([f in str(arg_init.func) for f in ['sin', 'cos', 'tan']]):
+                        # Restrict the range of values that can be encountered inside trig functions
+                        arg_range = np.max(vals_arg) - np.min(vals_arg)
+                        if arg_range > 50:
+                            args2 = args2 / arg_range * 30
 
                 # Update function
                 if is_sqrt or is_div:
@@ -520,8 +641,8 @@ def modify_constants_avoidNaNs(expr, x, bounded_ops, cfg, Xbounds, variable=symp
                     arg = constant * arg
             else:
                 # Go to a deeper level of the tree to obtain new function arguments
-                result = modify_constants_avoidNaNs(arg, x, bounded_ops, cfg, Xbounds, variable, extrapolate=extrapolate,
-                                                    avoid_x=avoid_x)
+                result = modify_constants_avoidNaNs(arg, x, bounded_ops, npoints, Xbounds, variable,
+                                                    extrapolate=extrapolate, avoid_x=avoid_x, threshold=threshold)
                 if result is None:
                     return None
                 x, arg, avoid_x = result
@@ -532,7 +653,7 @@ def modify_constants_avoidNaNs(expr, x, bounded_ops, cfg, Xbounds, variable=symp
     return x, new_xp, avoid_x
 
 
-def handle_singularities(expr, variable, cfg, minb, maxb, pre_solutions=None):
+def handle_singularities(expr, variable, n_points, minb, maxb, pre_solutions=None, threshold=0.05):
     """Sample a support that avoid generating undefined or too extreme values for the case o division or tangent"""
     arg = 1 / expr
     if isinstance(arg, sympy.Mul):
@@ -542,11 +663,12 @@ def handle_singularities(expr, variable, cfg, minb, maxb, pre_solutions=None):
             arg = arg.args[0]
     expr_fun = lambdify(flatten(variable), arg)
 
-    x_range = np.linspace(minb - .1, maxb + .1, 1000)  # Declare initial potential solutions
+    x_range = np.linspace(minb - 0.1, maxb + 0.1, 1500)  # Declare initial potential solutions
     y_range = expr_fun(x_range)
     solutions = []
     for i in range(1, len(x_range) - 1):
-        if np.sign(expr_fun(x_range[i])) != np.sign(y_range[i - 1]):  # If the sign change, it means it's crossed the x axis
+        if np.sign(expr_fun(x_range[i])) != np.sign(
+                y_range[i - 1]):  # If the sign change, it means it's crossed the x axis
             solutions.append(x_range[i])
     # Find the values of x where the equation equals 0
     valid_solutions = [np.round(x, 3) for x in solutions if minb <= x <= maxb]
@@ -555,18 +677,18 @@ def handle_singularities(expr, variable, cfg, minb, maxb, pre_solutions=None):
     unique_solutions = np.sort(np.unique(valid_solutions))
 
     # Define a function to check if a point is too close to any number that causes singularities
-    def is_close_to_sg(number, resp, fb_list, threshold):
+    def is_close_to_sg(number, resp, fb_list, thr):
         if 1 / np.abs(resp) >= 10:
             return True
         for fb_number in fb_list:
-            if abs(number - fb_number) < threshold:
+            if abs(number - fb_number) < thr:
                 return True
         return False
 
     # Identify valid ranges
-    x_init = np.linspace(minb, maxb, 2000)
+    x_init = np.linspace(minb + 0.1, maxb - 0.1, 2000)
     y_init = expr_fun(x_init)
-    y_init = [is_close_to_sg(x, y, unique_solutions, threshold=0.05) for x, y in zip(x_init, y_init)]
+    y_init = [is_close_to_sg(x, y, unique_solutions, thr=threshold) for x, y in zip(x_init, y_init)]
     list_pairs = []
     temp_pair = []
     check_left = True
@@ -582,7 +704,7 @@ def handle_singularities(expr, variable, cfg, minb, maxb, pre_solutions=None):
                 list_pairs.append(tuple(temp_pair))
                 temp_pair = []
     if len(temp_pair) == 1:
-        list_pairs.append((temp_pair[0], maxb))
+        list_pairs.append((temp_pair[0], maxb - 0.1))
 
     # Calculate the total length of all ranges
     total_length = sum(end - start for start, end in list_pairs)
@@ -591,7 +713,7 @@ def handle_singularities(expr, variable, cfg, minb, maxb, pre_solutions=None):
     # Generate points proportional to the length of each range
     for start, end in list_pairs:
         # Calculate the number of points to be generated in the current range
-        points_in_range = int(cfg.max_number_of_points * (end - start) / total_length)
+        points_in_range = int(n_points * (end - start) / total_length)
         # Generate equidistant points within the current range
         step = (end - start) / (points_in_range - 1)
         points_in_current_range = [start + j * step for j in range(points_in_range)]
@@ -599,10 +721,10 @@ def handle_singularities(expr, variable, cfg, minb, maxb, pre_solutions=None):
         generated_points.extend(points_in_current_range)
 
     # If the generated points are less than required, sample from one of the calculated ranges
-    while len(generated_points) < cfg.max_number_of_points:
+    while len(generated_points) < n_points:
         selected_range = np.random.choice(np.arange(0, len(list_pairs)))
         random_point = np.random.uniform(list_pairs[selected_range][0], list_pairs[selected_range][1])
-        if not is_close_to_sg(random_point, expr_fun(random_point), unique_solutions, threshold=0.05):
+        if not is_close_to_sg(random_point, expr_fun(random_point), unique_solutions, thr=threshold):
             generated_points.append(random_point)
 
     return np.array(generated_points), unique_solutions

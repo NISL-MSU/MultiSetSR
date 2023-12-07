@@ -1,6 +1,6 @@
 import glob
 
-import numpy as np
+import sympy
 import torch
 import omegaconf
 from torch import nn
@@ -39,8 +39,10 @@ def open_h5(path):
     return block
 
 
-def seq2equation(tokenized, id2word):
+def seq2equation(tokenized, id2word, printFlag=False):
     prefix = de_tokenize(tokenized, id2word)
+    if printFlag:
+        print("Prefix notation: " + str(prefix))
     env, param, config_dict = create_env(os.path.join(get_project_root(), "dataset_configuration.json"))
     infix = env.prefix_to_infix(prefix, coefficients=env.coefficients, variables=env.variables)
     return infix
@@ -110,7 +112,7 @@ class TransformerTrainer:
         # Prepare list of indexes for shuffling
         indexes = np.arange(len(train_files))
 
-        self.model.load_state_dict(torch.load('src/EquationLearning/models/saved_models/Model-' + self.cfg.dataset))
+        # self.model.load_state_dict(torch.load('src/EquationLearning/models/saved_models/Model-' + self.cfg.dataset))
         print("""""""""""""""""""""""""""""")
         print("Start training")
         print("""""""""""""""""""""""""""""")
@@ -120,52 +122,63 @@ class TransformerTrainer:
             np.random.shuffle(indexes)
 
             batch_count = 0
-            for b_ind in indexes[:0]:  # Block loop (each block contains 1000 inputs)
+            for b_ind in indexes:  # Block loop (each block contains 1000 inputs)
                 # Read block
                 block = open_h5(train_files[b_ind])
-                T = np.ceil(1.0 * len(block) / batch_size).astype(np.int32)
 
                 # Format elements in the block as torch Tensors
                 XY_block = torch.zeros(
-                    (len(block), block[0][0].shape[0], 2, self.cfg.architecture.number_of_sets)).cuda()
+                    (len(block), block[0][0].shape[0], 2, self.cfg.architecture.number_of_sets))
                 skeletons_block = []
                 xpr_block = []
+                remove_indices = []
                 for ib, b in enumerate(block):
                     Xs, Ys, tokenized, xpr, equations = b
-                    # Normalize data
                     Xs = Xs[:, :self.cfg.architecture.number_of_sets]
                     Ys = Ys[:, :self.cfg.architecture.number_of_sets]
+                    # Shuffle data
+                    for d in range(self.cfg.architecture.number_of_sets):
+                        indices = np.arange(Xs.shape[0])
+                        np.random.shuffle(indices)
+                        Xs[:, d] = Xs[indices, d]
+                        Ys[:, d] = Ys[indices, d]
+                    # Normalize data
                     means, std = np.mean(Ys, axis=0), np.std(Ys, axis=0)
-                    Ys = (Ys - means) / std
-                    if isinstance(Xs, np.ndarray):  # Some blocks were stored as numpy arrays and others as tensors
-                        Xs, Ys = torch.from_numpy(Xs), torch.from_numpy(Ys)
-                    Xs = Xs.cuda()
-                    Ys = Ys.cuda()
-                    XY_block[ib, :, 0, :] = Xs
-                    XY_block[ib, :, 1, :] = Ys
-                    skeletons_block.append(torch.tensor(tokenized).long().cuda())
-                    xpr_block.append(xpr)
-                    # print(xpr)
+                    Ys_temp = (Ys - means) / std
+                    if np.isnan(Ys_temp).any() or np.min(std) < 0.01:
+                        remove_indices.append(ib)
+                    else:
+                        if isinstance(Xs, np.ndarray):  # Some blocks were stored as numpy arrays and others as tensors
+                            Xs, Ys = torch.from_numpy(Xs), torch.from_numpy(Ys)
+                        XY_block[ib, :, 0, :] = Xs
+                        XY_block[ib, :, 1, :] = Ys
+                        skeletons_block.append(torch.tensor(tokenized).long().cuda())
+                        xpr_block.append(xpr)
+
+                # Create a mask to exclude rows with specified indices
+                mask = torch.ones(XY_block.shape[0], dtype=torch.bool, device=XY_block.device)
+                mask[remove_indices] = 0
+                # Use torch.index_select to select rows based on the mask
+                XY_block = torch.index_select(XY_block, dim=0, index=mask.nonzero().squeeze()).cuda()
 
                 if torch.cuda.device_count() > 1:
                     self.model.module.set_train()  # Sets training mode
                 else:
                     self.model.set_train()  # Sets training mode
                 running_loss = 0.0
-                inds = np.arange(len(block))
+                inds = np.arange(XY_block.shape[0])
                 np.random.shuffle(inds)
+                T = np.ceil(1.0 * XY_block.shape[0] / batch_size).astype(np.int32)
                 for step in range(T):  # Batch loop
 
                     # Generate indexes of the batch
                     batch_inds = inds[step * batch_size:(step + 1) * batch_size]
-                    print("Block " + str(train_files[b_ind]) + " Sample " + str(batch_inds[0]) + " Expr: " + str(
-                        xpr_block[batch_inds[0]]))
+                    print("Block " + str(train_files[b_ind]) + " Sample " + str(batch_inds[0]) + " Expr: " + str(xpr_block[batch_inds[0]]))
                     # Extract slices
                     XY_batch = XY_block[batch_inds, :, :, :]
                     skeletons_batch = [skeletons_block[i] for i in batch_inds]
                     # Check that there's no skeleton larger than the maximum length
-                    valid_inds = [i for i in range(len(skeletons_batch)) if
-                                  len(skeletons_batch[i]) < self.cfg.architecture.length_eq]
+                    valid_inds = [i for i in range(len(skeletons_batch)) if len(skeletons_batch[i]) < self.cfg.architecture.length_eq]
                     XY_batch = XY_batch[valid_inds, :, :, :]
                     skeletons_batch = [skeletons_batch[i] for i in valid_inds]
 
@@ -209,7 +222,6 @@ class TransformerTrainer:
                         print('[%d, %5d] loss: %.5f' % (epoch + 1, batch_count, running_loss / 5))
                         self.writer.add_scalar('training loss', running_loss / 5, global_batch_count)
                         running_loss = 0.0
-                # 12/0
 
             if epoch == 0:  # Save model at the end of the first epoch in case there's an error during validation
                 torch.save(self.model.state_dict(),
@@ -230,12 +242,12 @@ class TransformerTrainer:
             for b_ind in indexes2:  # Block loop (each block contains 1000 inputs)
                 # Read block
                 block = open_h5(val_files[b_ind])
-                T = np.ceil(1.0 * len(block) / batch_val_size).astype(np.int32)
 
                 # Format elements in the block as torch Tensors
                 XY_block = torch.zeros(
-                    (len(block), block[0][0].shape[0], 2, self.cfg.architecture.number_of_sets)).cuda()
+                    (len(block), block[0][0].shape[0], 2, self.cfg.architecture.number_of_sets))
                 skeletons_block = []
+                remove_indices = []
                 for ib, b in enumerate(block):
                     Xs, Ys, tokenized, xpr, equations = b
                     # Normalize data
@@ -245,13 +257,18 @@ class TransformerTrainer:
                     Ys = (Ys - means) / std
                     if isinstance(Xs, np.ndarray):  # Some blocks were stored as numpy arrays and others as tensors
                         Xs, Ys = torch.from_numpy(Xs), torch.from_numpy(Ys)
-                    Xs = Xs.cuda()
-                    Ys = Ys.cuda()
                     XY_block[ib, :, 0, :] = Xs[:, :self.cfg.architecture.number_of_sets]
                     XY_block[ib, :, 1, :] = Ys[:, :self.cfg.architecture.number_of_sets]
                     skeletons_block.append(torch.tensor(tokenized).long().cuda())
-                import sympy
-                inds = np.arange(len(block))
+
+                # Create a mask to exclude rows with specified indices
+                mask = torch.ones(XY_block.shape[0], dtype=torch.bool, device=XY_block.device)
+                mask[remove_indices] = 0
+                # Use torch.index_select to select rows based on the mask
+                XY_block = torch.index_select(XY_block, dim=0, index=mask.nonzero().squeeze()).cuda()
+
+                inds = np.arange(XY_block.shape[0])
+                T = np.ceil(1.0 * XY_block.shape[0] / batch_val_size).astype(np.int32)
                 for step in range(T):  # Batch loop
                     # Generate indexes of the batch
                     batch_inds = inds[step * batch_val_size:(step + 1) * batch_val_size]
@@ -301,7 +318,7 @@ class TransformerTrainer:
                         except:
                             print()
 
-                        print("\tValidation " + str(iv), end='\r')
+                        # print("\tValidation " + str(iv), end='\r')
                 cc += 1
                 with open('src/EquationLearning/models/saved_models/validation_performance.txt', 'w') as file:
                     file.write(str(L1v / (5000 * cc)))
@@ -310,7 +327,7 @@ class TransformerTrainer:
             loss = L1v / iv
             self.writer.add_scalar('validation loss', loss, global_batch_count)
             if loss < prev_loss:
-                prev_loss = loss
+                prev_loss = np.copy(loss)
                 torch.save(self.model.state_dict(),
                            'src/EquationLearning/models/saved_models/Model-' + self.cfg.dataset)
                 with open('src/EquationLearning/models/saved_models/validation_performance.txt', 'w') as file:

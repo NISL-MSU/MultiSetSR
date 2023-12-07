@@ -1,6 +1,6 @@
-train_path: data/dataset0/training
-val_path: data/dataset0/validation
-dataset: dataset0
+train_path: data/dataset1/training
+val_path: data/dataset1/validation
+dataset: dataset1
 
 raw_test_path: data/raw_datasets/150
 test_path: data/validation
@@ -37,7 +37,7 @@ dataset_train:
 dataset_val:
   total_variables: #Do not fill
   total_coefficients: #Do not fill
-  max_number_of_points: 1000
+  max_number_of_points: 5000
   number_of_sets: 10
   type_of_sampling_points: constant
   predict_c: True
@@ -100,7 +100,7 @@ architecture:
   number_of_sets: 10
 
 inference:
-  beam_size: 2
+  beam_size: 4
   bfgs:
     activated: True
     n_restarts: 10

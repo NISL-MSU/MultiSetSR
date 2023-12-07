@@ -40,7 +40,7 @@ class SampleData:
         batch = []
         count = 0
         n_batch = 0
-        for step in trange(46, len(self.validation_dataset)):  # Batch loop
+        for step in trange(10, len(self.validation_dataset)):  # Batch loop
             try:
                 sampled_data = evaluate_and_wrap(self.validation_dataset[step], self.cfg.dataset_train, self.word2id)
             except Exception as e:
@@ -48,13 +48,14 @@ class SampleData:
                 sampled_data = None
 
             if sampled_data is not None:
-                for i in range(sampled_data[0].shape[1]):
-                    plt.figure()
-                    plt.scatter(sampled_data[0][:, i], sampled_data[1][:, i])
-                    plt.xticks(fontsize=16)
-                    plt.yticks(fontsize=16)
+                # for i in range(sampled_data[0].shape[1]):
+                #     plt.figure()
+                #     plt.scatter(sampled_data[0][:, i], sampled_data[1][:, i])
+                #     plt.xticks(fontsize=16)
+                #     plt.yticks(fontsize=16)
 
                 count += 1
+                print(sampled_data[-2])
                 batch.append(sampled_data)
                 if count % 5000 == 0:
                     create_pickle_from_data(batch, "src/EquationLearning/Data/sampled_data/" + self.cfg.dataset +

@@ -36,7 +36,7 @@ class Trainer:
 
     def init_kfold(self):
         # Initialize kfold object
-        kfold = KFold(n_splits=10, shuffle=True, random_state=13)
+        kfold = KFold(n_splits=10, shuffle=True, random_state=7)
         iterator = kfold.split(self.X)
         return iterator
 
@@ -90,7 +90,7 @@ class Trainer:
 
 
 if __name__ == '__main__':
-    names = ['I.6.2']
+    names = ['U3']
     for name in names:
         predictor = Trainer(dataset=name)
-        predictor.train(scratch=True, batch_size=128, epochs=50, printProcess=True)
+        predictor.train(scratch=True, batch_size=128, epochs=200, printProcess=True)

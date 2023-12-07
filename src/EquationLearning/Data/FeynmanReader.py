@@ -11,7 +11,7 @@ class FeynmanReader:
         :arg name: Equation name. E.g., 'I.6.2'"""
         # Set directory path
         self.problem = name
-        self.path = str(get_project_root().parent) + '\\Feynman_without_units\\'
+        self.path = str(get_project_root().parent) + '/Feynman_with_units/'
         self.path_eq = self.path + name
         self.X, self.Y, self.names = self.read_data()
         self.expr = self.get_expression()
@@ -31,16 +31,16 @@ class FeynmanReader:
     def get_expression(self) -> sp.Expr:
         """Read the equation CSV file and returns it
         :return expr: A sympy expression with variables x0, x1, ..."""
-        eq_path = str(self.path) + '\\FeynmanEquations.csv'
+        eq_path = str(self.path) + '/FeynmanEquations.csv'
         eqs = pd.read_csv(eq_path, sep=',')
         # Find data regarding the specific Feynman problem
         eq_data = eqs[eqs['Filename'] == self.problem]
-        expr = eq_data['Formula'].iat[0]
+        expr = sp.sympify(eq_data['Formula'].iat[0])
         # Replace original variable names with x0, x1,...
         for i in range(self.X.shape[1]):
             vname = eq_data['v' + str(i + 1) + '_name'].iat[0]  # Get variable name of the i-th variable
-            expr = expr.replace(vname, 'x' + str(i))
-        return sp.sympify('expr')
+            expr = expr.subs(sp.sympify(vname), sp.sympify('x' + str(i)))
+        return sp.sympify(expr)
 
 
 if __name__ == '__main__':

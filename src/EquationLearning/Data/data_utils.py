@@ -85,6 +85,7 @@ def bounded_operations():
                'tanh': ('max', 10)}
     double_bounded = {'asin': [-0.999, 0.999],
                       'acos': [-0.999, 0.999]}
+    trig_functions = ['sin', 'cos', 'tan']
     op_with_singularities = {'tan': 50, 'div': 50}
 
-    return bounded, double_bounded, op_with_singularities
+    return bounded, double_bounded, op_with_singularities, trig_functions

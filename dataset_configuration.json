@@ -1,8 +1,8 @@
 {
-    "max_len": 10,
-    "operators": "add:5,mul:5,div:5,sqrt:4,pow2:4,pow3:3,pow4:3,ln:4,exp:4,sin:4,cos:4,tan:4,sinh:3,cosh:3,tanh:2,abs:2",
+    "max_len": 15,
+    "operators": "add:5,mul:5,div:10,sqrt:4,pow2:4,pow3:3,pow4:3,ln:4,exp:4,sin:4,cos:4,tan:4,sinh:3,cosh:3,tanh:2,abs:2",
     "operators2": "add:5,mul:5,div:5,sqrt:4,pow2:4,pow3:2,pow4:1,ln:4,exp:4,sin:4,cos:4,tan:4,asin:2,acos:2,atan:2,sinh:3,cosh:3,tanh:2,abs:2",
-    "max_ops": 3,
+    "max_ops": 5,
     "rewrite_functions": "",
     "variables": ["x_1"],
     "eos_index": 1,

@@ -70,7 +70,7 @@ class MLP2(nn.Module, ABC):
 
     def forward(self, x):
         x = self.hidden_layer1(x)
-        x = self.drop1(x)
+        # x = self.drop1(x)
         # x = self.hidden_layer2(x)
         # x = self.hidden_layer3(x)
         # x = self.drop2(x)

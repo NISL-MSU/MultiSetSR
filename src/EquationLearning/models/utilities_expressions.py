@@ -197,7 +197,7 @@ def check_forbidden_combination(xp):
                 args2 = arg.args
                 g52 = sum([str(op) + '(' in str(args2) for op in unary_ops])
                 g52 += str(args2).count('**')
-                if g52 > 0:
+                if g52 > 1:
                     return True
 
             res.append(check_forbidden_combination(arg))

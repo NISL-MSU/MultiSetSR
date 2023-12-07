@@ -40,7 +40,8 @@ class NNObject:
 class NNModel:
     """Define a feedforward symbolic neural network"""
 
-    def __init__(self, device, n_features: int, NNtype: str = 'NN', operations: dict = None, n_layers: int = 4):
+    def __init__(self, device, n_features: int, NNtype: str = 'NN', operations: dict = None, n_layers: int = 4,
+                 loaded_NN: nn.Module = None):
         """
         Initialize NN object
         :param device: Where is stored the model. "cuda:0" or "cpu".
@@ -49,6 +50,7 @@ class NNModel:
                            E.g. operations['unary'] = {'id', 'sin', 'cos'}; operations['binary'] = {'+', '-', '*'}.
         :param n_features: Input shape of the network.
         :param n_layers: Number of hidden layers used by the neural network
+        :param loaded_NN: If not None, it receives a NN model that has been loaded externally
         """
         self.device = device
         self.n_features = n_features
@@ -57,18 +59,21 @@ class NNModel:
         self.n_layers = n_layers
 
         criterion = nn.MSELoss()
-        if NNtype == "NN":
-            network = MLP(input_features=self.n_features,
-                          output_size=self.output_size,
-                          n_layers=self.n_layers)
-        elif NNtype == "NN2":
-            network = MLP2(input_features=self.n_features,
-                           output_size=self.output_size,
-                           n_layers=self.n_layers)
+        if loaded_NN is None:
+            if NNtype == "NN":
+                network = MLP(input_features=self.n_features,
+                              output_size=self.output_size,
+                              n_layers=self.n_layers)
+            elif NNtype == "NN2":
+                network = MLP2(input_features=self.n_features,
+                               output_size=self.output_size,
+                               n_layers=self.n_layers)
+            else:
+                network = MLP3(input_features=self.n_features,
+                               output_size=self.output_size,
+                               n_layers=self.n_layers)
         else:
-            network = MLP3(input_features=self.n_features,
-                           output_size=self.output_size,
-                           n_layers=self.n_layers)
+            network = loaded_NN
         network.to(self.device)
         # Training parameters
         optimizer = optim.Adadelta(network.parameters(), lr=0.05)
@@ -156,6 +161,7 @@ class NNModel:
 
             # Print every 10 epochs
             if printProcess and epoch % 10 == 0:
+                print(filepath)
                 print('VALIDATION: Training_MSE: %.10f. MSE val: %.10f. Best_MSE: %.10f' % (msetr, mse, val_mse))
 
         # Save model

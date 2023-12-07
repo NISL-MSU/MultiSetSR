@@ -1,9 +1,15 @@
+import os
+import sys
+import pickle
 import random
+import omegaconf
 import sympy as sp
 import numpy as np
-import pandas as pd
+from sympy import sympify, lambdify
 from src.utils import get_project_root
 from src.EquationLearning.Data.FeynmanReader import FeynmanReader
+from src.EquationLearning.Data.data_utils import bounded_operations
+from src.EquationLearning.Transformers.GenerateTransformerData import skeleton2dataset, Dataset, modify_constants_avoidNaNs
 
 
 def sigmoid(x):
@@ -29,7 +35,7 @@ class DataLoader:
         :param extrapolation: If True, generate extrapolation data
         """
         self.X, self.Y, self.names = np.zeros(0), np.zeros(0), None
-        self.expr = None
+        self.expr, self.cfg = None, None
         self.extrapolation = extrapolation
 
         if name == "E1":
@@ -53,10 +59,20 @@ class DataLoader:
         elif name == "S2":
             self.S2()
             self.modelType = "NN"
+        elif "U" in name:
+            if hasattr(self, f'{name}'):
+                method = getattr(self, f'{name}')
+                method()
+                self.modelType = "NN"
+            else:
+                sys.exit('The provided dataset name does not exist')
         else:  # If not one of the previous names, it probably comes from the Feynman database
-            Freader = FeynmanReader(name)
-            self.X, self.Y, self.names, self.expr = Freader.X, Freader.Y, Freader.names, Freader.expr
-            self.modelType = "NN"
+            try:
+                Freader = FeynmanReader(name)
+                self.X, self.Y, self.names, self.expr = Freader.X, Freader.Y, Freader.names, Freader.expr
+                self.modelType = "NN"
+            except FileNotFoundError:
+                sys.exit('The provided dataset name does not exist')
 
         # Shuffle dataset
         indexes = np.arange(len(self.X))
@@ -183,10 +199,10 @@ class DataLoader:
             x3 = np.random.uniform(-2, 2, size=n)
             x4 = np.random.uniform(-2, 2, size=n)
         else:
-            x1 = sample_exclude(-10, 10, n, -2, 2)
-            x2 = sample_exclude(-10, 10, n, -2, 2)
-            x3 = sample_exclude(-10, 10, n, -2, 2)
-            x4 = sample_exclude(-10, 10, n, -2, 2)
+            x1 = sample_exclude(-4, 4, n, -2, 2)
+            x2 = sample_exclude(-4, 4, n, -2, 2)
+            x3 = sample_exclude(-4, 4, n, -2, 2)
+            x4 = sample_exclude(-4, 4, n, -2, 2)
         self.X = np.array([x1, x2, x3, x4]).T
         # Calculate output
         self.Y = np.sin(2 * x1 + x2 * x3) + np.exp(1.2 * x4)
@@ -212,11 +228,83 @@ class DataLoader:
         symb = sp.symbols("{}:{}".format('x', 3))
         self.expr = (sp.Abs(symb[2])) / symb[0] * sp.exp(-1 / 10 * (symb[1] / symb[0]) ** 2)
 
+    #############################################################################################
+    # LOAD DIFFICULT UNIVARIATE PROBLEMS
+    #############################################################################################
+    def read_cfg(self):
+        # Read all equations
+        self.cfg = omegaconf.OmegaConf.load(str(get_project_root()) + "/src/EquationLearning/Transformers/config.yaml")
+        data_train_path = self.cfg.train_path
+        dataset = Dataset(data_train_path, self.cfg.dataset_train, mode="train")
+        word2id = dataset.word2id
+        self.cfg = self.cfg.dataset_train
+        return word2id
+
+    def loadGeneratedData(self, filepath, skeleton, xrange):
+        # If the file with the sampled data already exists, just load it
+        if os.path.exists(filepath) and False:
+            with open(filepath, 'rb') as file:
+                self.X, self.Y, _, skeleton, expr = pickle.load(file)
+        else:  # Else, generate the data from the target skeleton
+            word2id = self.read_cfg()
+            self.X, self.Y, _, skeleton, expr = skeleton2dataset(skeleton, xrange, self.cfg, word2id)
+            self.X = self.X[:, None]
+            # Save the data
+            with open(filepath, 'wb') as f:
+                pickle.dump([self.X, self.Y, _, skeleton, expr], f)
+        self.expr = sp.sympify(str(expr).replace('x_1', 'x0'))
+        self.names = ['x0']
+
+    def U1(self):
+        np.random.seed(7)
+        filepath = str(get_project_root()) + '/src/EquationLearning/Data/univariate_datasets/U1.pkl'
+        skeleton = 'c*x_1*log(c*x_1**2 + c) + c'
+        self.loadGeneratedData(filepath, skeleton, xrange=[-10, 10])
+
+    def U2(self):
+        np.random.seed(1)
+        filepath = str(get_project_root()) + '/src/EquationLearning/Data/univariate_datasets/U2.pkl'
+        skeleton = 'c*(c*x_1 + c)**2*sin(c*x_1) + c'
+        self.loadGeneratedData(filepath, skeleton, xrange=[-10, 10])
+
+    def U3(self):
+        np.random.seed(1)
+        # filepath = str(get_project_root()) + '/src/EquationLearning/Data/univariate_datasets/U2.pkl'
+        self.expr = sp.sympify('(x_1 + 1)**2/sin(x_1*x_2)')
+        # Generate data by fixing values of x2
+        xcount = 0
+        xx = np.linspace(np.pi/2 - 1.3, np.pi/2 + 1.3, 30)
+        xx2 = np.linspace(np.pi*3/2 - 1.3, np.pi*3/2 + 1.3, 30)
+        xx3 = np.linspace(-np.pi/2 - 1.3, -np.pi/2 + 1.3, 30)
+        xx = np.concatenate((xx, xx2, xx3))
+        self.X, self.Y = np.zeros((1000 * len(xx), 2)), np.zeros((1000 * len(xx),))
+        for v in xx:
+            if np.abs(v) > 0.1:
+                temp_expr = self.expr.subs(sp.sympify('x_2'), v)
+                x0 = np.linspace(-10, 10, 1000)
+                x, new_xp, _ = modify_constants_avoidNaNs(temp_expr, x0[None, :], bounded_operations(), 1000, [-10, 10],
+                                                          [sp.sympify('x_1')], threshold=0.05)
+                # Evaluate
+                if (np.isnan(x)).any():
+                    indices_to_remove = np.where(np.isnan(x[0, :]))[0]
+                    x = np.delete(x, indices_to_remove)[None, :]
+                function = lambdify(sp.sympify('x_1'), temp_expr)
+                y = np.array(function(x))
+                self.X[xcount:xcount + x.shape[1], 0] = x[0, :]
+                self.X[xcount:xcount + x.shape[1], 1] = v
+                self.Y[xcount:xcount + x.shape[1], ] = y[0, :]
+                xcount += x.shape[1]
+        self.X, self.Y = self.X[0:xcount, :], self.Y[0:xcount]
+        self.expr = sp.sympify(str(self.expr).replace('x_1', 'x0'))
+        self.expr = sp.sympify(str(self.expr).replace('x_2', 'x1'))
+        self.names = ['x0', 'x1']
+
 
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
     plt.figure()
-    dataLoader = DataLoader(name='I.6.2', extrapolation=False)
+    dataLoader = DataLoader(name='U3', extrapolation=False)
     X, Y, var_names = dataLoader.X, dataLoader.Y, dataLoader.names
-    # plt.scatter(X[:, 3], Y)
+    plt.scatter(X, Y)
+    print()
