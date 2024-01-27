@@ -71,7 +71,7 @@ class SymbolicRegressor:
             if self.n_features > 1:
                 sys.exit("We haven't trained a NN for this problem yet. Use the TrainNNModel.py file first.")
         # Load weights of MST
-        MST_path = os.path.join(root, "src//EquationLearning//models//saved_models/Model-dataset0")
+        MST_path = os.path.join(root, "src//EquationLearning//models//saved_models/Model-pre0-dataset1")
         self.model.load_state_dict(torch.load(MST_path))
         self.model.cuda()
 
@@ -129,9 +129,9 @@ class SymbolicRegressor:
                         Ys_real[:, ns] = np.array(self.f_lambdified(*list(best_values)))
                 # Normalize data
                 means, std = np.mean(Ys, axis=0), np.std(Ys, axis=0)
-                # Ys = (Ys - means) / std
+                Ys = (Ys - means) / std
                 means, std = np.mean(Ys_real, axis=0), np.std(Ys_real, axis=0)
-                # Ys_real = (Ys_real - means) / std
+                Ys_real = (Ys_real - means) / std
 
                 # Format the data as inputs to the Multi-set transformer
                 scaling_factor = 20 / (np.max(Xs) - np.min(Xs))
@@ -166,7 +166,7 @@ class SymbolicRegressor:
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
-    plt.figure()
+    # plt.figure()
 
-    regressor = SymbolicRegressor(dataset='U3')
+    regressor = SymbolicRegressor(dataset='E3')
     regressor.get_skeleton()

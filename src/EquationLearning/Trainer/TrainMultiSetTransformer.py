@@ -112,7 +112,7 @@ class TransformerTrainer:
         # Prepare list of indexes for shuffling
         indexes = np.arange(len(train_files))
 
-        # self.model.load_state_dict(torch.load('src/EquationLearning/models/saved_models/Model-' + self.cfg.dataset))
+        self.model.load_state_dict(torch.load('src/EquationLearning/models/saved_models/Model-' + self.cfg.dataset))
         print("""""""""""""""""""""""""""""")
         print("Start training")
         print("""""""""""""""""""""""""""""")
@@ -122,7 +122,7 @@ class TransformerTrainer:
             np.random.shuffle(indexes)
 
             batch_count = 0
-            for b_ind in indexes:  # Block loop (each block contains 1000 inputs)
+            for b_ind in indexes[:0]:  # Block loop (each block contains 1000 inputs)
                 # Read block
                 block = open_h5(train_files[b_ind])
 

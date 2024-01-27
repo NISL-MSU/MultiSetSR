@@ -172,16 +172,17 @@ if __name__ == '__main__':
     # PLot Training Curves
     ######################################################################
     # Path to your TensorBoard log directory
-    log_dir = "C:/Users\w63x712\Documents\Machine_Learning\SetGEN/runs\events.out.tfevents.1698951930.tempest-gpu010.2786895.0"
+    # log_dir = "C:/Users\w63x712\Documents\Machine_Learning\SetGEN/runs\events.out.tfevents.1705013791.tempest-gpu013.2203565.0"
+    log_dir = "C:/Users\w63x712\Documents\Machine_Learning\SetGEN/runs\Q2first14-16epochs__events.out.tfevents.1703971211.tempest-gpu013.996921.0"
     # Create an event accumulator for the log directory
     event_acc = event_accumulator.EventAccumulator(log_dir)
     event_acc.Reload()
     # Get all scalar data
     tag1 = 'training loss'
-    # tag2 = 'validation loss'
+    tag2 = 'validation loss'
     # Get scalar data for the specified tags
     scalar_data1 = event_acc.Scalars(tag1)
-    # scalar_data2 = event_acc.Scalars(tag2)
+    scalar_data2 = event_acc.Scalars(tag2)
     # Extract the steps and values
     steps1 = [scalar.step for scalar in scalar_data1]
     values1 = [scalar.value for scalar in scalar_data1]
@@ -189,35 +190,21 @@ if __name__ == '__main__':
     values2 = []
     steps2.insert(0, steps1[0])
     values2.insert(0, values1[0] - 0.3)
-
-    log_dir = "C:/Users\w63x712\Documents\Machine_Learning\SetGEN/runs\events.out.tfevents.1699107511.tempest-gpu011.1848658.0"
-    # Create an event accumulator for the log directory
-    event_acc = event_accumulator.EventAccumulator(log_dir)
-    event_acc.Reload()
-    tag1 = 'training loss'
-    tag2 = 'validation loss'
-    scalar_data1 = event_acc.Scalars(tag1)
-    scalar_data2 = event_acc.Scalars(tag2)
-    prev_step = steps1[-1] + 1
-    steps1 += [scalar.step + prev_step for scalar in scalar_data1]
-    values1 += [scalar.value for scalar in scalar_data1]
-    steps22 = [prev_step]
-    values22 = [0.33]
-    steps2 += steps22
-    values2 += values22
-    steps2 += [scalar.step + prev_step for scalar in scalar_data2]
-    values2 += [scalar.value -0.05 for scalar in scalar_data2]
+    steps2 += [scalar.step for scalar in scalar_data2]
+    values2 += [scalar.value for scalar in scalar_data2]
 
     # Plot the data
     plt.figure()
-    xx = np.array(steps1[0:-1:10]) / 110641
-    xx2 = np.array(steps2) / 110641
+    xx = np.array(steps1[0:-1:10]) / np.max(steps1[0:-1:10]) * len(steps2)
+    xx2 = np.array(steps2) / np.max(steps2) * len(steps2)
     plt.plot(xx, values1[0:-1:10], label=tag1, c='tab:blue')
     plt.plot(xx2, values2, label=tag2, c='tab:orange', marker='o')
-    plt.xticks([0, 1, 2])
+    plt.xticks(np.arange(len(xx2) + 1))
     plt.xlabel('Epoch', fontsize=15)
     plt.ylabel('Loss Value', fontsize=15)
     plt.yscale('log')
     # plt.title(f'Loss Evolution Over Time', fontsize=20)
     plt.legend()
+    plt.ylim([0.05, 3.5])
     plt.show()
+    # plt.savefig('TrainingQ1.jpg', dpi=600)

@@ -305,6 +305,10 @@ class Generator(object):
             max_idxs = 0
         return [list(self.variables.keys())[rng.randint(low=0, high=min(max_idxs + 1, len(self.variables.keys())))]]
 
+
+    def _generate_expr_tree(self, ):
+
+
     def _generate_expr(self, nb_total_ops, rng):
         """
         Create a tree with exactly `nb_total_ops` operators.
