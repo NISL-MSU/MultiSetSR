@@ -1,0 +1,3 @@
+dataset0: Equations without nested functions and without arc functions (i.e., asin, acos, atan) 
+dataset1: Equations without arc functions (i.e., asin, acos, atan)
+dataset2: Equations with up to 3 nested functions

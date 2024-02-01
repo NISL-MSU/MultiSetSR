@@ -2,10 +2,6 @@ train_path: data/dataset1/training
 val_path: data/dataset1/validation
 dataset: dataset1
 
-raw_test_path: data/raw_datasets/150
-test_path: data/validation
-model_path: /local/home/lbiggio/NeuralSymbolicRegressionThatScales/weights/10MCompleted.ckpt
-
 wandb: True
 num_of_workers: 32
 batch_size: 9
