@@ -83,6 +83,7 @@ class Pipepile:
         consts_elemns = {y: y for x in consts.values() for y in x}
         constants_expression = infix.format(**consts_elemns)
         infix = str(remove_dummy_constants(sympify(constants_expression)))
+
         if infix == 'ca_0 + cm_0*(ca_1 + cm_1*x_1)':
             infix = 'ca_0 + cm_0*x_1'
         # Try to convert infix back to prefix to check if there's an error
@@ -99,6 +100,8 @@ class Pipepile:
         if 'cc' in variables:
             variables.remove('cc')  # Remove dummy variable from the variables set
         res = dclasses.Equation(expr=infix, code=eq.__code__, coeff_dict=consts_elemns, variables=variables)
+        if 'cm_2**2' in res.expr:
+            res.expr = res.expr.replace('cm_2**2', 'cm_2')
         # signal.alarm(0)
         return res
 

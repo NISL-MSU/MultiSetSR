@@ -1,14 +1,15 @@
 # Code adapted from https://github.com/SymposiumOrganization/NeuralSymbolicRegressionThatScales
 # The "process_equation" method had bugs, they were solved, and the method was improved
-# The "_generate_expr" method was modified to avoid certain combinations of operations
+# The "_generate_expr" method was completely modified
+import random
 
 import numpy as np
-import sympy
 import sympy as sp
 from collections import Counter
 from .sympy_utils import simplify
 from collections import OrderedDict
 from sympy.calculus.util import AccumBounds
+from src.EquationLearning.Data.generate_expression import GenExpression
 from sympy.parsing.sympy_parser import parse_expr
 from .sympy_utils import remove_root_constant_terms, add_constants, remove_numeric_constants
 from src.EquationLearning.models.utilities_expressions import check_forbidden_combination
@@ -304,10 +305,6 @@ class Generator(object):
         else:
             max_idxs = 0
         return [list(self.variables.keys())[rng.randint(low=0, high=min(max_idxs + 1, len(self.variables.keys())))]]
-
-
-    def _generate_expr_tree(self, ):
-
 
     def _generate_expr(self, nb_total_ops, rng):
         """
@@ -712,13 +709,25 @@ class Generator(object):
         Generate pairs of (function, primitive).
         Start by generating a random function f, and use SymPy to compute F.
         """
-        nb_ops = rng.randint(2, self.max_ops)
-        f_expr = self._generate_expr(nb_ops, rng)
+        # nb_ops = rng.randint(2, self.max_ops)
+        # f_expr = self._generate_expr(nb_ops, rng)
+
+        nb_un_ops = rng.randint(2, 3)
+        un_ops = random.choices(self.una_ops, k=nb_un_ops)
+        m_tokens = rng.randint(3, self.max_ops)
+        gen = GenExpression(max_tokens=m_tokens, unary_ops=un_ops, max_nest=2)
+        expr = gen.generate_expr_tree()
+        f_expr = gen.tree_to_str(expr, [])
         infix = self.prefix_to_infix(f_expr, coefficients=self.coefficients, variables=self.variables)
         f = self.process_equation(infix)
 
         while len(str(f)) <= 2:  # Generate again in case the equation can be simplified to a constant after processing
-            f_expr = self._generate_expr(nb_ops, rng)
+            nb_un_ops = rng.randint(1, 3)
+            un_ops = random.choices(self.una_ops, k=nb_un_ops)
+            m_tokens = rng.randint(3, self.max_ops)
+            gen = GenExpression(max_tokens=m_tokens, unary_ops=un_ops, max_nest=2)
+            expr = gen.generate_expr_tree()
+            f_expr = gen.tree_to_str(expr, [])
             infix = self.prefix_to_infix(f_expr, coefficients=self.coefficients, variables=self.variables)
             f = self.process_equation(infix)
 
@@ -739,10 +748,10 @@ class Generator(object):
             # return None, "Sequence longer than max length"
 
         # skip when the number of operators is too far from expected
-        real_nb_ops = sum(1 if op in self.OPERATORS else 0 for op in f_expr)
-        if real_nb_ops < nb_ops / 2:
-            raise ValueErrorExpression("Too many operators")
-            # return None, "Too many operators"
+        # real_nb_ops = sum(1 if op in self.OPERATORS else 0 for op in f_expr)
+        # if real_nb_ops < nb_ops / 2:
+        #     raise ValueErrorExpression("Too many operators")
+        #     # return None, "Too many operators"
 
         if f == "0" or type(f) == str:
             raise ValueErrorExpression("Not a function")
@@ -750,4 +759,6 @@ class Generator(object):
 
         sy = f.free_symbols
         variables = set(map(str, sy)) - set(self.placeholders.keys())
+
+        f = sp.sympify(str(f).replace('cm_2**2', 'cm_2'))
         return f_prefix, variables, f
