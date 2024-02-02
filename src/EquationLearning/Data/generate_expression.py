@@ -17,6 +17,7 @@ class GenExpression:
     def __init__(self, max_tokens, unary_ops, max_nest):
         self.max_tokens = max_tokens
         self.unary_ops = unary_ops
+        self.un_ops_orig = self.unary_ops.copy()
         self.max_nest = max_nest
 
     def addNode(self, prev_node, nt, nest_level, nest_bin=0):
@@ -117,7 +118,11 @@ class GenExpression:
         prev_node = None
         init_nt = 0
         nodeOrigin = self.addNode(prev_node=prev_node, nt=init_nt, nest_level=0)
-        return nodeOrigin[0]
+        fexpr = self.tree_to_str(nodeOrigin[0], [])
+        while not any([un_op in str(fexpr) for un_op in self.un_ops_orig]):
+            fexpr = self.addNode(prev_node=prev_node, nt=init_nt, nest_level=0)
+            fexpr = self.tree_to_str(fexpr[0], [])
+        return fexpr
         
     def tree_to_str(self, node, strng):
         if len(node.children) == 0:
@@ -136,5 +141,4 @@ if __name__ == '__main__':
     un_ops = ['sin', 'cos', 'pow2']
     gen = GenExpression(max_tokens=m_tokens, unary_ops=un_ops, max_nest=2)
     expr = gen.generate_expr_tree()
-    expr_str = gen.tree_to_str(expr, [])
     print(expr_str)

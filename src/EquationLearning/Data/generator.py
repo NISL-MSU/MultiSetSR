@@ -716,18 +716,16 @@ class Generator(object):
         un_ops = random.choices(self.una_ops, k=nb_un_ops)
         m_tokens = rng.randint(3, self.max_ops)
         gen = GenExpression(max_tokens=m_tokens, unary_ops=un_ops, max_nest=2)
-        expr = gen.generate_expr_tree()
-        f_expr = gen.tree_to_str(expr, [])
+        f_expr = gen.generate_expr_tree()
         infix = self.prefix_to_infix(f_expr, coefficients=self.coefficients, variables=self.variables)
         f = self.process_equation(infix)
 
-        while len(str(f)) <= 2:  # Generate again in case the equation can be simplified to a constant after processing
+        while len(str(f)) <= 2 or 'x_1' not in str(f):  # Generate again in case the equation can be simplified to a constant after processing
             nb_un_ops = rng.randint(1, 3)
             un_ops = random.choices(self.una_ops, k=nb_un_ops)
             m_tokens = rng.randint(3, self.max_ops)
             gen = GenExpression(max_tokens=m_tokens, unary_ops=un_ops, max_nest=2)
-            expr = gen.generate_expr_tree()
-            f_expr = gen.tree_to_str(expr, [])
+            f_expr = gen.generate_expr_tree()
             infix = self.prefix_to_infix(f_expr, coefficients=self.coefficients, variables=self.variables)
             f = self.process_equation(infix)
 
