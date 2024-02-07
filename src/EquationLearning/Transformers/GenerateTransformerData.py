@@ -178,7 +178,7 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
     exprs = eq.expr
     curr_p = cfg.max_number_of_points
     # # Uncomment the code below if you have a specific skeleton from which you want to sample data as an example
-    # sk = sympy.sympify('c + c*sin(c*x_1 + c)**4/x_1**3')
+    # sk = sympy.sympify('c + c/(x_1**4*cos(c + x_1))')
     # sk, _, _ = add_constant_identifier(sk)
     # coeff_dict = dict()
     # var = None
@@ -668,7 +668,7 @@ def handle_singularities(expr, variable, n_points, minb, maxb, pre_solutions=Non
     solutions = []
     for i in range(1, len(x_range) - 1):
         if np.sign(expr_fun(x_range[i])) != np.sign(
-                y_range[i - 1]):  # If the sign change, it means it's crossed the x axis
+                y_range[i - 1]) or np.abs(expr_fun(x_range[i])) < 0.001:  # If the sign change, it means it's crossed the x axis
             solutions.append(x_range[i])
     # Find the values of x where the equation equals 0
     valid_solutions = [np.round(x, 3) for x in solutions if minb <= x <= maxb]
