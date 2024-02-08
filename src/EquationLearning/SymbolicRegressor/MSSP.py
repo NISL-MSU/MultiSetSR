@@ -1,6 +1,6 @@
 import sys
 
-import numpy as np
+import random
 import torch
 import omegaconf
 import sympy as sp
@@ -21,7 +21,7 @@ class SymbolicRegressor:
         # Define problem
         self.dataset = dataset
         dataLoader = DataLoader(name=self.dataset)
-        self.X, self.Y, self.var_names = dataLoader.X, dataLoader.Y, dataLoader.names
+        self.X, self.Y, self.var_names, self.types = dataLoader.X, dataLoader.Y, dataLoader.names, dataLoader.types
         self.target_function = dataLoader.expr
         self.f_lambdified = sp.lambdify(sp.utilities.iterables.flatten(sp.sympify(dataLoader.names)), dataLoader.expr)
         self.limits = dataLoader.limits
@@ -104,10 +104,17 @@ class SymbolicRegressor:
                             # Sample random values for all the variables
                             values = np.zeros((len(self.symbols)))
                             for isy in range(len(self.symbols)):
-                                values[isy] = np.random.uniform(self.limits[isy][0], self.limits[isy][1])
+                                if self.types[isy] == 'continuous':
+                                    values[isy] = np.random.uniform(self.limits[isy][0], self.limits[isy][1])
+                                else:
+                                    range_values = np.linspace(self.limits[isy][0], self.limits[isy][1], 100)
+                                    values[isy] = np.random.choice(range_values)
                             values = np.repeat(values[:, None], self.n_samples, axis=1)
                             # Sample values of the variable that is being analyzed
+                            # if self.types[iv] == 'continuous':
                             sample = np.random.uniform(self.limits[iv][0], self.limits[iv][1], self.n_samples)
+                            # else:
+                            #     sample = np.array([random.randint(self.limits[iv][0], self.limits[iv][1]) for _ in range(self.n_samples)])
                             values[iv, :] = sample
                             # Estimate the response of the generated set
                             Y = np.array(self.nn_model.evaluateFold(values.T, batch_size=values.shape[1]))[:, 0]
@@ -168,5 +175,5 @@ if __name__ == '__main__':
 
     # plt.figure()
 
-    regressor = SymbolicRegressor(dataset='E3')
+    regressor = SymbolicRegressor(dataset='CS4')
     regressor.get_skeleton()

@@ -90,7 +90,7 @@ class Trainer:
 
 
 if __name__ == '__main__':
-    names = ['U3']
+    names = ['CS4']
     for name in names:
         predictor = Trainer(dataset=name)
-        predictor.train(scratch=True, batch_size=128, epochs=200, printProcess=True)
+        predictor.train(scratch=True, batch_size=256, epochs=10000, printProcess=True)

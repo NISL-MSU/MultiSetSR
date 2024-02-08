@@ -61,7 +61,7 @@ class NNModel:
         criterion = nn.MSELoss()
         if loaded_NN is None:
             if NNtype == "NN":
-                network = MLP(input_features=self.n_features,
+                network = MLP3(input_features=self.n_features,
                               output_size=self.output_size,
                               n_layers=self.n_layers)
             elif NNtype == "NN2":

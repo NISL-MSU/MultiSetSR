@@ -35,31 +35,10 @@ class DataLoader:
         :param extrapolation: If True, generate extrapolation data
         """
         self.X, self.Y, self.names = np.zeros(0), np.zeros(0), None
-        self.expr, self.cfg = None, None
+        self.expr, self.cfg, self.types = None, None, None
         self.extrapolation = extrapolation
 
-        if name == "E1":
-            self.E1()
-            self.modelType = "NN"
-        elif name == "E2":
-            self.E2()
-            self.modelType = "NN"
-        elif name == "E3":
-            self.E3()
-            self.modelType = "NN"
-        elif name == "E4":
-            self.E4()
-            self.modelType = "NN2"
-        elif name == "E5":
-            self.E5()
-            self.modelType = "NN"
-        elif name == "S1":
-            self.S1()
-            self.modelType = "NN3"
-        elif name == "S2":
-            self.S2()
-            self.modelType = "NN"
-        elif "U" in name:
+        if "U" in name or "E" in name or "CS" in name:
             if hasattr(self, f'{name}'):
                 method = getattr(self, f'{name}')
                 method()
@@ -100,6 +79,7 @@ class DataLoader:
         # Calculate output
         self.Y = (3.0375 * x1 * x2 + 5.5 * np.sin(9/4 * (x1 - 2/3) * (x2 - 2/3))) / 5
         self.names = ['x0', 'x1']
+        self.types = ['continuous', 'continuous']
         symb = sp.symbols("{}:{}".format('x', 2))
         self.expr = (3.0375 * symb[0] * symb[1] + 5.5 * sp.sin(9/4 * (symb[0] - 2/3) * (symb[1] - 2/3))) / 5
 
@@ -118,6 +98,7 @@ class DataLoader:
         # Calculate output
         self.Y = 5.5 + (1 - x1 / 4) ** 2 + (np.sqrt(x2 + 10)) * np.sin(x3 / 5)
         self.names = ['x0', 'x1', 'x2']
+        self.types = ['continuous', 'continuous', 'continuous']
         symb = sp.symbols("{}:{}".format('x', 3))
         self.expr = 5.5 + (1 - symb[0] / 4) ** 2 + (sp.sqrt(symb[1] + 10)) * sp.sin(symb[2] / 5)
 
@@ -132,6 +113,7 @@ class DataLoader:
         # Calculate output
         self.Y = 3.2 / (np.sin(2 * np.pi * np.exp(x1 / 5)) - 1.5)
         self.names = ['x0']
+        self.types = ['continuous']
         symb = sp.symbols("{}:{}".format('x', 1))
         self.expr = 3.2 / (sp.sin(2 * np.pi * sp.exp(symb[0] / 5)) - 1.5)
 
@@ -150,6 +132,7 @@ class DataLoader:
         # Calculate output
         self.Y = 5.5 + (1 - x1 / 4) ** 2 + (np.exp(x2 / 7)) / (np.sin(np.exp(x3 / 5)) - 1.5)
         self.names = ['x0', 'x1', 'x2']
+        self.types = ['continuous', 'continuous', 'continuous']
         symb = sp.symbols("{}:{}".format('x', 3))
         self.expr = 5.5 + (1 - symb[0] / 4) ** 2 + (sp.exp(symb[1] / 7)) / (sp.sin(sp.exp(symb[2] / 5)) - 1.5)
 
@@ -166,6 +149,7 @@ class DataLoader:
         # Calculate output
         self.Y = (1.5 * np.exp(1.5 * x1) + 5 * np.cos(3 * x2))/10
         self.names = ['x0', 'x1']
+        self.types = ['continuous', 'continuous']
         symb = sp.symbols("{}:{}".format('x', 2))
         self.expr = (1.5 * sp.exp(1.5 * symb[0]) + 5 * sp.cos(3 * symb[1]))/10
 
@@ -186,6 +170,7 @@ class DataLoader:
         # Calculate output
         self.Y = ((1 - x1) ** 2 + (1 - x3) ** 2 + 100 * (x2 - x1 ** 2) ** 2 + 100 * (x4 - x3 ** 2) ** 2) / 10000
         self.names = ['x0', 'x1', 'x2', 'x3']
+        self.types = ['continuous', 'continuous', 'continuous', 'continuous']
         symb = sp.symbols("{}:{}".format('x', 4))
         self.expr = ((1 - symb[0]) ** 2 + (1 - symb[2]) ** 2 + 100 * (symb[1] - symb[0] ** 2) ** 2 +
                      100 * (symb[3] - symb[2] ** 2) ** 2) / 10000
@@ -207,6 +192,7 @@ class DataLoader:
         # Calculate output
         self.Y = np.sin(2 * x1 + x2 * x3) + np.exp(1.2 * x4)
         self.names = ['x0', 'x1', 'x2', 'x3']
+        self.types = ['continuous', 'continuous', 'continuous', 'continuous']
         symb = sp.symbols("{}:{}".format('x', 4))
         self.expr = sp.sin(2 * symb[0] + symb[1] * symb[2]) + sp.exp(1.2 * symb[3])
 
@@ -225,8 +211,79 @@ class DataLoader:
         # Calculate output
         self.Y = (np.abs(x3)) / x1 * np.exp(-1 / 10 * (x2 / x1) ** 2)
         self.names = ['x0', 'x1', 'x2']
+        self.types = ['continuous', 'continuous', 'continuous']
         symb = sp.symbols("{}:{}".format('x', 3))
         self.expr = (sp.Abs(symb[2])) / symb[0] * sp.exp(-1 / 10 * (symb[1] / symb[0]) ** 2)
+
+    def CS1(self, n=50000):
+        np.random.seed(7)
+        # Define features
+        if not self.extrapolation:
+            x1 = np.random.uniform(-2, 2, size=n)
+            range_values = np.linspace(-4, 4, 100)
+            x2 = [np.random.choice(range_values) for _ in range(n)]
+        else:
+            x1 = np.random.uniform(-10, 10, size=n)
+            range_values = np.linspace(-5, 5, 200)
+            x2 = [np.random.choice(range_values) for _ in range(n)]
+        self.X = np.array([x1, x2]).T
+        # Calculate output
+        self.Y = np.sin(x1 * np.exp(x2))
+        self.names = ['x0', 'x1']
+        self.types = ['continuous', 'discrete']
+        symb = sp.symbols("{}:{}".format('x', 2))
+        self.expr = sp.sin(symb[0] * sp.exp(symb[1]))
+
+    def CS2(self, n=50000):
+        np.random.seed(7)
+        # Define features
+        if not self.extrapolation:
+            x1 = np.random.uniform(-5, 5, size=n)
+            x2 = np.random.uniform(-5, 5, size=n)
+        else:
+            x1 = np.random.uniform(-10, 10, size=n)
+            x2 = np.random.uniform(-10, 10, size=n)
+        self.X = np.array([x1, x2]).T
+        # Calculate output
+        self.Y = x1 * np.log(x2 ** 4)
+        self.names = ['x0', 'x1']
+        self.types = ['continuous', 'continuous']
+        symb = sp.symbols("{}:{}".format('x', 2))
+        self.expr = symb[0] * sp.log(symb[1] ** 4)
+
+    def CS3(self, n=50000):
+        np.random.seed(7)
+        # Define features
+        if not self.extrapolation:
+            x1 = np.random.uniform(-10, 10, size=n)
+            x2 = np.random.uniform(-10, 10, size=n)
+        else:
+            x1 = np.random.uniform(-20, 20, size=n)
+            x2 = np.random.uniform(-20, 20, size=n)
+        self.X = np.array([x1, x2]).T
+        # Calculate output
+        self.Y = 1 + x1 * np.sin(1 / x2)
+        self.names = ['x0', 'x1']
+        self.types = ['continuous', 'continuous']
+        symb = sp.symbols("{}:{}".format('x', 2))
+        self.expr = 1 + symb[0] * sp.sin(1 / symb[1])
+
+    def CS4(self, n=50000):
+        np.random.seed(7)
+        # Define features
+        if not self.extrapolation:
+            x1 = np.random.uniform(0, 20, size=n)
+            x2 = np.random.uniform(-5, 5, size=n)
+        else:
+            x1 = np.random.uniform(0, 30, size=n)
+            x2 = np.random.uniform(-10, 10, size=n)
+        self.X = np.array([x1, x2]).T
+        # Calculate output
+        self.Y = np.sqrt(x1 ** 3) * np.log(x2 ** 2)
+        self.names = ['x0', 'x1']
+        self.types = ['continuous', 'continuous']
+        symb = sp.symbols("{}:{}".format('x', 2))
+        self.expr = sp.sqrt(symb[0] ** 3) * sp.log(symb[1] ** 2)
 
     #############################################################################################
     # LOAD DIFFICULT UNIVARIATE PROBLEMS
