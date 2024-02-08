@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-from .set_transformer import ISAB, PMA
+from .set_transformer import ISAB, PMA, SAB
 
 
 class SetEncoder(nn.Module):
@@ -19,11 +19,11 @@ class SetEncoder(nn.Module):
         if cfg.linear:
             self.linearl = nn.Linear(cfg.dim_input, 16 * cfg.dim_input)
 
-        # Encoder structure (stack of ISABs)
+        # Encoder structure (stack of SABs) IMPORTANT: Using SABs instead of ISABs (SABs require fewer parameters)
         self.selfatt = nn.ModuleList()
-        self.selfatt1 = ISAB(16 * cfg.dim_input, cfg.dim_hidden, cfg.num_heads, cfg.num_inds, ln=cfg.ln)
+        self.selfatt1 = SAB(16 * cfg.dim_input, cfg.dim_hidden, cfg.num_heads, ln=cfg.ln)
         for i in range(cfg.n_l_enc):
-            self.selfatt.append(ISAB(cfg.dim_hidden, cfg.dim_hidden, cfg.num_heads, cfg.num_inds, ln=cfg.ln))
+            self.selfatt.append(SAB(cfg.dim_hidden, cfg.dim_hidden, cfg.num_heads, ln=cfg.ln))
 
         # Pooling by multi-head attention
         self.outatt = PMA(cfg.dim_hidden, cfg.num_heads, cfg.num_features, ln=cfg.ln)
