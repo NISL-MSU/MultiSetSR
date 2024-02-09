@@ -379,8 +379,10 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
                     Y[:, 1:] = Y[:, 0][:, np.newaxis]
                     sampled_exprs = [new_expr] * cfg.number_of_sets
                     break
-
                 n_set += 1
+
+            elif np.std(vals) == 0 or 'x_1' not in str(new_expr):
+                return None
 
     if return_exprs:
         return X, Y, tokenized, exprs, sampled_exprs

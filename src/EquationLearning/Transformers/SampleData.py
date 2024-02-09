@@ -40,9 +40,9 @@ class SampleData:
         batch = []
         count = 0
         n_batch = 0
-        for step in trange(10, len(self.validation_dataset)):  # Batch loop
+        for step in trange(0, len(self.training_dataset)):  # Batch loop
             try:
-                sampled_data = evaluate_and_wrap(self.validation_dataset[step], self.cfg.dataset_train, self.word2id)
+                sampled_data = evaluate_and_wrap(self.training_dataset[step], self.cfg.dataset_train, self.word2id)
             except Exception as e:
                 print("Problem in step = " + str(step) + " Exception = " + str(e))
                 sampled_data = None

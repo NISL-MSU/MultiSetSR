@@ -87,7 +87,7 @@ architecture:
   src_pad_idx: 0
   trg_pad_idx: 0
   length_eq: 40
-  n_l_enc: 5  # It was 3. If the encoder uses SABs instead of ISABs it needs fewer parameters so it's possible to increase # of enc
+  n_l_enc: 5
   mean: 0.5
   std: 0.5
   dim_input: 2
