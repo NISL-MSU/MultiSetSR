@@ -2,3 +2,14 @@
 .idea
 /UploadDataset.ipynb
 /UploadDatasets.py
+/src/EquationLearning/Optimization/CFE.py
+/src/EquationLearning/Optimization/CoefficientProblem.py
+/src/EquationLearning/Optimization/DoubleCoefficientProblem.py
+/src/EquationLearning/Optimization/FindDependentCoefficients.py
+/src/EquationLearning/Optimization/GeneticProgramming.py
+/src/EquationLearning/Optimization/PolynomialFitting.py
+/src/EquationLearning/Optimization/SimpleFitProblem.py
+/src/EquationLearning/Optimization/UnivariateGP.py
+/src/EquationLearning/SymbolicRegressor/MergeExpressions.py
+/src/EquationLearning/SymbolicRegressor/Singlevariable.py
+/src/EquationLearning/SymbolicRegressor/univariate.py

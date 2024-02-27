@@ -1,6 +1,7 @@
-# Code adapted from https://github.com/SymposiumOrganization/NeuralSymbolicRegressionThatScales
+# Code initially adapted from https://github.com/SymposiumOrganization/NeuralSymbolicRegressionThatScales
 # The "process_equation" method had bugs, they were solved, and the method was improved
-# The "_generate_expr" method was completely modified
+# The "_generate_expr" method was completely modified. Instead, we used the method in Data/generate_expression.py
+
 import random
 
 import numpy as np
@@ -189,9 +190,9 @@ class Generator(object):
         self.p1 = 1  # len(self.una_ops)
         self.p2 = 1  # len(self.bin_ops)
 
-        # initialize distribution for binary and unary-binary trees
-        self.bin_dist = self.generate_bin_dist(params.max_ops)
-        self.ubi_dist = self.generate_ubi_dist(params.max_ops)
+        # # initialize distribution for binary and unary-binary trees
+        # self.bin_dist = self.generate_bin_dist(params.max_ops)
+        # self.ubi_dist = self.generate_ubi_dist(params.max_ops)
 
         # rewrite expressions
         self.rewrite_functions = self.return_rewrite_functions(params)
@@ -217,173 +218,6 @@ class Generator(object):
             for x in r
         )
         return r
-
-    def generate_bin_dist(self, max_ops):
-        """
-        `max_ops`: maximum number of operators
-        Enumerate the number of possible binary trees that can be generated from empty nodes.
-        D[e][n] represents the number of different binary trees with n nodes that
-        can be generated from e empty nodes, using the following recursion:
-            D(0, n) = 0
-            D(1, n) = C_n (n-th Catalan number)
-            D(e, n) = D(e - 1, n + 1) - D(e - 2, n + 1)
-        """
-        # initialize Catalan numbers
-        catalans = [1]
-        for i in range(1, 2 * max_ops + 1):
-            catalans.append((4 * i - 2) * catalans[i - 1] // (i + 1))
-
-        # enumerate possible trees
-        D = []
-        for e in range(max_ops + 1):  # number of empty nodes
-            s = []
-            for n in range(2 * max_ops - e + 1):  # number of operators
-                if e == 0:
-                    s.append(0)
-                elif e == 1:
-                    s.append(catalans[n])
-                else:
-                    s.append(D[e - 1][n + 1] - D[e - 2][n + 1])
-            D.append(s)
-        return D
-
-    def generate_ubi_dist(self, max_ops):
-        """
-        `max_ops`: maximum number of operators
-        Enumerate the number of possible unary-binary trees that can be generated from empty nodes.
-        D[e][n] represents the number of different binary trees with n nodes that
-        can be generated from e empty nodes, using the following recursion:
-            D(0, n) = 0
-            D(e, 0) = L ** e
-            D(e, n) = L * D(e - 1, n) + p_1 * D(e, n - 1) + p_2 * D(e + 1, n - 1)
-        """
-        # enumerate possible trees
-        # first generate the tranposed version of D, then transpose it
-        D = [[0] + ([self.nl ** i for i in range(1, 2 * max_ops + 1)])]
-        for n in range(1, 2 * max_ops + 1):  # number of operators
-            s = [0]
-            for e in range(1, 2 * max_ops - n + 1):  # number of empty nodes
-                s.append(
-                    self.nl * s[e - 1]
-                    + self.p1 * D[n - 1][e]
-                    + self.p2 * D[n - 1][e + 1]
-                )
-            D.append(s)
-        assert all(len(D[i]) >= len(D[i + 1]) for i in range(len(D) - 1))
-        D = [
-            [D[j][i] for j in range(len(D)) if i < len(D[j])]
-            for i in range(max(len(x) for x in D))
-        ]
-        return D
-
-    def sample_next_pos_ubi(self, nb_empty, nb_ops, rng):
-        """
-        Sample the position of the next node (unary-binary case).
-        Sample a position in {0, ..., `nb_empty` - 1}, along with an arity.
-        """
-        assert nb_empty > 0
-        assert nb_ops > 0
-        probs = []
-        for i in range(nb_empty):
-            probs.append(
-                (self.nl ** i) * self.p1 * self.ubi_dist[nb_empty - i][nb_ops - 1]
-            )
-        for i in range(nb_empty):
-            probs.append(
-                (self.nl ** i) * self.p2 * self.ubi_dist[nb_empty - i + 1][nb_ops - 1]
-            )
-        probs = [p / self.ubi_dist[nb_empty][nb_ops] for p in probs]
-        probs = np.array(probs, dtype=np.float64)
-        e = rng.choice(2 * nb_empty, p=probs)
-        arity = 1 if e < nb_empty else 2
-        e = e % nb_empty
-        return e, arity
-
-    def get_leaf(self, curr_leaves, rng):
-        if curr_leaves:
-            max_idxs = max([self.pos_dict[x] for x in curr_leaves]) + 1
-        else:
-            max_idxs = 0
-        return [list(self.variables.keys())[rng.randint(low=0, high=min(max_idxs + 1, len(self.variables.keys())))]]
-
-    def _generate_expr(self, nb_total_ops, rng):
-        """
-        Create a tree with exactly `nb_total_ops` operators.
-        """
-        stack = [None]
-        nb_empty = 1  # number of empty nodes
-        l_leaves = 0  # left leaves - None states reserved for leaves
-        t_leaves = 1  # total number of leaves (just used for sanity check)
-
-        # create tree
-        una_ops_copy, una_ops_probs_copy = self.una_ops.copy(), self.una_ops_probs.copy()
-        for nb_ops in range(nb_total_ops, 0, -1):
-
-            # next operator, arity and position
-            skipped, arity = self.sample_next_pos_ubi(nb_empty, nb_ops, rng)
-
-            # Next operator, arity and position
-            # arity = np.random.choice([1, 2], p=[1/3, 2/3])
-            # free_pos = [i for i, x in enumerate(stack) if x is None]
-            # which_None = np.random.choice(np.arange(0, len(free_pos)))
-            # pos = free_pos[which_None]
-
-            if arity == 1:
-                una_ops, una_ops_probs = np.array(una_ops_copy), np.array(una_ops_probs_copy)
-                op = rng.choice(una_ops, p=una_ops_probs/np.sum(una_ops_probs))
-                # Remove the current operation from the list of options
-                f_ops_inds = np.array([io for io, iop in enumerate(una_ops_copy) if iop != op])
-                una_ops_copy, una_ops_probs_copy = np.array(una_ops_copy)[f_ops_inds], np.array(una_ops_probs_copy)[f_ops_inds]
-            else:
-                op = rng.choice(self.bin_ops, p=self.bin_ops_probs)
-
-            nb_empty += (self.OPERATORS[op] - 1 - skipped)  # created empty nodes - skipped future leaves
-            t_leaves += self.OPERATORS[op] - 1  # update number of total leaves
-            l_leaves += skipped  # update number of left leaves
-
-            # update tree
-            pos = [i for i, v in enumerate(stack) if v is None][l_leaves]
-            stack = (
-                    stack[:pos]
-                    + [op]
-                    + [None for _ in range(self.OPERATORS[op])]
-                    + stack[pos + 1:]
-            )
-
-        # sanity check
-        assert len([1 for v in stack if v in self.all_ops]) == nb_total_ops
-        assert len([1 for v in stack if v is None]) == t_leaves
-
-        leaves = []
-        curr_leaves = set()
-        for _ in range(t_leaves):
-            new_element = self.get_leaf(curr_leaves, rng)
-            leaves.append(new_element)
-            curr_leaves.add(*new_element)
-
-        # insert leaves into tree
-        for pos in range(len(stack) - 1, -1, -1):
-            if stack[pos] is None:
-                stack = stack[:pos] + leaves.pop() + stack[pos + 1:]
-        assert len(leaves) == 0
-
-        new_stack = []
-        i = 0
-        while i < len(stack):
-            if (stack[i:i + 3] == ['mul', 'x_1', 'x_1']) or (stack[i:i + 3] == ['div', 'x_1', 'x_1']):
-                new_stack.append('x_1')
-                i += 3
-            else:
-                new_stack.append(stack[i])
-                i += 1
-
-        # Explore the expression tree and check if there's a ramification with two operators that belong to the same
-        # forbidden group
-        inf = self.prefix_to_infix(new_stack, coefficients=self.coefficients, variables=self.variables)
-        if check_forbidden_combination(2 * sp.sympify(inf)) or len(new_stack) <= 2:
-            new_stack = self._generate_expr(nb_total_ops, rng)
-
-        return new_stack
 
     @classmethod
     def write_infix(cls, token, args):
@@ -720,7 +554,8 @@ class Generator(object):
         infix = self.prefix_to_infix(f_expr, coefficients=self.coefficients, variables=self.variables)
         f = self.process_equation(infix)
 
-        while len(str(f)) <= 2 or 'x_1' not in str(f):  # Generate again in case the equation can be simplified to a constant after processing
+        # Generate again in case the equation can be simplified to a constant after processing
+        while len(str(f)) <= 2 or 'x_1' not in str(f):
             nb_un_ops = rng.randint(1, 3)
             un_ops = random.choices(self.una_ops, k=nb_un_ops)
             m_tokens = rng.randint(3, self.max_ops)
@@ -743,13 +578,6 @@ class Generator(object):
         # skip too long sequences
         if len(f_expr) + 2 > self.max_len:
             raise ValueErrorExpression("Sequence longer than max length")
-            # return None, "Sequence longer than max length"
-
-        # skip when the number of operators is too far from expected
-        # real_nb_ops = sum(1 if op in self.OPERATORS else 0 for op in f_expr)
-        # if real_nb_ops < nb_ops / 2:
-        #     raise ValueErrorExpression("Too many operators")
-        #     # return None, "Too many operators"
 
         if f == "0" or type(f) == str:
             raise ValueErrorExpression("Not a function")
