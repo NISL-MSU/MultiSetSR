@@ -1,13 +1,6 @@
 import sympy
 import sympy as sp
 from src.EquationLearning.Data.sympy_utils import numeric_to_placeholder
-from scipy.stats import pearsonr
-from sympy.utilities.iterables import flatten
-
-
-# from src.EquationLearning.models.functions import *
-# from src.EquationLearning.models.NNModel import NNModel
-# from src.EquationLearning.models.symbolic_expression import round_expr
 
 
 def get_args(xp, return_symbols=False):
@@ -25,7 +18,7 @@ def get_args(xp, return_symbols=False):
             args = args.args
 
     for arg in args:
-        if arg.is_number or (isinstance(arg, sp.Symbol) and 'c' in str(arg)):  # If it's a number or coeff, add it to the list
+        if arg.is_number or (isinstance(arg, sp.Symbol) and 'c' in str(arg)):  # If it's a number or coeff, add it
             num_args.append(arg)
         elif isinstance(arg, sp.Symbol) and return_symbols:
             num_args.append(arg)
@@ -205,127 +198,6 @@ def check_forbidden_combination(xp):
     return any(res)
 
 
-# def verify_dependency(xp_orig, list_symbols, gen_fun, values, limits, variable, resample_var, r_orig):
-#     """Randomly change value of variable "resample_var" and check if the correlation value of the overall equation
-#     changes"""
-#     # Sample values of the variable that is being analyzed
-#     sample = np.random.uniform(limits[variable][0], limits[variable][1], 1000)
-#     ref = values[resample_var]  # Save original value of variable that will be resampled
-#     res_value = np.random.uniform(limits[resample_var][0], limits[resample_var][1])
-#     while np.abs(res_value - ref) < 0.3:
-#         # If sampled value is close to the original, keep resampling
-#         res_value = np.random.uniform(limits[resample_var][0], limits[resample_var][1])
-#     values[resample_var] = res_value
-#     values = np.repeat(values, 1000, axis=1)
-#     values[variable] = sample
-#
-#     # Obtain the estimated outputs using the generating function (e.g., the NN)
-#     if isinstance(gen_fun, NNModel):  # Used if gen_fun is a neural network
-#         y = np.array(gen_fun.evaluateFold(values.T, batch_size=len(values)))[:, 0]
-#     else:  # Used if gen_fun is a symbolic expressions
-#         y = gen_fun(*list(values))
-#
-#     # Lambdify to evaluate
-#     expr = sp.lambdify(flatten(list_symbols), xp_orig)
-#     # Evaluate original expression
-#     y_pred = expr(*list(values))
-#     return (r_orig - np.round(np.abs(pearsonr(y, y_pred)[0]), 5)) > 0.0003
-
-
-# def get_polynomial(variable, coeff, calc_complexity=True):
-#     """Retrieve polynomial symbolic expression"""
-#     xp = 0
-#     for d in range(len(coeff)):
-#         if isinstance(coeff[d], float) or isinstance(coeff[d], int):
-#             if np.abs(coeff[d]) < 0.001:
-#                 coeff[d] = 0
-#         xp += coeff[d] * variable ** (len(coeff) - d)
-#
-#     if calc_complexity:  # Only calculate complexity when specified
-#         if len(coeff) <= 2:
-#             comp = np.sum(np.abs(coeff) >= 0.01)
-#         else:
-#             comp = 2 * np.sum(np.abs(coeff[:len(coeff) - 2]) >= 0.01) + np.sum(np.abs(coeff[len(coeff) - 2:]) >= 0.01)
-#         return round_expr(xp, 4), comp
-#     else:
-#         return round_expr(xp, 4)
-
-
-# def get_expression(variable, coeff, operator, inv, calc_complexity=True):
-#     """Retrieve simplified symbolic expression"""
-#     comp = 0
-#     if coeff[0] == 1:
-#         xp = get_sym_function(operator)[0]((coeff[1] * variable + coeff[2]) + coeff[3])
-#         if calc_complexity:  # Only calculate complexity when specified
-#             comp = get_sym_function(operator)[2] + (np.abs(coeff[2] + coeff[3]) > 0.001) * .5 + (
-#                     np.abs(coeff[4]) > 0.001)
-#     else:
-#         xp = get_sym_function(operator)[0](1 / (coeff[1] * variable + coeff[2]) + coeff[3])
-#         if calc_complexity:  # Only calculate complexity when specified
-#             comp = get_sym_function(operator)[2] + 1 + (np.abs(coeff[2]) > 0.001) * .5 + \
-#                    (np.abs(coeff[3]) > 0.001) * .5 + (np.abs(coeff[4]) > 0.001)
-#     # Divide by a constant so that the first coefficient is always 1
-#     if isinstance(xp + coeff[4], sp.Mul):
-#         xp = (xp + coeff[4]).args[1]
-#     elif isinstance(xp, sp.Mul):
-#         xp = xp.args[1] + coeff[4] / xp.args[0]
-#     else:
-#         xp = xp + coeff[4]
-#     if inv:
-#         xp = 1 / xp
-#         if calc_complexity:
-#             comp += 2
-#
-#     if calc_complexity:
-#         return round_expr(xp, 4), comp
-#     else:
-#         return round_expr(xp, 4)
-#
-#
-# def get_expression_nested(variable, coeff, operator1, secondary_operators, inv, calc_complexity=True):
-#     """Retrieve simplified symbolic expression"""
-#     comp = 0
-#     operator2 = secondary_operators[int(coeff[-1])]
-#     inv1 = coeff[0]
-#     inv2 = coeff[1]
-#     x1 = [coeff[k] for k in range(2, 6)]
-#     x2 = [coeff[k] for k in range(6, 10)]
-#
-#     xp = get_sym_function(operator1)[0]((x1[0] * variable + x1[1]) ** inv1 + x1[2]) + x1[3]
-#     xp = get_sym_function(operator2)[0]((x2[0] * xp + x2[1]) ** inv2 + x2[2])
-#
-#     if calc_complexity:  # Only calculate complexity when specified
-#         if inv1 == 1:
-#             comp = get_sym_function(operator1)[2] + (np.abs(x1[1] + x1[2]) > 0.001) * .5 + (np.abs(x1[3]) > 0.001)
-#         else:
-#             comp = get_sym_function(operator1)[2] + 1 + (np.abs(x1[1]) > 0.001) * .5 + (np.abs(x1[2]) > 0.001) * .5 + \
-#                    (np.abs(x1[3]) > 0.001)
-#
-#         if inv2 == 1:
-#             comp += get_sym_function(operator2)[2] + (np.abs(x2[1] + x2[2]) > 0.001) * .5 + (np.abs(x2[3]) > 0.001)
-#         else:
-#             comp += get_sym_function(operator2)[2] + 1 + (np.abs(x2[1]) > 0.001) * .5 + (np.abs(x2[2]) > 0.001) * .5 + \
-#                     (np.abs(x2[3]) > 0.001)
-#
-#     # Divide by a constant so that the first coefficient is always 1
-#     if isinstance(xp + x2[3], sp.Mul):
-#         xp = (xp + x2[3]).args[1]
-#     elif isinstance(xp, sp.Mul):
-#         xp = xp.args[1] + x2[3] / xp.args[0]
-#     else:
-#         xp = xp + x2[3]
-#
-#     if inv:
-#         xp = 1 / xp
-#         if calc_complexity:
-#             comp += 2
-#
-#     if calc_complexity:
-#         return round_expr(xp, 4), comp
-#     else:
-#         return round_expr(xp, 4)
-
-
 def _avoid_operations_between_constants(xp):
     """ Simplify exponent of constants inside symbolic expression and constant multiplied by constants.
     E.g., constant ** 3 = constant or cons1 * cons2 * cons3 = cons1
@@ -413,8 +285,3 @@ def get_skeletons(expr, var_names):
         skeletons.append(skeleton)
     return skeletons
 
-
-if __name__ == '__main__':
-    s = sp.sympify('cm_0*cosh(ca_1 + cm_1*x_1 + exp(cm_2*x_1))')
-    rt = check_forbidden_combination(s)
-    print()
