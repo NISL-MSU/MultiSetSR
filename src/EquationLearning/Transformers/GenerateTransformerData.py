@@ -388,8 +388,8 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False, n_
                         np.isinf(np.mean(vals)) or np.isnan(np.std(vals)) or np.isinf(np.std(vals)):
                     return None
 
-                # If there's not enough samples between -3 and 3, try again (it avoids having functions with big gaps)
-                selected_indices = np.where((support >= -4) & (support <= 4))[0]
+                # If there's not enough samples between -4 and 4, try again (it avoids having functions with big gaps)
+                selected_indices = np.where((support >= 4/10 * np.min(support)) & (support <= 4/10 * np.max(support)))[0]
                 if len(selected_indices) < 3000 or np.std(support) < 3 or np.max(support) - np.min(support) < 15:
                     continue
 
