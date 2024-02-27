@@ -98,7 +98,7 @@ class CoefficientFitting(Problem):
 
 class FitGA:
 
-    def __init__(self, skeleton, Xs, Ys, v_limits, c_limits):
+    def __init__(self, skeleton, Xs, Ys, v_limits, c_limits, max_it=None):
         """
         Given a univariate symbolic expression, find which coefficients are dependent on other functions
         :param skeleton: Symbolic skeleton generated for the t-th variable
@@ -106,19 +106,24 @@ class FitGA:
         :param Ys: Corresponding response values
         :param v_limits: Limits of the values that all variables can take
         :param c_limits: Limits of the values that all expression coefficients can take
+        :param max_it: If not None, specify the maximum number of iterations for the GA
         """
         self.skeleton = skeleton  # The skeleton is a function of variable x_t (the t-th variable in list_vars)
         self.Xs = Xs
         self.Ys = Ys
         self.v_limits = v_limits
         self.c_limits = c_limits
+        if max_it is None:
+            self.termination = RobustTermination(MultiObjectiveSpaceTermination(tol=1e-5), period=20)
+        else:
+            self.termination = ('n_gen', max_it)
 
     def run(self):
         # Fit coefficients
-        termination = RobustTermination(MultiObjectiveSpaceTermination(tol=1e-5), period=20)
+
         problem = CoefficientFitting(skeleton=self.skeleton, x_values=self.Xs, y_est=self.Ys, climits=self.c_limits)
         algorithm = GA(pop_size=400)
-        res = minimize(problem, algorithm, termination, seed=1, verbose=False)
+        res = minimize(problem, algorithm, self.termination, seed=1, verbose=False)
 
         if len(self.skeleton.args) > 0:
             return set_args(self.skeleton, list(res.X)), res.F

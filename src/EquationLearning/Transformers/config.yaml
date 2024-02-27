@@ -4,8 +4,8 @@ dataset: dataset1
 
 wandb: True
 num_of_workers: 32
-batch_size: 24
-epochs: 20
+batch_size: 12
+epochs: 100
 val_check_interval: 1.0
 precision: 16
 gpu: 2
@@ -13,7 +13,7 @@ gpu: 2
 dataset_train:
   total_variables: #Do not fill
   total_coefficients: #Do not fill
-  max_number_of_points: 5000  #2000 before
+  max_number_of_points: 8000  #2000 before
   number_of_sets: 10
   lambda_: 0.5
   type_of_sampling_points: constant
@@ -69,6 +69,7 @@ dataset_test:
       min: -5
 
 architecture:
+  block_size: 3000
   sinuisodal_embeddings: False
   dec_pf_dim: 512
   dec_layers: 5
@@ -78,7 +79,7 @@ architecture:
   num_features: 5  # 10? TODO
   ln: True
   N_p: 0
-  num_inds: 50  # ISABs are no longer used, so this parameter is not used
+  num_inds: 50
   activation: "relu"
   bit16: True
   norm: True
@@ -91,12 +92,12 @@ architecture:
   mean: 0.5
   std: 0.5
   dim_input: 2
-  num_heads: 16
+  num_heads: 8
   output_dim: 32
   number_of_sets: 10
 
 inference:
-  beam_size: 4
+  beam_size: 6
   bfgs:
     activated: True
     n_restarts: 10

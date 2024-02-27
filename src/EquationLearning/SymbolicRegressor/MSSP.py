@@ -1,17 +1,18 @@
 import sys
 
-import random
+import numpy as np
 import torch
 import omegaconf
 import sympy as sp
 from src.utils import *
+from sklearn.metrics import r2_score
+from sklearn.linear_model import LinearRegression
 from src.EquationLearning.models.NNModel import NNModel
 from src.EquationLearning.Transformers.model import Model
 from src.EquationLearning.Data.GenerateDatasets import DataLoader
+from src.EquationLearning.Optimization.CoefficientFitting import FitGA
 from src.EquationLearning.Transformers.GenerateTransformerData import Dataset
 from src.EquationLearning.Trainer.TrainMultiSetTransformer import seq2equation
-from sklearn.linear_model import LinearRegression
-from sklearn.metrics import r2_score
 
 
 class SymbolicRegressor:
@@ -50,7 +51,7 @@ class SymbolicRegressor:
         self.univariate_skeletons = []
         self.merged_expressions = []
         self.n_sets = 10
-        self.n_samples = 5000
+        self.n_samples = 3000
 
     def _load_models(self):
         # Define NN and load weights
@@ -71,7 +72,7 @@ class SymbolicRegressor:
             if self.n_features > 1:
                 sys.exit("We haven't trained a NN for this problem yet. Use the TrainNNModel.py file first.")
         # Load weights of MST
-        MST_path = os.path.join(root, "src//EquationLearning//models//saved_models/Model-pre0-dataset1")
+        MST_path = os.path.join(root, "src//EquationLearning//models//saved_models/Model512-batch_12-dataset1")
         self.model.load_state_dict(torch.load(MST_path))
         self.model.cuda()
 
@@ -83,12 +84,13 @@ class SymbolicRegressor:
             print("Analyzing variable " + str(va))
             print("********************************")
             if iv >= 0:
+                Rs = np.zeros(self.n_sets)
                 # Generate multiple sets of data where only the current variable is allowed to vary
                 if len(self.symbols) == 1:
-                    if len(self.X) > 5000:
+                    if len(self.X) > self.n_samples:
                         ra = np.arange(0, len(self.X))
                         np.random.shuffle(ra)
-                        ra = ra[0:5000]
+                        ra = ra[0:self.n_samples]
                         self.X, self.Y = self.X[ra, :], self.Y[ra]
                     Xs = np.repeat(self.X, self.n_sets, axis=1)
                     Ys = np.repeat(self.Y[:, None], self.n_sets, axis=1)
@@ -111,10 +113,7 @@ class SymbolicRegressor:
                                     values[isy] = np.random.choice(range_values)
                             values = np.repeat(values[:, None], self.n_samples, axis=1)
                             # Sample values of the variable that is being analyzed
-                            # if self.types[iv] == 'continuous':
                             sample = np.random.uniform(self.limits[iv][0], self.limits[iv][1], self.n_samples)
-                            # else:
-                            #     sample = np.array([random.randint(self.limits[iv][0], self.limits[iv][1]) for _ in range(self.n_samples)])
                             values[iv, :] = sample
                             # Estimate the response of the generated set
                             Y = np.array(self.nn_model.evaluateFold(values.T, batch_size=values.shape[1]))[:, 0]
@@ -124,17 +123,24 @@ class SymbolicRegressor:
                             model.fit(X[:, None], Y)
                             Y_pred = model.predict(X[:, None])
                             r2 = r2_score(Y, Y_pred)
-                            R2s.append(r2)
+                            if np.std(Y) < 0.3:
+                                R2s.append(0)
+                            else:
+                                R2s.append(r2)
                             XXs.append(X.copy())
                             YYs.append(Y.copy())
                             valuess.append(values.copy())
                         sorted_indices = np.argsort(np.array(R2s))
-                        ind = sorted_indices[1]
+                        ind = sorted_indices[4]
                         best_X, best_Y, best_values = XXs[ind], YYs[ind], valuess[ind]
                         Ys[:, ns] = best_Y
                         Xs[:, ns] = best_X
                         Ys_real[:, ns] = np.array(self.f_lambdified(*list(best_values)))
+                        Rs[ns] = R2s[ind]
                 # Normalize data
+                sorted_indices = np.argsort(np.array(Rs))
+                ind = sorted_indices[4]
+                Xi, Yi = Xs[:, ind].copy(), Ys[:, ind].copy()
                 means, std = np.mean(Ys, axis=0), np.std(Ys, axis=0)
                 Ys = (Ys - means) / std
                 means, std = np.mean(Ys_real, axis=0), np.std(Ys_real, axis=0)
@@ -152,20 +158,33 @@ class SymbolicRegressor:
                 XY_block[0, :, 1, :] = Ys
 
                 # Perform Multi-Set Skeleton Prediction
-                # tokenized = self.model.validation_step(XY_block)[1][0]
-                # skeleton = sp.sympify(seq2equation(tokenized, self.id2word))
-                skeleton = None
                 preds = self.model.inference(XY_block)
+                pred_skeletons = []
                 for ip, pred in enumerate(preds):
                     try:
                         tokenized = list(pred[1].cpu().numpy())[1:]
                         skeleton = seq2equation(tokenized, self.id2word, printFlag=True)
                         skeleton = sp.sympify(skeleton.replace('x_1', str(va)))
-                        print('Predicted skeleton' + str(ip) + ' for variable ' + str(va) + ': ' + str(skeleton))
+                        pred_skeletons.append(skeleton)
+                        print('Predicted skeleton ' + str(ip + 1) + ' for variable ' + str(va) + ': ' + str(skeleton))
                     except:  # TypeError:
                         print("Invalid response created by the model")
 
-                self.univariate_skeletons.append(skeleton)
+                print("\n Choosing the best skeleton...")
+                best_error, best_sk = np.Infinity, ''
+                for ip, skeleton in enumerate(pred_skeletons):
+                    # Fit coefficients of the estimated skeletons
+                    problem = FitGA(skeleton, Xi, Yi, [np.min(Xi), np.max(Xi)], [-10, 10], max_it=50)
+                    est_expr, error = problem.run()
+                    print("\tSkeleton: " + str(skeleton) + ". Error: " + str(error))
+                    if error < best_error:
+                        best_error = error
+                        best_sk = skeleton
+                        if error < 0.001:  # If the error is very low, assume this is the best
+                            break
+                print("Selected skeleton: " + str(best_sk))
+
+                self.univariate_skeletons.append(best_sk)
 
         return self.univariate_skeletons
 
@@ -175,5 +194,5 @@ if __name__ == '__main__':
 
     # plt.figure()
 
-    regressor = SymbolicRegressor(dataset='CS4')
+    regressor = SymbolicRegressor(dataset='CS1')
     regressor.get_skeleton()

@@ -1,20 +1,73 @@
 import omegaconf
 import sympy as sp
 import numpy as np
-from src.utils import get_project_root
 import matplotlib.pyplot as plt
-# from src.EquationLearning.Data.sympy_utils import *
-from src.EquationLearning.Data.GenerateDatasets import DataLoader
-from src.EquationLearning.Transformers.GenerateTransformerData import Dataset, evaluate_and_wrap
+from scipy.stats import tukey_hsd
+from src.utils import get_project_root
 from src.EquationLearning.Data.dclasses import SimpleEquation
-from src.EquationLearning.models.utilities_expressions import avoid_operations_between_constants, \
-    add_constant_identifier, get_skeletons
+from src.EquationLearning.Data.GenerateDatasets import DataLoader
+from src.EquationLearning.models.utilities_expressions import add_constant_identifier, get_skeletons
 from src.EquationLearning.Optimization.CoefficientFitting import FitGA
+from src.EquationLearning.Transformers.GenerateTransformerData import Dataset, evaluate_and_wrap
+
+
+def tukeyLetters(pp, means=None, alpha=0.05):
+    if len(pp.shape) == 1:
+        # vector
+        G = int(3 + np.sqrt(9 - 4 * (2 - len(pp)))) // 2
+        ppp = .5 * np.eye(G)
+        ppp[np.triu_indices(G, 1)] = pp
+        pp = ppp + ppp.T
+    conn = pp > alpha
+    G = len(conn)
+    if np.all(conn):
+        return ['a' for _ in range(G)]
+    conns = []
+    for g1 in range(G):
+        for g2 in range(g1 + 1, G):
+            if conn[g1, g2]:
+                conns.append((g1, g2))
+
+    letters = [[] for _ in range(G)]
+    nextletter = 0
+    for g in range(G):
+        if np.sum(conn[g, :]) == 1:
+            letters[g].append(nextletter)
+            nextletter += 1
+    while len(conns):
+        grp = set(conns.pop(0))
+        for g in range(G):
+            if all(conn[g, np.sort(list(grp))]):
+                grp.add(g)
+        for g in grp:
+            letters[g].append(nextletter)
+        for g in grp:
+            for h in grp:
+                if (g, h) in conns:
+                    conns.remove((g, h))
+        nextletter += 1
+
+    if means is None:
+        means = np.arange(G)
+    means = np.array(means)
+    groupmeans = []
+    for k in range(nextletter):
+        ingroup = [g for g in range(G) if k in letters[g]]
+        groupmeans.append(means[np.array(ingroup)].mean())
+    ordr = np.empty(nextletter, int)
+    ordr[np.argsort(groupmeans)] = np.arange(nextletter)
+    r = []
+    for ltr in letters:
+        lst = [chr(97 + ordr[x]) for x in ltr]
+        lst.sort()
+        r.append(''.join(lst))
+    return r
+
 
 np.random.seed(7)  # Set seed
 
 # Parameters
-name = 'E3'
+name = 'CS1'
 clim = [-10, 10]
 cfg = omegaconf.OmegaConf.load("./EquationLearning/Transformers/config.yaml")
 training_dataset = Dataset(cfg.train_path, cfg.dataset_train, mode="train")
@@ -22,7 +75,7 @@ word2id = training_dataset.word2id
 
 # Methods
 # methods = ['GPLEARN', 'PYSR', 'NESYMRES', 'E2E', 'MST']
-methods = ['PYSR', 'NESYMRES', 'E2E', 'MST']
+methods = ['PYSR', 'TaylorGP', 'NESYMRES', 'E2E']
 
 # Load underlying equation
 dataLoader = DataLoader(name=name, extrapolation=True)
@@ -33,7 +86,7 @@ print("Underlying function: " + str(expr))
 # Analyze one variable at a time
 original_skeletons = get_skeletons(expr, var_names)
 for iv, var in enumerate(var_names):
-    if iv == 0:
+    if iv >= 0:
         # Get skeleton for each variable present in the expression
         skeleton = original_skeletons[iv]
         print('Analyzing variable ' + var + '. Skeleton: ')
@@ -46,7 +99,8 @@ for iv, var in enumerate(var_names):
                 coeff_dict[str(constant)] = constant
 
         eq = SimpleEquation(expr=skeleton, coeff_dict=coeff_dict, variables=[var])
-        result = evaluate_and_wrap(eq, cfg.dataset_train, word2id, return_exprs=True)
+        result = evaluate_and_wrap(eq, cfg.dataset_train, word2id, return_exprs=True, n_sets=30,
+                                   xmin=dataLoader.limits[iv][0] * 2, xmax=dataLoader.limits[iv][1] * 2)
         Xs, Ys, _, _, exprs = result
 
         # Analyze each of the 10 sampled expressions
@@ -69,6 +123,7 @@ for iv, var in enumerate(var_names):
                     # In the case of the Multi-Set Transformer, it directly saves the skeletons
                     est_skeleton = get_skeletons(expr=sp.sympify(sk[iv]), var_names=var_names)[iv]
                     est_skeleton = add_constant_identifier(est_skeleton)[0]
+
                 print("\t|\t\tUsing skeleton obtained by the " + method + " method: " + str(est_skeleton))
                 # Fit coefficients of the estimated skeletons
                 problem = FitGA(est_skeleton, Xi, Yi, limits, clim)
@@ -84,3 +139,12 @@ for iv, var in enumerate(var_names):
         plt.boxplot(errors, labels=methods)
         plt.xlabel('Methods')
         plt.ylabel('Errors')
+
+        # Perform Tukey Test
+        columns = [errors[:, i] for i in range(errors.shape[1])]
+        res = tukey_hsd(*columns)
+        print("Tukey's HSD Pairwise Group Comparisons (Grouping)")
+        print("___________________")
+        print(methods)
+        lett = tukeyLetters(res.pvalue)
+        print(lett)

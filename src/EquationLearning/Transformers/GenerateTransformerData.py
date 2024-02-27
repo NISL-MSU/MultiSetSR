@@ -166,7 +166,7 @@ def sample_constants(eq, cfg):
     return eq2
 
 
-def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
+def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False, n_sets=None, xmin=None, xmax=None):
     """
     Given a list of skeleton equations, sample their inputs and corresponding constants and evaluate their results
     :param eq: List of skeleton equations
@@ -174,11 +174,14 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
     :param word2id: Dictionary used to tokenize equations
     :param return_exprs: If True, return the expression that were sampeld during the process
     :param extrapolate: If True, sample support values that go beond the training domain
+    :param n_sets: If not None, it explicitly specifies the number of sets to be generated
+    :param xmin: If not None, it explicitly specifies the minimum support value to be used for generation
+    :param xmax: If not None, it explicitly specifies the minimum support value to be used for generation
     """
     exprs = eq.expr
     curr_p = cfg.max_number_of_points
     # # Uncomment the code below if you have a specific skeleton from which you want to sample data as an example
-    # sk = sympy.sympify('c + c/(x_1**4*cos(c + x_1))')
+    # sk = sympy.sympify('c*x_1 + c*sin(c*x_1 + c) + c')
     # sk, _, _ = add_constant_identifier(sk)
     # coeff_dict = dict()
     # var = None
@@ -191,9 +194,13 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
     # exprs = eq.expr
 
     # Randomly stretch or shrink input domain. E.g., from [-10, 10] to [-5, 5] or [-2, 2]
-    divider = np.random.randint(2, 10) / 2
-    minX, maxX = cfg.fun_support.min / divider, cfg.fun_support.max / divider
-    Xbounds = [minX, maxX]
+    divider = 1  # np.random.randint(2, 10) / 2
+    if xmin is None and xmax is None:
+        minX, maxX = cfg.fun_support.min / divider, cfg.fun_support.max / divider
+        Xbounds = [minX, maxX]
+    else:
+        minX, maxX = xmin, xmax
+        Xbounds = [minX, maxX]
 
     # Check if there's any bounded operation in the expression
     bounded, double_bounded, op_with_singularities, trig_functions = bounded_operations()
@@ -203,21 +210,26 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
             any([b in str(exprs) for b in list(op_with_singularities)]) or '**0.5' in str(exprs) or '**(-' in str(exprs):
         is_bounded = True
 
-    # Create "cfg.number_of_sets" vectors to store the evaluations
-    X = np.zeros((curr_p, cfg.number_of_sets), dtype=np.float32)
-    Y = np.zeros((curr_p, cfg.number_of_sets), dtype=np.float32)
-    # Sample constants "cfg.number_of_sets" times
+    # If the number of sets is explicitly specified
+    Ns = cfg.number_of_sets
+    if n_sets is not None:
+        Ns = n_sets
+
+    # Create "Ns" vectors to store the evaluations
+    X = np.zeros((curr_p, Ns), dtype=np.float32)
+    Y = np.zeros((curr_p, Ns), dtype=np.float32)
+    # Sample constants "Ns" times
     support = sample_support(curr_p, cfg, Xbounds, extrapolate)
     tokenized = None
     n_set = 0
-    sampled_exprs = [''] * cfg.number_of_sets
+    sampled_exprs = [''] * Ns
 
     ###########################################################
     # Start Ns iterations
     ###########################################################
     tic_main = time.time()
     skeleton_eq, coeff_dict = None, None
-    while n_set < cfg.number_of_sets:  # for loop but using while because it may restart
+    while n_set < Ns:  # for loop but using while because it may restart
         # If more than 20 seconds time has passed, skip this equation
         toc_main = time.time()
         if toc_main - tic_main > 50:
@@ -254,8 +266,9 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
         expr_with_placeholder = numeric_to_placeholder(new_expr)
         eq_sympy_infix = constants_to_placeholder(expr_with_placeholder, coeff_dict)
         eq_sympy_infix = sympify(str(eq_sympy_infix).replace('*(c + x_1)', '*(c*x_1 + c)'))
-        # eq_sympy_infix = sympify(str(eq_sympy_infix).replace('(x_1', '(c*x_1'))
-        eq_sympy_infix = sympify(str(eq_sympy_infix).replace('+ (c*x_1 + c)**', '+ c*(c*x_1 + c)**'))
+        eq_sympy_infix = sympify(str(eq_sympy_infix).replace('c*(c*x_1 + c)', 'c*(x_1 + c)'))
+        # eq_sympy_infix = sympify(str(eq_sympy_infix2).replace('(x_1', '(c*x_1'))
+        eq_sympy_infix = sympify(str(eq_sympy_infix).replace('+ (c*x_1 + c)**', '+ c*(x_1 + c)**'))
         eq_sympy_infix = sympify(str(eq_sympy_infix).replace('+ Abs(c*x_1)', '+ c*Abs(x_1)'))
         eq_sympy_infix = sympify(str(eq_sympy_infix).replace('c*Abs(c*x_1)', 'c*Abs(x_1)'))
         eq_sympy_prefix = Generator.sympy_to_prefix(eq_sympy_infix)
@@ -298,8 +311,9 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
                 expr_with_placeholder2 = numeric_to_placeholder(new_expr)
                 eq_sympy_infix2 = constants_to_placeholder(expr_with_placeholder2, coeff_dict)
                 eq_sympy_infix2 = sympify(str(eq_sympy_infix2).replace('*(c + x_1)', '*(c*x_1 + c)'))
+                eq_sympy_infix2 = sympify(str(eq_sympy_infix2).replace('c*(c*x_1 + c)', 'c*(x_1 + c)'))
                 # eq_sympy_infix2 = sympify(str(eq_sympy_infix2).replace('(x_1', '(c*x_1'))
-                eq_sympy_infix2 = sympify(str(eq_sympy_infix2).replace('+ (c*x_1 + c)**', '+ c*(c*x_1 + c)**'))
+                eq_sympy_infix2 = sympify(str(eq_sympy_infix2).replace('+ (c*x_1 + c)**', '+ c*(x_1 + c)**'))
                 eq_sympy_infix2 = sympify(str(eq_sympy_infix2).replace('+ Abs(c*x_1)', '+ c*Abs(x_1)'))
                 eq_sympy_infix2 = sympify(str(eq_sympy_infix2).replace('c*Abs(c*x_1)', 'c*Abs(x_1)'))
                 eq_sympy_prefix2 = Generator.sympy_to_prefix(eq_sympy_infix2)
@@ -339,7 +353,7 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
             # tic = time.time()  # Start Time
             # while len(vals) < curr_p:
             #     missing = curr_p - len(vals)
-            #     # Sample constants "cfg.number_of_sets/2" times and remove NaNs from them
+            #     # Sample constants "Ns/2" times and remove NaNs from them
             #     extra_support = sample_support(eq, int(curr_p/2), cfg, extrapolate)
             #     extra_vals = np.array(function(*list(extra_support)))
             #     isnans, indices_to_remove = is_nan(extra_vals), []
@@ -358,8 +372,9 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
             #     if toc - tic > 10:
             #         return None
 
-            scaling_factor = 20 / (np.max(support) - np.min(support))
-            support = (support - np.min(support)) * scaling_factor - 10
+            # if n_set is None:
+            #     scaling_factor = 20 / (np.max(support) - np.min(support))
+            #     support = (support - np.min(support)) * scaling_factor - 10
             X[:, n_set] = support
             Y[:, n_set] = vals
             indices = np.arange(X.shape[0])
@@ -368,20 +383,22 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False):
             Y[:, n_set] = Y[indices, n_set]
             sampled_exprs[n_set] = new_expr
 
-            if np.std(vals) > 0.01:  # If the result is too flat, try again
+            if np.std(vals) > 0.01 and not any(is_nan(vals)):  # If the result is too flat, try again
                 if np.isnan(vals).any() or np.isinf(vals).any() or np.isnan(np.mean(vals)) or \
                         np.isinf(np.mean(vals)) or np.isnan(np.std(vals)) or np.isinf(np.std(vals)):
                     return None
 
-                # With a chance of 0.3, fix all sets to the same function
-                if np.random.random(1) < 0.3 and n_set == 0:
-                    X[:, 1:] = X[:, 0][:, np.newaxis]
-                    Y[:, 1:] = Y[:, 0][:, np.newaxis]
-                    sampled_exprs = [new_expr] * cfg.number_of_sets
-                    break
+                # If there's not enough samples between -3 and 3, try again (it avoids having functions with big gaps)
+                selected_indices = np.where((support >= -4) & (support <= 4))[0]
+                if len(selected_indices) < 3000 or np.std(support) < 3 or np.max(support) - np.min(support) < 15:
+                    continue
+
                 n_set += 1
 
-            elif np.std(vals) == 0 or 'x_1' not in str(new_expr):
+            elif any(is_nan(vals)):  # If there's an undefined value, try again
+                continue
+
+            elif np.std(vals) == 0 or 'x_1' not in str(new_expr) or 'x_1' not in str(exprs):
                 return None
 
     if return_exprs:
@@ -475,24 +492,23 @@ def skeleton2dataset(sk, Xbounds, cfg, word2id, extrapolate=False):
 
 def is_nan(x, bound=None):
     """Encompasses NaN, Inf values, and outliers"""
-    mean = np.mean(x)
-    std = np.std(x)
-    threshold = 5
-    outliers = []
-    for xx in x:
-        z_score = (xx - mean) / std
-        try:
-            if abs(z_score) > threshold:
-                outliers.append(True)
-            else:
-                outliers.append(False)
-        except:
-            print()
+    # mean = np.mean(x)
+    # std = np.std(x)
+    # threshold = 5
+    # outliers = []
+    # for xx in x:
+    #     z_score = (xx - mean) / std
+    #     try:
+    #         if abs(z_score) > threshold:
+    #             outliers.append(True)
+    #         else:
+    #             outliers.append(False)
+    #     except:
+    #         print()
     if bound is None:
-        return np.iscomplex(x) + np.isnan(x) + np.isinf(x) + (np.abs(x) > 100000) + np.array(outliers)
+        return np.iscomplex(x) + np.isnan(x) + np.isinf(x) + (np.abs(x) > 100000)  # + np.array(outliers)
     else:
-        return np.iscomplex(x) + np.isnan(x) + np.isinf(x) + (np.abs(x) > 100000) + (np.abs(x) > bound) + np.array(
-            outliers)
+        return np.iscomplex(x) + np.isnan(x) + np.isinf(x) + (np.abs(x) > 100000) + (np.abs(x) > bound)  # + np.array(outliers)
 
 
 def modify_constants_avoidNaNs(expr, x, bounded_ops, npoints, Xbounds, variable=sympy.sympify('x_1'), extrapolate=False,
@@ -569,7 +585,7 @@ def modify_constants_avoidNaNs(expr, x, bounded_ops, npoints, Xbounds, variable=
 
                 if any(is_nan(vals)) or ('exp' in str(arg_init.func) and 0 in vals) or \
                         any([f in str(arg_init.func) for f in list(bounded_ops[2].keys())]) or \
-                        any([f in str(arg_init.func) for f in ['sin', 'cos', 'tan']]):
+                        any([f in str(arg_init.func) for f in ['sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh']]):
                     # If NaN values were found, evaluate the values of the arguments inside the current function
                     arg_function = lambdify(flatten(variable), args2)
                     vals_arg = np.array(arg_function(*list(x)))
@@ -599,7 +615,7 @@ def modify_constants_avoidNaNs(expr, x, bounded_ops, npoints, Xbounds, variable=
                                     args2 = args2 / offset * 10
                         else:
                             # Max-bounded operations are simply divided and multiplied
-                            if (np.abs(vals) > 100000).any():
+                            if np.any(np.abs(vals_arg) > bound):
                                 args2 = args2 / np.max(np.abs(vals_arg)) * bound
 
                     elif any([f in str(arg_init.func) for f in list(bounded_ops[1].keys())]):
@@ -613,7 +629,7 @@ def modify_constants_avoidNaNs(expr, x, bounded_ops, npoints, Xbounds, variable=
                                 np.max(vals_arg) - np.min(vals_arg))  # Scaled between 0 and 1
                         args2 = args2 * (max_bound - min_bound) + min_bound  # Scaled between min_bound and max_bound
 
-                    else:
+                    elif str(arg_init.func) not in ['sin', 'cos']:
                         # For operations with singularities such as TAN, resample the support vector to avoid singularities
                         # Drop input-output pairs containing NaNs and entries with an absolute value of y above 10000
                         if extrapolate:

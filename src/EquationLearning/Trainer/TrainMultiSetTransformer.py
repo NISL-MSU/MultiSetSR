@@ -102,6 +102,43 @@ class TransformerTrainer:
         self.writer = SummaryWriter('runs')
         self.lambda_ = self.cfg.dataset_train.lambda_
 
+    def sample_domain(self, Xs, Ys, equations):
+        """Use a random domain (e.g., between -10 and 10, or -5 and 5, etc)"""
+        dva = np.random.randint(3, 10)
+        minX, maxX = -dva, dva
+        X, Y = np.zeros((self.cfg.architecture.block_size, self.cfg.architecture.number_of_sets)), np.zeros(
+            (self.cfg.architecture.block_size, self.cfg.architecture.number_of_sets))
+        for ns in range(self.cfg.architecture.number_of_sets):
+            # Select rows where the value of the first column is between minX and maxX
+            selected_rows_indices = np.where((Xs[:, ns] >= minX) & (Xs[:, ns] <= maxX))[0]
+            remaining = self.cfg.architecture.block_size - len(selected_rows_indices)
+            # Randomly select 1000 rows from the selected rows
+            if len(selected_rows_indices) > self.cfg.architecture.block_size:
+                selected_rows_indices = np.random.choice(selected_rows_indices, self.cfg.architecture.block_size, replace=False)
+            elif len(selected_rows_indices) < self.cfg.architecture.block_size and remaining < 200:
+                try:
+                    selected_rows_indices = list(selected_rows_indices)
+                    selected_rows_indices += list(np.random.choice(np.array(selected_rows_indices), remaining, replace=False))
+                    selected_rows_indices = np.array(selected_rows_indices)
+                except ValueError:
+                    ns, dva = 0, dva + 1  # If it failed, try with a larger domain
+                    continue
+            elif len(selected_rows_indices) < self.cfg.architecture.block_size and remaining >= 200:
+                ns, dva = 0, dva + 1  # If it failed, try with a larger domain
+                continue
+
+            X[:, ns] = Xs[:, ns][selected_rows_indices]
+            scaling_factor = 20 / (np.max(X[:, ns]) - np.min(X[:, ns]))
+            X[:, ns] = (X[:, ns] - np.min(X[:, ns])) * scaling_factor - 10
+            Y[:, ns] = Ys[:, ns][selected_rows_indices]
+        # With a chance of 0.3, fix all sets to the same function
+        if np.random.random(1) < 0.3:
+            ns = np.random.randint(0, self.cfg.architecture.number_of_sets)
+            X[:, 0:] = X[:, ns][:, np.newaxis]
+            Y[:, 0:] = Y[:, ns][:, np.newaxis]
+            equations = [equations[ns]] * self.cfg.architecture.number_of_sets
+        return X, Y, equations
+
     def fit(self):
         """Implement main training loop"""
         epochs = self.cfg.epochs
@@ -112,7 +149,7 @@ class TransformerTrainer:
         # Prepare list of indexes for shuffling
         indexes = np.arange(len(train_files))
 
-        self.model.load_state_dict(torch.load('src/EquationLearning/models/saved_models/Model-' + self.cfg.dataset))
+        # self.model.load_state_dict(torch.load('src/EquationLearning/models/saved_models/Model-' + self.cfg.dataset))
         print("""""""""""""""""""""""""""""")
         print("Start training")
         print("""""""""""""""""""""""""""""")
@@ -127,8 +164,7 @@ class TransformerTrainer:
                 block = open_h5(train_files[b_ind])
 
                 # Format elements in the block as torch Tensors
-                XY_block = torch.zeros(
-                    (len(block), block[0][0].shape[0], 2, self.cfg.architecture.number_of_sets))
+                XY_block = torch.zeros((len(block), self.cfg.architecture.block_size, 2, self.cfg.architecture.number_of_sets))
                 skeletons_block = []
                 xpr_block = []
                 remove_indices = []
@@ -136,6 +172,8 @@ class TransformerTrainer:
                     Xs, Ys, tokenized, xpr, equations = b
                     Xs = Xs[:, :self.cfg.architecture.number_of_sets]
                     Ys = Ys[:, :self.cfg.architecture.number_of_sets]
+                    Xs, Ys, _ = self.sample_domain(Xs, Ys, equations)
+
                     # Shuffle data
                     for d in range(self.cfg.architecture.number_of_sets):
                         indices = np.arange(Xs.shape[0])
@@ -144,8 +182,15 @@ class TransformerTrainer:
                         Ys[:, d] = Ys[indices, d]
                     # Normalize data
                     means, std = np.mean(Ys, axis=0), np.std(Ys, axis=0)
-                    Ys_temp = (Ys - means) / std
-                    if np.isnan(Ys_temp).any() or np.min(std) < 0.01:
+                    Ys = (Ys - means) / std
+                    # if isinstance(Xs, np.ndarray):  # Some blocks were stored as numpy arrays and others as tensors
+                    #     Xs, Ys = torch.from_numpy(Xs), torch.from_numpy(Ys)
+                    # XY_block[ib, :, 0, :] = Xs.cuda()
+                    # XY_block[ib, :, 1, :] = Ys.cuda()
+                    # skeletons_block.append(torch.tensor(tokenized).long().cuda())
+                    # xpr_block.append(xpr)
+
+                    if np.isnan(Ys).any() or np.min(std) < 0.01 or 'E' in xpr:
                         remove_indices.append(ib)
                     else:
                         if isinstance(Xs, np.ndarray):  # Some blocks were stored as numpy arrays and others as tensors
@@ -245,7 +290,7 @@ class TransformerTrainer:
 
                 # Format elements in the block as torch Tensors
                 XY_block = torch.zeros(
-                    (len(block), block[0][0].shape[0], 2, self.cfg.architecture.number_of_sets))
+                    (len(block), self.cfg.architecture.block_size, 2, self.cfg.architecture.number_of_sets))
                 skeletons_block = []
                 remove_indices = []
                 for ib, b in enumerate(block):
@@ -253,6 +298,7 @@ class TransformerTrainer:
                     # Normalize data
                     Xs = Xs[:, :self.cfg.architecture.number_of_sets]
                     Ys = Ys[:, :self.cfg.architecture.number_of_sets]
+                    Xs, Ys, _ = self.sample_domain(Xs, Ys, equations)
                     means, std = np.mean(Ys, axis=0), np.std(Ys, axis=0)
                     Ys = (Ys - means) / std
                     if isinstance(Xs, np.ndarray):  # Some blocks were stored as numpy arrays and others as tensors

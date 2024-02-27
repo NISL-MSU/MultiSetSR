@@ -141,4 +141,4 @@ if __name__ == '__main__':
     un_ops = ['sin', 'cos', 'pow2']
     gen = GenExpression(max_tokens=m_tokens, unary_ops=un_ops, max_nest=2)
     expr = gen.generate_expr_tree()
-    print(expr_str)
+    print(expr)

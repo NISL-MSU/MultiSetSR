@@ -80,9 +80,9 @@ def bounded_operations():
     bounded = {'sqrt': ('min', 0.01),
                'log': ('min', 0.001),
                'exp': ('max', 10),
-               'sinh': ('max', 10),
-               'cosh': ('max', 10),
-               'tanh': ('max', 10)}
+               'sinh': ('max', 8),
+               'cosh': ('max', 8),
+               'tanh': ('max', 8)}
     double_bounded = {'asin': [-0.999, 0.999],
                       'acos': [-0.999, 0.999]}
     trig_functions = ['sin', 'cos', 'tan']
