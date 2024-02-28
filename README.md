@@ -8,7 +8,7 @@ sets of input--response pairs, where all sets correspond to the same functional 
 and outputs a common skeleton expression, as follows:
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/GiorgioMorales/MSSP-SymbolicRegression/master/figs/MSSP_definition.jpg?token=GHSAT0AAAAAACO2QV332ZSA6VYFPHJ7QSJAZO6Q4VA" alt="alt text" width="400">
+  <img src="figs/MSSP_definition.jpg" alt="alt text" width="400">
 </p>
 
 We present a novel transformer model called "Multi-Set Transformer" to solve the MSSP problem. The model is pre-trained 
@@ -17,7 +17,7 @@ identification process of the functional form between each variable and the syst
 of MSSP problems:
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/GiorgioMorales/MSSP-SymbolicRegression/master/figs/Skeleton.png?token=GHSAT0AAAAAACO2QV33A4XNSXTKOWMXJZUIZO6Q25Q" alt="alt text" width="500">
+  <img src="figs/Skeleton.png" alt="alt text" width="500">
 </p>
 
 ## Usage
