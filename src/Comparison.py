@@ -1,7 +1,7 @@
 import omegaconf
+import matplotlib
 import sympy as sp
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.stats import tukey_hsd
 from src.utils import get_project_root
 from src.EquationLearning.Data.dclasses import SimpleEquation
@@ -9,6 +9,8 @@ from src.EquationLearning.Data.GenerateDatasets import DataLoader
 from src.EquationLearning.models.utilities_expressions import add_constant_identifier, get_skeletons
 from src.EquationLearning.Optimization.CoefficientFitting import FitGA
 from src.EquationLearning.Transformers.GenerateTransformerData import Dataset, evaluate_and_wrap
+matplotlib.use('TkAgg')
+import matplotlib.pyplot as plt
 
 
 def tukeyLetters(pp, means=None, alpha=0.05):
@@ -109,7 +111,8 @@ for iv, var in enumerate(var_names):
             for it in range(Xs.shape[1]):
                 Xi, Yi = Xs[:, it], Ys[:, it]
                 print('\tIteration ' + str(it))
-                exprs[it] = sp.sympify('-0.808776035583721*x0 - 4.22339575696008*sin(0.750333459239193*x0 - 2.34678008290392)')
+                exprs[it] = sp.sympify(
+                    '-0.808776035583721*x0 - 4.22339575696008*sin(0.750333459239193*x0 - 2.34678008290392)')
                 print("\t|\tSampled expression: " + str(exprs[it]))
 
                 for im, method in enumerate(methods):
@@ -134,7 +137,8 @@ for iv, var in enumerate(var_names):
                     print("\t|\t\t\tFitted expression: " + str(est_expr) + ". Error = " + str(np.round(error, 8)))
 
             # Save results
-            np.save(str(get_project_root()) + '/output/metrics/comparison_var-' + var + '_problem-' + name + '.npy', errors)
+            np.save(str(get_project_root()) + '/output/metrics/comparison_var-' + var + '_problem-' + name + '.npy',
+                    errors)
 
         else:  # Load results
             errors = np.load(str(get_project_root()) + '/output/metrics/comparison_var-' + var + '_problem-' + name +
@@ -146,7 +150,8 @@ for iv, var in enumerate(var_names):
         plt.xlabel('Methods')
         plt.ylabel('Errors')
         plt.tight_layout()
-        plt.savefig(str(get_project_root()) + '/output/metrics/comparison_var-' + var + '_problem-' + name + '.jpg', dpi=600)
+        plt.savefig(str(get_project_root()) + '/output/metrics/comparison_var-' + var + '_problem-' + name + '.jpg',
+                    dpi=600)
 
         # Perform Tukey Test
         columns = [errors[:, i] for i in range(errors.shape[1])]
@@ -163,14 +168,14 @@ for iv, var in enumerate(var_names):
         # Format the results in LaTeX format
         latex_output = ""
         for i in range(len(means)):
-            if means[i] < 0.01:
-                mean_str = "{:.0e}".format(means[i])
+            if means[i] < 0.1:
+                mean_str = "{:.0e}".format(means[i]).replace('e', '\!\\times\! 10^{') + '}'
             else:
                 means_rounded = np.round(means, decimals=1)
                 mean_str = "{}".format(means_rounded[i])
 
-            if stds[i] < 0.01:
-                std_str = "{:.0e}".format(stds[i])
+            if stds[i] < 0.1:
+                std_str = "{:.0e}".format(stds[i]).replace('e', '\!\\times\! 10^{') + '}'
             else:
                 stds_rounded = np.round(stds, decimals=1)
                 std_str = "{}".format(stds_rounded[i])
