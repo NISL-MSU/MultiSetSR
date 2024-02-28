@@ -72,7 +72,7 @@ class SymbolicRegressor:
             if self.n_features > 1:
                 sys.exit("We haven't trained a NN for this problem yet. Use the TrainNNModel.py file first.")
         # Load weights of MST
-        MST_path = os.path.join(root, "src//EquationLearning//models//saved_models/Model512-batch_12-dataset1")
+        MST_path = os.path.join(root, "src//EquationLearning//models//saved_models/Model512-batch_12-Q2")
         self.model.load_state_dict(torch.load(MST_path))
         self.model.cuda()
 
