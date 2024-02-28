@@ -1,5 +1,6 @@
 import numpy as np
 import warnings
+from sympy import flatten
 from pymoo.optimize import minimize
 from pymoo.core.variable import Real
 from pymoo.core.problem import Problem
@@ -7,7 +8,6 @@ from pymoo.algorithms.soo.nonconvex.ga import GA
 from pymoo.termination.robust import RobustTermination
 from src.EquationLearning.models.utilities_expressions import *
 from pymoo.termination.ftol import MultiObjectiveSpaceTermination
-
 warnings.filterwarnings("ignore")
 
 
