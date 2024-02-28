@@ -13,9 +13,11 @@ and outputs a common skeleton expression, as follows:
   <img src="https://raw.githubusercontent.com/GiorgioMorales/MSSP-SymbolicRegression/master/figs/mst.jpg?token=GHSAT0AAAAAACO2QV33FDVL2NIL52PYKPUAZO6QF2Q" alt="alt text" width="400">
 </p>
 
-
 We present a novel transformer model called "Multi-Set Transformer" to solve the MSSP problem. The model is pre-trained 
 on a large dataset of synthetic symbolic expressions using an entropy-based loss function. The 
 identification process of the functional form between each variable and the system's response is viewed as a sequence 
 of MSSP problems:
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/GiorgioMorales/MSSP-SymbolicRegression/master/figs/Skeleton.jpg?token=GHSAT0AAAAAACO2QV33NAKQLA7YBGVKS2P2ZO6QO4A" alt="alt text" width="400">
+</p>
