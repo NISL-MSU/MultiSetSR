@@ -20,6 +20,10 @@ of MSSP problems:
   <img src="figs/Skeleton.png" alt="alt text" width="500">
 </p>
 
+Our method generates univariate skeletons that are more similar to those corresponding to the underlying equations in comparison to other SR methods.
+From an interpretability standpoint, producing more faithful univariate skeletons means that we are able to provide better explanations of how each variable is related to the system's response.
+In addition, the generated skeletons may be used as building blocks that could be used to estimate the overall function of the system (future work). 
+
 ## Usage
 
 This repository contains the following main scripts:
