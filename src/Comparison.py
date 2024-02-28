@@ -156,3 +156,28 @@ for iv, var in enumerate(var_names):
         print(methods)
         lett = tukeyLetters(res.pvalue)
         print(lett)
+
+        means = np.mean(errors, axis=0)
+        stds = np.std(errors, axis=0)
+
+        # Format the results in LaTeX format
+        latex_output = ""
+        for i in range(len(means)):
+            if means[i] < 0.01:
+                mean_str = "{:.0e}".format(means[i])
+            else:
+                means_rounded = np.round(means, decimals=1)
+                mean_str = "{}".format(means_rounded[i])
+
+            if stds[i] < 0.01:
+                std_str = "{:.0e}".format(stds[i])
+            else:
+                stds_rounded = np.round(stds, decimals=1)
+                std_str = "{}".format(stds_rounded[i])
+
+            latex_output += "${} \pm {}$".format(mean_str, std_str)
+
+            if i < len(means) - 1:
+                latex_output += " & "
+
+        print(latex_output)
