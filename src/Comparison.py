@@ -67,7 +67,7 @@ def tukeyLetters(pp, means=None, alpha=0.05):
 np.random.seed(7)  # Set seed
 
 # Parameters
-name = 'E1'
+name = 'E2'
 clim = [-10, 10]
 cfg = omegaconf.OmegaConf.load("./EquationLearning/Transformers/config.yaml")
 training_dataset = Dataset(cfg.train_path, cfg.dataset_train, mode="train")
