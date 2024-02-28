@@ -1,6 +1,6 @@
-train_path: data/dataset1/training
-val_path: data/dataset1/validation
-dataset: dataset1
+train_path: data/Q2/training
+val_path: data/Q2/validation
+dataset: Q2
 
 wandb: True
 num_of_workers: 32
