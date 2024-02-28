@@ -17,5 +17,5 @@ identification process of the functional form between each variable and the syst
 of MSSP problems:
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/GiorgioMorales/MSSP-SymbolicRegression/master/figs/Skeleton.jpg?token=GHSAT0AAAAAACO2QV33IVMLJAG7XNQVT566ZO6QV7Q" alt="alt text" width="500">
+  <img src="https://raw.githubusercontent.com/GiorgioMorales/MSSP-SymbolicRegression/master/figs/Skeleton.png?token=GHSAT0AAAAAACO2QV33A4XNSXTKOWMXJZUIZO6Q25Q" alt="alt text" width="500">
 </p>
