@@ -67,12 +67,12 @@ def tukeyLetters(pp, means=None, alpha=0.05):
 np.random.seed(7)  # Set seed
 
 # Parameters
-name = 'E2'
+name = 'E1'
 clim = [-10, 10]
 cfg = omegaconf.OmegaConf.load("./EquationLearning/Transformers/config.yaml")
 training_dataset = Dataset(cfg.train_path, cfg.dataset_train, mode="train")
 word2id = training_dataset.word2id
-scratch = True  # If False, just load saved results and plot them
+scratch = False  # If False, just load saved results and plot them
 
 # Methods
 methods = ['PYSR', 'TaylorGP', 'NESYMRES', 'E2E', 'MST']
