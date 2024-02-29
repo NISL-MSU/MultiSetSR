@@ -47,9 +47,9 @@ class CoefficientFitting(Problem):
                     xu.append(2*np.pi)
                     continue
                 elif ('exp' in ops[-2]) and 'Mul' in ops[-1]:
-                    opt_variables[f"x{k:02}"] = Real(bounds=(-3, 3))
-                    xl.append(-3)
-                    xu.append(3)
+                    opt_variables[f"x{k:02}"] = Real(bounds=(-2.5, 2.5))
+                    xl.append(-2.5)
+                    xu.append(2.5)
                     continue
             if len(ops) == 3:
                 if (('sin' in ops[0]) or ('cos' in ops[0]) or ('tan' in ops[0])) and 'Add' in ops[1] and 'Mul' in ops[2]:
@@ -79,7 +79,7 @@ class CoefficientFitting(Problem):
             else:
                 ys = np.repeat(c[si, :], len(self.x_values), axis=0)
             # Calculate correlation between the results of the new expression and the original estimated vector
-            if len(np.argwhere((np.isinf(ys)) | (np.isnan(ys)) | (np.abs(ys) > 1000000))) > 0:
+            if len(np.argwhere((np.isinf(ys)) | (np.isnan(ys)) | (np.abs(ys) > 10**14))) > 0:
                 error += 1000
             else:
                 # r = pearsonr(self.y_est, ys)[0]

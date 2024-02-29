@@ -166,3 +166,56 @@ def create_env(path):
     param = GeneratorDetails(**d)
     env = generator.Generator(param)
     return env, param, d
+
+
+def tukeyLetters(pp, means=None, alpha=0.05):
+    if len(pp.shape) == 1:
+        # vector
+        G = int(3 + np.sqrt(9 - 4 * (2 - len(pp)))) // 2
+        ppp = .5 * np.eye(G)
+        ppp[np.triu_indices(G, 1)] = pp
+        pp = ppp + ppp.T
+    conn = pp > alpha
+    G = len(conn)
+    if np.all(conn):
+        return ['a' for _ in range(G)]
+    conns = []
+    for g1 in range(G):
+        for g2 in range(g1 + 1, G):
+            if conn[g1, g2]:
+                conns.append((g1, g2))
+
+    letters = [[] for _ in range(G)]
+    nextletter = 0
+    for g in range(G):
+        if np.sum(conn[g, :]) == 1:
+            letters[g].append(nextletter)
+            nextletter += 1
+    while len(conns):
+        grp = set(conns.pop(0))
+        for g in range(G):
+            if all(conn[g, np.sort(list(grp))]):
+                grp.add(g)
+        for g in grp:
+            letters[g].append(nextletter)
+        for g in grp:
+            for h in grp:
+                if (g, h) in conns:
+                    conns.remove((g, h))
+        nextletter += 1
+
+    if means is None:
+        means = np.arange(G)
+    means = np.array(means)
+    groupmeans = []
+    for k in range(nextletter):
+        ingroup = [g for g in range(G) if k in letters[g]]
+        groupmeans.append(means[np.array(ingroup)].mean())
+    ordr = np.empty(nextletter, int)
+    ordr[np.argsort(groupmeans)] = np.arange(nextletter)
+    r = []
+    for ltr in letters:
+        lst = [chr(97 + ordr[x]) for x in ltr]
+        lst.sort()
+        r.append(''.join(lst))
+    return r

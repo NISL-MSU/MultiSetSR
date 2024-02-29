@@ -3,7 +3,7 @@ import matplotlib
 import sympy as sp
 import numpy as np
 from scipy.stats import tukey_hsd
-from src.utils import get_project_root
+from src.utils import get_project_root, tukeyLetters
 from src.EquationLearning.Data.dclasses import SimpleEquation
 from src.EquationLearning.Data.GenerateDatasets import DataLoader
 from src.EquationLearning.models.utilities_expressions import add_constant_identifier, get_skeletons
@@ -12,85 +12,37 @@ from src.EquationLearning.Transformers.GenerateTransformerData import Dataset, e
 matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 
+np.random.seed(7)
 
-def tukeyLetters(pp, means=None, alpha=0.05):
-    if len(pp.shape) == 1:
-        # vector
-        G = int(3 + np.sqrt(9 - 4 * (2 - len(pp)))) // 2
-        ppp = .5 * np.eye(G)
-        ppp[np.triu_indices(G, 1)] = pp
-        pp = ppp + ppp.T
-    conn = pp > alpha
-    G = len(conn)
-    if np.all(conn):
-        return ['a' for _ in range(G)]
-    conns = []
-    for g1 in range(G):
-        for g2 in range(g1 + 1, G):
-            if conn[g1, g2]:
-                conns.append((g1, g2))
-
-    letters = [[] for _ in range(G)]
-    nextletter = 0
-    for g in range(G):
-        if np.sum(conn[g, :]) == 1:
-            letters[g].append(nextletter)
-            nextletter += 1
-    while len(conns):
-        grp = set(conns.pop(0))
-        for g in range(G):
-            if all(conn[g, np.sort(list(grp))]):
-                grp.add(g)
-        for g in grp:
-            letters[g].append(nextletter)
-        for g in grp:
-            for h in grp:
-                if (g, h) in conns:
-                    conns.remove((g, h))
-        nextletter += 1
-
-    if means is None:
-        means = np.arange(G)
-    means = np.array(means)
-    groupmeans = []
-    for k in range(nextletter):
-        ingroup = [g for g in range(G) if k in letters[g]]
-        groupmeans.append(means[np.array(ingroup)].mean())
-    ordr = np.empty(nextletter, int)
-    ordr[np.argsort(groupmeans)] = np.arange(nextletter)
-    r = []
-    for ltr in letters:
-        lst = [chr(97 + ordr[x]) for x in ltr]
-        lst.sort()
-        r.append(''.join(lst))
-    return r
-
-
-np.random.seed(7)  # Set seed
-
+####################################
 # Parameters
-name = 'E1'
+####################################
+name = 'E3'
 clim = [-10, 10]
 cfg = omegaconf.OmegaConf.load("./EquationLearning/Transformers/config.yaml")
 training_dataset = Dataset(cfg.train_path, cfg.dataset_train, mode="train")
 word2id = training_dataset.word2id
-scratch = False  # If False, just load saved results and plot them
+scratch = True  # If False, just load saved results and plot them
 
 # Methods
-methods = ['PYSR', 'TaylorGP', 'NESYMRES', 'E2E', 'MST']
+methods = ['MST']
 
+####################################
 # Load underlying equation
+####################################
 dataLoader = DataLoader(name=name, extrapolation=True)
 X, Y, var_names, expr = dataLoader.X, dataLoader.Y, dataLoader.names, dataLoader.expr
-limits = [dataLoader.limits[0][0] * 2, dataLoader.limits[0][1] * 2]
 print("Underlying function: " + str(expr))
 
+####################################
 # Analyze one variable at a time
+####################################
 original_skeletons = get_skeletons(expr, var_names)
 for iv, var in enumerate(var_names):
     if iv >= 0:
         if scratch:
             # Get skeleton for each variable present in the expression
+            limits = [dataLoader.limits[iv][0], dataLoader.limits[iv][1]]
             skeleton = original_skeletons[iv]
             print('Analyzing variable ' + var + '. Skeleton: ')
             print('\t' + str(skeleton))
@@ -103,7 +55,7 @@ for iv, var in enumerate(var_names):
 
             eq = SimpleEquation(expr=skeleton, coeff_dict=coeff_dict, variables=[var])
             result = evaluate_and_wrap(eq, cfg.dataset_train, word2id, return_exprs=True, n_sets=30,
-                                       xmin=dataLoader.limits[iv][0] * 2, xmax=dataLoader.limits[iv][1] * 2)
+                                       xmin=limits[0], xmax=limits[1])
             Xs, Ys, _, _, exprs = result
 
             # Analyze each of the 10 sampled expressions
@@ -111,8 +63,6 @@ for iv, var in enumerate(var_names):
             for it in range(Xs.shape[1]):
                 Xi, Yi = Xs[:, it], Ys[:, it]
                 print('\tIteration ' + str(it))
-                exprs[it] = sp.sympify(
-                    '-0.808776035583721*x0 - 4.22339575696008*sin(0.750333459239193*x0 - 2.34678008290392)')
                 print("\t|\tSampled expression: " + str(exprs[it]))
 
                 for im, method in enumerate(methods):

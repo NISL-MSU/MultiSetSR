@@ -113,8 +113,8 @@ class DataLoader:
             x1 = np.random.uniform(-5, 5, size=n)
             x2 = np.random.uniform(-5, 5, size=n)
         else:
-            x1 = sample_exclude(-10, 10, n, -5, 5)
-            x2 = sample_exclude(-10, 10, n, -5, 5)
+            x1 = sample_exclude(-8, 8, n, -5, 5)
+            x2 = sample_exclude(-8, 8, n, -5, 5)
         self.X = np.array([x1, x2]).T
         # Calculate output
         self.Y = (1.5 * np.exp(1.5 * x1) + 5 * np.cos(3 * x2))/10
@@ -132,10 +132,10 @@ class DataLoader:
             x3 = np.random.uniform(-5, 5, size=n)
             x4 = np.random.uniform(-5, 5, size=n)
         else:
-            x1 = sample_exclude(-20, 20, n, -10, 10)
-            x2 = sample_exclude(-20, 20, n, -10, 10)
-            x3 = sample_exclude(-20, 20, n, -10, 10)
-            x4 = sample_exclude(-20, 20, n, -10, 10)
+            x1 = sample_exclude(-10, 10, n, -5, 5)
+            x2 = sample_exclude(-10, 10, n, -5, 5)
+            x3 = sample_exclude(-10, 10, n, -5, 5)
+            x4 = sample_exclude(-10, 10, n, -5, 5)
         self.X = np.array([x1, x2, x3, x4]).T
         # Calculate output
         self.Y = ((1 - x1) ** 2 + (1 - x3) ** 2 + 100 * (x2 - x1 ** 2) ** 2 + 100 * (x4 - x3 ** 2) ** 2) / 10000
@@ -154,10 +154,10 @@ class DataLoader:
             x3 = np.random.uniform(-3, 3, size=n)
             x4 = np.random.uniform(-3, 3, size=n)
         else:
-            x1 = sample_exclude(-4, 4, n, -2, 2)
-            x2 = sample_exclude(-4, 4, n, -2, 2)
-            x3 = sample_exclude(-4, 4, n, -2, 2)
-            x4 = sample_exclude(-4, 4, n, -2, 2)
+            x1 = sample_exclude(-10, 10, n, -5, 5)
+            x2 = sample_exclude(-6, 6, n, -3, 3)
+            x3 = sample_exclude(-6, 6, n, -3, 3)
+            x4 = sample_exclude(-6, 6, n, -3, 3)
         self.X = np.array([x1, x2, x3, x4]).T
         # Calculate output
         self.Y = np.sin(x1 + x2 * x3) + np.exp(1.2 * x4)
@@ -260,8 +260,8 @@ class DataLoader:
             x1 = np.random.uniform(0, 5, size=n)
             x2 = np.random.uniform(0, 5, size=n)
         else:
-            x1 = np.random.uniform(5, 10, size=n)
-            x2 = np.random.uniform(5, 10, size=n)
+            x1 = np.random.uniform(0, 10, size=n)
+            x2 = np.random.uniform(0, 10, size=n)
         self.X = np.array([x1, x2]).T
         # Calculate output
         self.Y = np.log(2 * x2 + 1) - np.log(4 * x1 ** 2 + 1)
@@ -278,8 +278,8 @@ class DataLoader:
             range_values = np.linspace(-3, 3, 100)
             x2 = [np.random.choice(range_values) for _ in range(n)]
         else:
-            x1 = np.random.uniform(-10, 10, size=n)
-            range_values = np.linspace(-5, 5, 200)
+            x1 = np.random.uniform(-4, 4, size=n)
+            range_values = np.linspace(-6, 6, 200)
             x2 = [np.random.choice(range_values) for _ in range(n)]
         self.X = np.array([x1, x2]).T
         # Calculate output
@@ -330,7 +330,7 @@ class DataLoader:
             x1 = np.random.uniform(0, 20, size=n)
             x2 = np.random.uniform(-5, 5, size=n)
         else:
-            x1 = np.random.uniform(0, 30, size=n)
+            x1 = np.random.uniform(0, 40, size=n)
             x2 = np.random.uniform(-10, 10, size=n)
         self.X = np.array([x1, x2]).T
         # Calculate output
