@@ -17,12 +17,12 @@ np.random.seed(7)
 ####################################
 # Parameters
 ####################################
-name = 'E2'
+name = 'E3'
 clim = [-10, 10]
 cfg = omegaconf.OmegaConf.load("./EquationLearning/Transformers/config.yaml")
 training_dataset = Dataset(cfg.train_path, cfg.dataset_train, mode="train")
 word2id = training_dataset.word2id
-scratch = False  # If False, just load saved results and plot them
+scratch = True  # If False, just load saved results and plot them
 
 # Methods
 methods = ['PYSR', 'TaylorGP', 'NESYMRES', 'E2E', 'MST']
@@ -41,8 +41,9 @@ original_skeletons = get_skeletons(expr, var_names)
 for iv, var in enumerate(var_names):
     if iv >= 0:
         if scratch:
-            # Get skeleton for each variable present in the expression
+            # The evaluation domain is TWICE the one used during training
             limits = [dataLoader.limits[iv][0]*2, dataLoader.limits[iv][1]*2]
+            # Get skeleton for each variable present in the expression
             skeleton = original_skeletons[iv]
             print('Analyzing variable ' + var + '. Skeleton: ')
             print('\t' + str(skeleton))
