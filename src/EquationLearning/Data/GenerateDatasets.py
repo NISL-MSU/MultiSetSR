@@ -110,8 +110,8 @@ class DataLoader:
         np.random.seed(7)
         # Define features
         if not self.extrapolation:
-            x1 = np.random.uniform(-5, 5, size=n)
-            x2 = np.random.uniform(-5, 5, size=n)
+            x1 = np.random.uniform(-3, 3, size=n)
+            x2 = np.random.uniform(-3, 3, size=n)
         else:
             x1 = sample_exclude(-8, 8, n, -5, 5)
             x2 = sample_exclude(-8, 8, n, -5, 5)

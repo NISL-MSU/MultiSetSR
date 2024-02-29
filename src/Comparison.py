@@ -25,12 +25,12 @@ word2id = training_dataset.word2id
 scratch = True  # If False, just load saved results and plot them
 
 # Methods
-methods = ['MST']
+methods = ['PYSR', 'TaylorGP', 'NESYMRES', 'E2E', 'MST']
 
 ####################################
 # Load underlying equation
 ####################################
-dataLoader = DataLoader(name=name, extrapolation=True)
+dataLoader = DataLoader(name=name, extrapolation=False)
 X, Y, var_names, expr = dataLoader.X, dataLoader.Y, dataLoader.names, dataLoader.expr
 print("Underlying function: " + str(expr))
 
@@ -42,7 +42,7 @@ for iv, var in enumerate(var_names):
     if iv >= 0:
         if scratch:
             # Get skeleton for each variable present in the expression
-            limits = [dataLoader.limits[iv][0], dataLoader.limits[iv][1]]
+            limits = [dataLoader.limits[iv][0]*2, dataLoader.limits[iv][1]*2]
             skeleton = original_skeletons[iv]
             print('Analyzing variable ' + var + '. Skeleton: ')
             print('\t' + str(skeleton))
