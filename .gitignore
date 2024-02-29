@@ -15,3 +15,4 @@
 /src/EquationLearning/SymbolicRegressor/univariate.py
 /SampleDataInParallel.py
 /src/EquationLearning/Trainer/CrossValidationNNmodel.py
+/src/Evaluation.py
