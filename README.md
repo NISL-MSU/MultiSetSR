@@ -2,7 +2,8 @@
 
 ## Description
 
-We present a method that generates univariate symbolic skeletons that aim to describe the functional relation between each variable and the response.
+We present a method that, given a multivariate regression problem, generates univariate symbolic skeletons that aim to describe 
+the functional relation between each input variable and the system's response.
 To do this, we introduce a new SR problem called Multi-Set symbolic skeleton prediction (MSSP). It receives multiple 
 sets of input--response pairs, where all sets correspond to the same functional form but use different equation constants, 
 and outputs a common skeleton expression, as follows:
@@ -35,7 +36,7 @@ This repository contains the following main scripts:
 Other important scripts:
 
 * `/src/Trainer/TrainMultiSetTRansformer`: Trains the Multi-Set Transformer to solve the MSSP based on a large dataset of pre-generated mathematical expressions.
-* `/src/Trainer/TrainNNmodel`: It trains the NN model $\hat{f}$ that acts as a black-box approximation of the system's underlying function $f$ and that is used to generate the artificial multiple sets used for MSSP.
+* `/src/Trainer/TrainNNmodel`: Trains the NN model $\hat{f}$ that acts as a black-box approximation of the system's underlying function $f$ and that is used to generate the artificial multiple sets used for MSSP.
 
 The datasets are available online at: [https://huggingface.co/datasets/AnonymousGM/MultiSetTransformerData](https://huggingface.co/datasets/AnonymousGM/MultiSetTransformerData).
 To replicate the training process, download the datasets and paste them in the `/src/data/sampled_data` folder
