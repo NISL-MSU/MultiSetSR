@@ -166,41 +166,7 @@ class DataLoader:
         symb = sp.symbols("{}:{}".format('x', 4))
         self.expr = sp.sin(symb[0] + symb[1] * symb[2]) + sp.exp(1.2 * symb[3])
 
-    def E6(self, n=50000):
-        np.random.seed(7)
-        # Define features
-        if not self.extrapolation:
-            x1 = np.random.uniform(-5, 5, size=n)
-            x2 = np.random.uniform(-5, 5, size=n)
-            x3 = np.random.uniform(-5, 5, size=n)
-        else:
-            x1 = sample_exclude(-10, 10, n, -5, 5)
-            x2 = sample_exclude(-10, 10, n, -5, 5)
-            x3 = sample_exclude(-10, 10, n, -5, 5)
-        self.X = np.array([x1, x2, x3]).T
-        # Calculate output
-        self.Y = (np.abs(x3)) / x1 * np.exp(-1 / 2 * (x2 / x1) ** 2)
-        self.names = ['x0', 'x1', 'x2']
-        self.types = ['continuous', 'continuous', 'continuous']
-        symb = sp.symbols("{}:{}".format('x', 3))
-        self.expr = (sp.Abs(symb[2])) / symb[0] * sp.exp(-1 / 2 * (symb[1] / symb[0]) ** 2)
-
-    def E7(self, n=10000):
-        np.random.seed(7)
-        # Define features
-        if not self.extrapolation:
-            x1 = np.random.uniform(-10, 10, size=n)
-        else:
-            x1 = sample_exclude(-20, 20, n, -10, 10)
-        self.X = np.array([x1]).T
-        # Calculate output
-        self.Y = 3.2 / (np.sin(2 * np.pi * np.exp(x1 / 5)) - 1.5)
-        self.names = ['x0']
-        self.types = ['continuous']
-        symb = sp.symbols("{}:{}".format('x', 1))
-        self.expr = 3.2 / (sp.sin(2 * np.pi * sp.exp(symb[0] / 5)) - 1.5)
-
-    def E8(self, n=50000):  # Ours
+    def E6(self, n=50000):  # Ours
         np.random.seed(7)
         # Define features
         if not self.extrapolation:
@@ -219,7 +185,7 @@ class DataLoader:
         symb = sp.symbols("{}:{}".format('x', 3))
         self.expr = sp.tanh(symb[0] / 2) + (sp.Abs(symb[1])) / (sp.sin(2 * np.pi * sp.exp(symb[2] / 5)) - 1.5)
 
-    def E9(self, n=50000):  # S0 in "Informed Equation Learning" paper
+    def E7(self, n=50000):  # S0 in "Informed Equation Learning" paper
         np.random.seed(7)
         # Define features
         if not self.extrapolation:
@@ -236,7 +202,7 @@ class DataLoader:
         symb = sp.symbols("{}:{}".format('x', 2))
         self.expr = (1 - symb[1]**2) / (sp.sin(2 * np.pi * symb[0]) + 1.5)
 
-    def E10(self, n=50000):  # S5 in "Informed Equation Learning" (Werner et. al, 2021)
+    def E8(self, n=50000):  # S5 in "Informed Equation Learning" (Werner et. al, 2021)
         np.random.seed(7)
         # Define features
         if not self.extrapolation:
@@ -253,7 +219,7 @@ class DataLoader:
         symb = sp.symbols("{}:{}".format('x', 2))
         self.expr = (5 * symb[0])**4 / ((5 * symb[0])**4 + 1) + (5 * symb[1])**4 / ((5 * symb[1])**4 + 1)
 
-    def E11(self, n=50000):  # A2 in "Informed Equation Learning" (Werner et. al, 2021)
+    def E9(self, n=50000):  # A2 in "Informed Equation Learning" (Werner et. al, 2021)
         np.random.seed(7)
         # Define features
         if not self.extrapolation:
@@ -339,6 +305,40 @@ class DataLoader:
         self.types = ['continuous', 'continuous']
         symb = sp.symbols("{}:{}".format('x', 2))
         self.expr = sp.sqrt(symb[0] ** 3) * sp.log(symb[1] ** 2)
+
+    def EX1(self, n=50000):
+        np.random.seed(7)
+        # Define features
+        if not self.extrapolation:
+            x1 = np.random.uniform(-5, 5, size=n)
+            x2 = np.random.uniform(-5, 5, size=n)
+            x3 = np.random.uniform(-5, 5, size=n)
+        else:
+            x1 = sample_exclude(-10, 10, n, -5, 5)
+            x2 = sample_exclude(-10, 10, n, -5, 5)
+            x3 = sample_exclude(-10, 10, n, -5, 5)
+        self.X = np.array([x1, x2, x3]).T
+        # Calculate output
+        self.Y = (np.abs(x3)) / x1 * np.exp(-1 / 2 * (x2 / x1) ** 2)
+        self.names = ['x0', 'x1', 'x2']
+        self.types = ['continuous', 'continuous', 'continuous']
+        symb = sp.symbols("{}:{}".format('x', 3))
+        self.expr = (sp.Abs(symb[2])) / symb[0] * sp.exp(-1 / 2 * (symb[1] / symb[0]) ** 2)
+
+    def EX2(self, n=10000):
+        np.random.seed(7)
+        # Define features
+        if not self.extrapolation:
+            x1 = np.random.uniform(-10, 10, size=n)
+        else:
+            x1 = sample_exclude(-20, 20, n, -10, 10)
+        self.X = np.array([x1]).T
+        # Calculate output
+        self.Y = 3.2 / (np.sin(2 * np.pi * np.exp(x1 / 5)) - 1.5)
+        self.names = ['x0']
+        self.types = ['continuous']
+        symb = sp.symbols("{}:{}".format('x', 1))
+        self.expr = 3.2 / (sp.sin(2 * np.pi * sp.exp(symb[0] / 5)) - 1.5)
 
     #############################################################################################
     # LOAD DIFFICULT UNIVARIATE PROBLEMS

@@ -192,5 +192,5 @@ class SymbolicRegressor:
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
-    regressor = SymbolicRegressor(dataset='CS1')
+    regressor = SymbolicRegressor(dataset='E4')
     regressor.get_skeleton()
