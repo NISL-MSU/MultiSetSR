@@ -38,7 +38,7 @@ class DataModuleParams:
 class GeneratorDetails:
     max_len: int
     operators: str
-    operators2: str
+    # operators2: str
     max_ops: int
     # int_base: int
     # precision: int
