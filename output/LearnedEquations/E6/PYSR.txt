@@ -1,0 +1,1 @@
+log(sqrt(tanh(exp(x2))) / cosh(x1))
