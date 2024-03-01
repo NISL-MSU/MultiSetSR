@@ -3,7 +3,7 @@
 ## Description
 
 We present a method that, given a multivariate regression problem, generates univariate symbolic skeletons that aim to describe 
-the functional relation between each variable and the system's response.
+the functional relation between each input variable and the system's response.
 To do this, we introduce a new SR problem called Multi-Set symbolic skeleton prediction (MSSP). It receives multiple 
 sets of input--response pairs, where all sets correspond to the same functional form but use different equation constants, 
 and outputs a common skeleton expression, as follows:
