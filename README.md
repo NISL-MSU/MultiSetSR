@@ -35,7 +35,7 @@ This repository contains the following main scripts:
 Other important scripts:
 
 * `/src/Trainer/TrainMultiSetTRansformer`: Trains the Multi-Set Transformer to solve the MSSP based on a large dataset of pre-generated mathematical expressions.
-* `/src/Trainer/TrainNNmodel`: It trains the NN model $\hat{f}$ that acts as a black-box approximation of the system's underlying function $f$ and that is used to generate the artificial multiple sets used for MSSP.
+* `/src/Trainer/TrainNNmodel`: Trains the NN model $\hat{f}$ that acts as a black-box approximation of the system's underlying function $f$ and that is used to generate the artificial multiple sets used for MSSP.
 
 The datasets are available online at: [https://huggingface.co/datasets/AnonymousGM/MultiSetTransformerData](https://huggingface.co/datasets/AnonymousGM/MultiSetTransformerData).
 To replicate the training process, download the datasets and paste them in the `/src/data/sampled_data` folder
