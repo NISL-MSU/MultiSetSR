@@ -181,7 +181,7 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False, n_
     exprs = eq.expr
     curr_p = cfg.max_number_of_points
     # # Uncomment the code below if you have a specific skeleton from which you want to sample data as an example
-    # sk = sympy.sympify('c*x_1 + c*sin(c*x_1 + c) + c')
+    # sk = sympy.sympify('c + exp(c * (c / x1) ** 2) / x1')
     # sk, _, _ = add_constant_identifier(sk)
     # coeff_dict = dict()
     # var = None
@@ -390,7 +390,7 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False, n_
 
                 # If there's not enough samples between -4 and 4, try again (it avoids having functions with big gaps)
                 selected_indices = np.where((support >= 4/10 * np.min(support)) & (support <= 4/10 * np.max(support)))[0]
-                dt = (xmax - xmin) / 4 * 3  # If at least 3/4 of the domain space is not covered, try again
+                dt = (maxX - minX) / 4 * 3  # If at least 3/4 of the domain space is not covered, try again
                 if len(selected_indices) < 3000 or np.std(support) < 3 or np.max(support) - np.min(support) < dt:
                     continue
 
@@ -586,7 +586,8 @@ def modify_constants_avoidNaNs(expr, x, bounded_ops, npoints, Xbounds, variable=
 
                 if any(is_nan(vals)) or ('exp' in str(arg_init.func) and 0 in vals) or \
                         any([f in str(arg_init.func) for f in list(bounded_ops[2].keys())]) or \
-                        any([f in str(arg_init.func) for f in ['sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh']]):
+                        any([f in str(arg_init.func) for f in ['sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh']]) or \
+                        is_div or is_sqrt:
                     # If NaN values were found, evaluate the values of the arguments inside the current function
                     arg_function = lambdify(flatten(variable), args2)
                     vals_arg = np.array(arg_function(*list(x)))
@@ -630,7 +631,7 @@ def modify_constants_avoidNaNs(expr, x, bounded_ops, npoints, Xbounds, variable=
                                 np.max(vals_arg) - np.min(vals_arg))  # Scaled between 0 and 1
                         args2 = args2 * (max_bound - min_bound) + min_bound  # Scaled between min_bound and max_bound
 
-                    elif str(arg_init.func) not in ['sin', 'cos']:
+                    elif str(arg_init.func) not in ['sin', 'cos'] or ('Pow' in str(expr.func) and expr.args[1] == -1):
                         # For operations with singularities such as TAN, resample the support vector to avoid singularities
                         # Drop input-output pairs containing NaNs and entries with an absolute value of y above 10000
                         if extrapolate:

@@ -40,10 +40,8 @@ class DataLoader:
 
         if "U" in name or "E" in name or "CS" in name:
             self.modelType = "NN"
-            if "CS" in name or name in ['E1', 'E5', 'E9']:
+            if "CS" in name or name in ['E1', 'E4', 'E5', 'E9']:
                 self.modelType = "NN3"
-            elif name in ['E4']:
-                self.modelType = "NN2"
             if hasattr(self, f'{name}'):
                 method = getattr(self, f'{name}')
                 method()

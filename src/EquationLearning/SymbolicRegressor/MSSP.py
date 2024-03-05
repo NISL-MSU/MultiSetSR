@@ -131,7 +131,7 @@ class SymbolicRegressor:
                             YYs.append(Y.copy())
                             valuess.append(values.copy())
                         sorted_indices = np.argsort(np.array(R2s))
-                        ind = sorted_indices[4]
+                        ind = sorted_indices[3]
                         best_X, best_Y, best_values = XXs[ind], YYs[ind], valuess[ind]
                         Ys[:, ns] = best_Y
                         Xs[:, ns] = best_X
@@ -139,7 +139,7 @@ class SymbolicRegressor:
                         Rs[ns] = R2s[ind]
                 # Normalize data
                 sorted_indices = np.argsort(np.array(Rs))
-                ind = sorted_indices[4]
+                ind = sorted_indices[2]
                 Xi, Yi = Xs[:, ind].copy(), Ys[:, ind].copy()
                 means, std = np.mean(Ys, axis=0), np.std(Ys, axis=0)
                 Ys = (Ys - means) / std
@@ -172,19 +172,19 @@ class SymbolicRegressor:
 
                 print("\n Choosing the best skeleton...")
                 best_error, best_sk = np.Infinity, ''
-                for ip, skeleton in enumerate(pred_skeletons):
-                    # Fit coefficients of the estimated skeletons
-                    problem = FitGA(skeleton, Xi, Yi, [np.min(Xi), np.max(Xi)], [-10, 10], max_it=50)
-                    est_expr, error = problem.run()
-                    print("\tSkeleton: " + str(skeleton) + ". Error: " + str(error))
-                    if error < best_error:
-                        best_error = error
-                        best_sk = skeleton
-                        if error < 0.001:  # If the error is very low, assume this is the best
-                            break
-                print("Selected skeleton: " + str(best_sk))
-
-                self.univariate_skeletons.append(best_sk)
+                # for ip, skeleton in enumerate(pred_skeletons):
+                #     # Fit coefficients of the estimated skeletons
+                #     problem = FitGA(skeleton, Xi, Yi, [np.min(Xi), np.max(Xi)], [-10, 10], max_it=50)
+                #     est_expr, error = problem.run()
+                #     print("\tSkeleton: " + str(skeleton) + ". Error: " + str(error))
+                #     if error < best_error:
+                #         best_error = error
+                #         best_sk = skeleton
+                #         if error < 0.001:  # If the error is very low, assume this is the best
+                #             break
+                # print("Selected skeleton: " + str(best_sk))
+                #
+                # self.univariate_skeletons.append(best_sk)
 
         return self.univariate_skeletons
 
