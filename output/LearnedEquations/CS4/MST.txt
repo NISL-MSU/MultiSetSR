@@ -1,2 +1,2 @@
 c*sqrt(c + x0) + c
-c*log(c*x1**2) + c
+c*log(c*(c + x1)**2) + c
