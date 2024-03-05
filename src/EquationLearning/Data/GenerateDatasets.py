@@ -298,7 +298,7 @@ class DataLoader:
             x2 = np.random.uniform(-10, 10, size=n)
         self.X = np.array([x1, x2]).T
         # Calculate output
-        self.Y = np.sqrt(x1 ** 3) * np.log(x2 ** 2)
+        self.Y = np.sqrt(x1) * np.log(x2 ** 2)
         self.names = ['x0', 'x1']
         self.types = ['continuous', 'continuous']
         symb = sp.symbols("{}:{}".format('x', 2))
