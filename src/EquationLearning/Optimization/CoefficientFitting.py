@@ -84,7 +84,7 @@ class CoefficientFitting(Problem):
             else:
                 # r = pearsonr(self.y_est, ys)[0]
                 # if np.isnan(r):
-                error += np.mean((self.y_est - ys)**2)
+                error += np.mean(np.abs(self.y_est - ys))
                 # else:
                 #     error += np.mean((self.y_est - ys)**2) * (2 - r)
             # Calculate first objective
@@ -114,15 +114,15 @@ class FitGA:
         self.v_limits = v_limits
         self.c_limits = c_limits
         if max_it is None:
-            self.termination = RobustTermination(MultiObjectiveSpaceTermination(tol=1e-5), period=20)
+            self.termination = RobustTermination(MultiObjectiveSpaceTermination(tol=1e-5), period=30)
         else:
             self.termination = ('n_gen', max_it)
 
     def run(self):
-        # Fit coefficients
 
+        # Fit coefficients
         problem = CoefficientFitting(skeleton=self.skeleton, x_values=self.Xs, y_est=self.Ys, climits=self.c_limits)
-        algorithm = GA(pop_size=400)
+        algorithm = GA(pop_size=500)
         res = minimize(problem, algorithm, self.termination, seed=1, verbose=False)
 
         if len(self.skeleton.args) > 0:

@@ -1,1 +1,1 @@
-9.85221674876847*x0*log(x1)
+sqrt(exp(sqrt(x0)))*log(x1) + log(x1) + 0.584

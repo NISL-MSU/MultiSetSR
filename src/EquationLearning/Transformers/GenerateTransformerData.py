@@ -178,6 +178,8 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False, n_
     :param xmin: If not None, it explicitly specifies the minimum support value to be used for generation
     :param xmax: If not None, it explicitly specifies the minimum support value to be used for generation
     """
+    eq.expr = sympify(str(eq.expr).replace(eq.variables[0], 'x_1'))
+    eq.variables[0] = 'x_1'
     exprs = eq.expr
     curr_p = cfg.max_number_of_points
     # # Uncomment the code below if you have a specific skeleton from which you want to sample data as an example
