@@ -1,5 +1,6 @@
 import sympy
 import sympy as sp
+from sympy.parsing.sympy_parser import parse_expr
 from src.EquationLearning.Data.sympy_utils import numeric_to_placeholder
 
 
@@ -270,18 +271,35 @@ def get_skeletons(expr, var_names):
     # Get a skeleton for each variable present in the expression
     skeletons = []
     for var in var_names:
-        skeleton = numeric_to_placeholder(expr, var=var)
-        for v in var_names:
-            if v != var:
-                skeleton = skeleton.subs(sp.sympify(v), sp.sympify('c'))
-        skeleton2 = None
-        skeleton = sp.expand(skeleton)
-        while skeleton != skeleton2:
-            skeleton2 = skeleton
-            skeleton = avoid_operations_between_constants(skeleton)
-            skeleton = numeric_to_placeholder(skeleton, var=var)
-        if 'x' in str(skeleton):  # If there are no variables in the expression, skip adding identifiers
-            skeleton = add_constant_identifier(skeleton)[0]
+        skeleton = get_skeleton_var(expr, var, var_names, expand=True)
+        skeleton2 = get_skeleton_var(expr, var, var_names, expand=False)
+        if count_placeholders(skeleton) > count_placeholders(skeleton2):
+            skeleton = skeleton2  # Choose the skeleton form with the fewest coefficient placeholders
         skeletons.append(skeleton)
     return skeletons
 
+
+def get_skeleton_var(expr, var, var_names, expand=True):
+    skeleton = numeric_to_placeholder(expr, var=var)
+    for v in var_names:
+        if v != var:
+            skeleton = skeleton.subs(sp.sympify(v), sp.sympify('c'))
+    skeleton2 = None
+    if expand:
+        skeleton = sp.expand(skeleton)
+    while skeleton != skeleton2:
+        skeleton2 = skeleton
+        skeleton = avoid_operations_between_constants(skeleton)
+        skeleton = numeric_to_placeholder(skeleton, var=var)
+    if 'x' in str(skeleton):  # If there are no variables in the expression, skip adding identifiers
+        skeleton = add_constant_identifier(skeleton)[0]
+    return skeleton
+
+
+def count_placeholders(expr):
+    expr = parse_expr(str(expr))
+    count = 0
+    for atom in expr.atoms():
+        if str(atom).startswith('ca_') or str(atom).startswith('cm_'):
+            count += 1
+    return count
