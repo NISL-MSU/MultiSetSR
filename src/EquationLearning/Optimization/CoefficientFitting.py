@@ -75,7 +75,6 @@ class CoefficientFitting(Problem):
             error = 0
             # Replace the coefficients
             csi = np.round(c[si, :], 3)
-            csi[np.abs(csi) < 0.0001] = 0
             if len(self.skeleton.args) > 0:
                 fs = set_args(self.skeleton, list(c[si, :]))
                 if 'x' not in str(fs.free_symbols):
@@ -96,9 +95,7 @@ class CoefficientFitting(Problem):
                 # r = pearsonr(self.y_est, ys)[0]
                 # if np.isnan(r):
                 er = np.mean(np.abs(self.y_est - ys))
-                penalty = 0
-                if er < 0.01:
-                    penalty = -(np.sum(csi == 0) + np.sum(csi == 1))
+                penalty = -(np.sum(csi == 0) + np.sum(csi == 1))/10
 
                 error += er + penalty
                 # else:
@@ -130,7 +127,7 @@ class FitGA:
         self.v_limits = v_limits
         self.c_limits = c_limits
         if max_it is None:
-            self.termination = RobustTermination(MultiObjectiveSpaceTermination(tol=1e-5), period=20)
+            self.termination = RobustTermination(MultiObjectiveSpaceTermination(tol=1e-6), period=20)
         else:
             self.termination = ('n_gen', max_it)
 
@@ -156,7 +153,6 @@ class FitGA:
         algorithm = GA(pop_size=400)
         res = minimize(problem, algorithm, self.termination, seed=1, verbose=False)
         resX = np.round(res.X, 3)
-        resX[np.abs(resX) < 0.0001] = 0
         fs = set_args(self.skeleton, list(resX))
         if 'x' not in str(fs.free_symbols):
             if fs.is_real:
