@@ -25,7 +25,7 @@ word2id = training_dataset.word2id
 scratch = True  # If False, just load saved results and plot them
 
 # Methods
-methods = ['E2E', 'MST']
+methods = ['PYSR', 'TaylorGP', 'NESYMRES', 'E2E', 'MST']
 
 ####################################
 # Load underlying equation

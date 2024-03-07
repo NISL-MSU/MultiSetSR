@@ -75,6 +75,7 @@ class CoefficientFitting(Problem):
             error = 0
             # Replace the coefficients
             csi = np.round(c[si, :], 3)
+            csi[csi == 3.142] = np.pi
             if len(self.skeleton.args) > 0:
                 fs = set_args(self.skeleton, list(c[si, :]))
                 if 'x' not in str(fs.free_symbols):
@@ -127,7 +128,7 @@ class FitGA:
         self.v_limits = v_limits
         self.c_limits = c_limits
         if max_it is None:
-            self.termination = RobustTermination(MultiObjectiveSpaceTermination(tol=1e-6), period=20)
+            self.termination = RobustTermination(MultiObjectiveSpaceTermination(tol=1e-5), period=20)
         else:
             self.termination = ('n_gen', max_it)
 
@@ -153,6 +154,7 @@ class FitGA:
         algorithm = GA(pop_size=400)
         res = minimize(problem, algorithm, self.termination, seed=1, verbose=False)
         resX = np.round(res.X, 3)
+        resX[resX == 3.142] = np.pi
         fs = set_args(self.skeleton, list(resX))
         if 'x' not in str(fs.free_symbols):
             if fs.is_real:
