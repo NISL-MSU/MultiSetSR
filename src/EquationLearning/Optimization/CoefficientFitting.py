@@ -74,8 +74,9 @@ class CoefficientFitting(Problem):
         for si in range(x.shape[0]):
             error = 0
             # Replace the coefficients
-            csi = np.round(c[si, :], 3)
-            csi[csi == 3.142] = np.pi
+            csi = np.round(c[si, :], 6)
+            # csi[csi == 3.142] = np.pi
+            # csi[csi == -3.142] = -np.pi
             if len(self.skeleton.args) > 0:
                 fs = set_args(self.skeleton, list(c[si, :]))
                 if 'x' not in str(fs.free_symbols):
@@ -96,12 +97,13 @@ class CoefficientFitting(Problem):
                 # r = pearsonr(self.y_est, ys)[0]
                 # if np.isnan(r):
                 er = np.mean(np.abs(self.y_est - ys))
-                penalty = -(np.sum(csi == 0) + np.sum(csi == 1))/10
+                penalty = -(np.sum(csi == 0) + np.sum(csi == 1))/20
 
                 error += er + penalty
                 # else:
                 #     error += np.mean((self.y_est - ys)**2) * (2 - r)
-
+            if error <= 0.0001:
+                error = 0
             outs[si, 0] = error
 
         out["F"] = outs
@@ -128,43 +130,50 @@ class FitGA:
         self.v_limits = v_limits
         self.c_limits = c_limits
         if max_it is None:
-            self.termination = RobustTermination(MultiObjectiveSpaceTermination(tol=1e-5), period=20)
+            self.termination = RobustTermination(MultiObjectiveSpaceTermination(tol=1e-4), period=25)
         else:
             self.termination = ('n_gen', max_it)
 
     def run(self):
-        # def binary_tournament(pop, P, *args, **kwargs):
-        #     n_tournaments, n_competitors = P.shape
-        #     if n_competitors != 2:
-        #         raise Exception("Only pressure=2 allowed for binary tournament!")
-        #     S = np.full(n_tournaments, -1, dtype=int)
-        #     for i in range(n_tournaments):
-        #         a, b = P[i]
-        #         if pop[a].F < pop[b].F:
-        #             S[i] = a
-        #         else:
-        #             S[i] = b
-        #     return S
-        #
-        # # Create the tournament selection
-        # selection = TournamentSelection(pressure=2, func_comp=binary_tournament)
+        def binary_tournament(pop, P, *args, **kwargs):
+            n_tournaments, n_competitors = P.shape
+            if n_competitors != 2:
+                raise Exception("Only pressure=2 allowed for binary tournament!")
+            S = np.full(n_tournaments, -1, dtype=int)
+            for i in range(n_tournaments):
+                a, b = P[i]
+                if pop[a].F < pop[b].F:
+                    S[i] = a
+                else:
+                    S[i] = b
+            return S
+
+        # Create the tournament selection
+        selection = TournamentSelection(pressure=2, func_comp=binary_tournament)
 
         # Fit coefficients
         problem = CoefficientFitting(skeleton=self.skeleton, x_values=self.Xs, y_est=self.Ys, climits=self.c_limits)
-        algorithm = GA(pop_size=400)
+        algorithm = GA(pop_size=400, selection=selection)
         res = minimize(problem, algorithm, self.termination, seed=1, verbose=False)
-        resX = np.round(res.X, 3)
-        resX[resX == 3.142] = np.pi
-        fs = set_args(self.skeleton, list(resX))
-        if 'x' not in str(fs.free_symbols):
-            if fs.is_real:
-                ys = np.repeat(float(fs), len(self.Xs), axis=0)
+        resX = np.round(res.X, 6)
+        # resX[resX == 3.142] = np.pi
+        # resX[resX == -3.142] = -np.pi
+        # resX[resX == 6.283] = 2*np.pi
+        # resX[resX == -6.283] = -2*np.pi
+        fs = None
+        if len(self.skeleton.args) > 0:
+            fs = set_args(self.skeleton, list(resX))
+            if 'x' not in str(fs.free_symbols):
+                if fs.is_real:
+                    ys = np.repeat(float(fs), len(self.Xs), axis=0)
+                else:
+                    ys = np.repeat(1000, len(self.Xs), axis=0)  # Penalize these cases
             else:
-                ys = np.repeat(1000, len(self.Xs), axis=0)  # Penalize these cases
+                # Evaluate new expression
+                fs_lambda = sp.lambdify(flatten(fs.free_symbols), fs)
+                ys = fs_lambda(self.Xs)
         else:
-            # Evaluate new expression
-            fs_lambda = sp.lambdify(flatten(fs.free_symbols), fs)
-            ys = fs_lambda(self.Xs)
+            ys = np.repeat(resX, len(self.Xs), axis=0)
 
         if len(self.skeleton.args) > 0:
             return fs, np.mean(np.abs(self.Ys - ys))

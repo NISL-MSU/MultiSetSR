@@ -17,15 +17,15 @@ np.random.seed(7)
 ####################################
 # Parameters
 ####################################
-name = 'CS1'
-clim = [-10, 10]
+name = 'E5'
+clim = [-5, 5]
 cfg = omegaconf.OmegaConf.load("./EquationLearning/Transformers/config.yaml")
 training_dataset = Dataset(cfg.train_path, cfg.dataset_train, mode="train")
 word2id = training_dataset.word2id
 scratch = True  # If False, just load saved results and plot them
 
 # Methods
-methods = ['PYSR', 'TaylorGP', 'NESYMRES', 'E2E', 'MST']
+methods = ['PYSR', 'TaylorGP', 'E2E', 'MST']
 
 ####################################
 # Load underlying equation
