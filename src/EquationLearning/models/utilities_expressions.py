@@ -272,9 +272,9 @@ def get_skeletons(expr, var_names):
     skeletons = []
     for var in var_names:
         skeleton = get_skeleton_var(expr, var, var_names, expand=True)
-        # skeleton2 = get_skeleton_var(expr, var, var_names, expand=False)
-        # if count_placeholders(skeleton) > count_placeholders(skeleton2):
-        #     skeleton = skeleton2  # Choose the skeleton form with the fewest coefficient placeholders
+        skeleton2 = get_skeleton_var(expr, var, var_names, expand=False)
+        if count_placeholders(skeleton) > count_placeholders(skeleton2):
+            skeleton = skeleton2  # Choose the skeleton form with the fewest coefficient placeholders
         skeletons.append(skeleton)
     return skeletons
 

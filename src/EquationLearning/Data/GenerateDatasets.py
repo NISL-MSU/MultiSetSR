@@ -211,17 +211,17 @@ class DataLoader:
             x2 = sample_exclude(-10, 10, n, -5, 5)
         self.X = np.array([x1, x2]).T
         # Calculate output
-        self.Y = (5 * x1)**4 / ((5 * x1)**4 + 1) + (5 * x2)**4 / ((5 * x2)**4 + 1)
+        self.Y = x1**4 / (x1**4 + 1) + x2**4 / (x2**4 + 1)
         self.names = ['x0', 'x1']
         self.types = ['continuous', 'continuous']
         symb = sp.symbols("{}:{}".format('x', 2))
-        self.expr = (5 * symb[0])**4 / ((5 * symb[0])**4 + 1) + (5 * symb[1])**4 / ((5 * symb[1])**4 + 1)
+        self.expr = (symb[0])**4 / ((symb[0])**4 + 1) + (symb[1])**4 / ((symb[1])**4 + 1)
 
     def E9(self, n=50000):  # A2 in "Informed Equation Learning" (Werner et. al, 2021)
         np.random.seed(7)
         # Define features
         if not self.extrapolation:
-            x1 = np.random.uniform(0, 5, size=n)
+            x1 = np.random.uniform(-5, 5, size=n)
             x2 = np.random.uniform(0, 5, size=n)
         else:
             x1 = np.random.uniform(0, 10, size=n)
@@ -302,7 +302,7 @@ class DataLoader:
         self.names = ['x0', 'x1']
         self.types = ['continuous', 'continuous']
         symb = sp.symbols("{}:{}".format('x', 2))
-        self.expr = sp.sqrt(symb[0] ** 3) * sp.log(symb[1] ** 2)
+        self.expr = sp.sqrt(symb[0]) * sp.log(symb[1] ** 2)
 
     def EX1(self, n=50000):
         np.random.seed(7)

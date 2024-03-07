@@ -8,7 +8,10 @@ from pymoo.algorithms.soo.nonconvex.ga import GA
 from pymoo.termination.robust import RobustTermination
 from src.EquationLearning.models.utilities_expressions import *
 from pymoo.termination.ftol import MultiObjectiveSpaceTermination
+# from scipy.stats import pearsonr
 warnings.filterwarnings("ignore")
+
+from pymoo.operators.selection.tournament import TournamentSelection
 
 
 class CoefficientFitting(Problem):
@@ -72,22 +75,35 @@ class CoefficientFitting(Problem):
             error = 0
             if len(self.skeleton.args) > 0:
                 # Replace the coefficients
+                csi = c[si, :]
+                csi[np.abs(csi) < 0.0001] = 0
                 fs = set_args(self.skeleton, list(c[si, :]))
-                # Evaluate new expression
-                fs_lambda = sp.lambdify(flatten(fs.free_symbols), fs)
-                ys = fs_lambda(self.x_values)
+                if 'x' not in str(fs.free_symbols):
+                    if fs.is_real:
+                        ys = np.repeat(float(fs), len(self.x_values), axis=0)
+                    else:
+                        ys = np.repeat(1000, len(self.x_values), axis=0)  # Penalize these cases
+                else:
+                    # Evaluate new expression
+                    fs_lambda = sp.lambdify(flatten(fs.free_symbols), fs)
+                    ys = fs_lambda(self.x_values)
             else:
                 ys = np.repeat(c[si, :], len(self.x_values), axis=0)
             # Calculate correlation between the results of the new expression and the original estimated vector
-            if len(np.argwhere((np.isinf(ys)) | (np.isnan(ys)) | (np.abs(ys) > 10**14))) > 0:
-                error += 1000
-            else:
-                # r = pearsonr(self.y_est, ys)[0]
-                # if np.isnan(r):
-                error += np.mean(np.abs(self.y_est - ys))
-                # else:
-                #     error += np.mean((self.y_est - ys)**2) * (2 - r)
-            # Calculate first objective
+            try:
+                if len(np.argwhere((np.isinf(ys)) | (np.isnan(ys)) | (np.abs(ys) > 10**14))) > 0:
+                    error += 1000
+                else:
+                    # r = pearsonr(self.y_est, ys)[0]
+                    # if np.isnan(r):
+                    error += np.mean(np.abs(self.y_est - ys))
+                    # else:
+                    #     error += np.mean((self.y_est - ys)**2) * (2 - r)
+            except:
+                print()
+
+            # if error <= 1e-05:
+            # error = 0
             outs[si, 0] = error
 
         out["F"] = outs
@@ -114,18 +130,35 @@ class FitGA:
         self.v_limits = v_limits
         self.c_limits = c_limits
         if max_it is None:
-            self.termination = RobustTermination(MultiObjectiveSpaceTermination(tol=1e-5), period=30)
+            self.termination = RobustTermination(MultiObjectiveSpaceTermination(tol=1e-5), period=20)
         else:
             self.termination = ('n_gen', max_it)
 
     def run(self):
+        # def binary_tournament(pop, P, *args, **kwargs):
+        #     n_tournaments, n_competitors = P.shape
+        #     if n_competitors != 2:
+        #         raise Exception("Only pressure=2 allowed for binary tournament!")
+        #     S = np.full(n_tournaments, -1, dtype=int)
+        #     for i in range(n_tournaments):
+        #         a, b = P[i]
+        #         if pop[a].F < pop[b].F:
+        #             S[i] = a
+        #         else:
+        #             S[i] = b
+        #     return S
+        #
+        # # Create the tournament selection
+        # selection = TournamentSelection(pressure=2, func_comp=binary_tournament)
 
         # Fit coefficients
         problem = CoefficientFitting(skeleton=self.skeleton, x_values=self.Xs, y_est=self.Ys, climits=self.c_limits)
-        algorithm = GA(pop_size=500)
+        algorithm = GA(pop_size=400)
         res = minimize(problem, algorithm, self.termination, seed=1, verbose=False)
+        resX = res.X
+        resX[np.abs(resX) < 0.0001] = 0
 
         if len(self.skeleton.args) > 0:
-            return set_args(self.skeleton, list(res.X)), res.F
+            return set_args(self.skeleton, list(resX)), res.F
         else:
-            return res.X, res.F
+            return resX, res.F
