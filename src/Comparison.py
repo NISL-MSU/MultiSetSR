@@ -17,7 +17,7 @@ np.random.seed(7)
 ####################################
 # Parameters
 ####################################
-name = 'CS4'
+name = 'CS1'
 clim = [-10, 10]
 cfg = omegaconf.OmegaConf.load("./EquationLearning/Transformers/config.yaml")
 training_dataset = Dataset(cfg.train_path, cfg.dataset_train, mode="train")
@@ -25,7 +25,7 @@ word2id = training_dataset.word2id
 scratch = True  # If False, just load saved results and plot them
 
 # Methods
-methods = ['PYSR', 'TaylorGP', 'NESYMRES', 'E2E', 'MST']
+methods = ['E2E', 'MST']
 
 ####################################
 # Load underlying equation
@@ -39,7 +39,7 @@ print("Underlying function: " + str(expr))
 ####################################
 original_skeletons = get_skeletons(expr, var_names)
 for iv, var in enumerate(var_names):
-    if iv >= 1:
+    if iv >= 0:
         if scratch:
             # The evaluation domain is TWICE the one used during training
             limits = [dataLoader.limits[iv][0]*2, dataLoader.limits[iv][1]*2]

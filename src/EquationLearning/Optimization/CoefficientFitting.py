@@ -73,10 +73,10 @@ class CoefficientFitting(Problem):
 
         for si in range(x.shape[0]):
             error = 0
+            # Replace the coefficients
+            csi = np.round(c[si, :], 3)
+            csi[np.abs(csi) < 0.0001] = 0
             if len(self.skeleton.args) > 0:
-                # Replace the coefficients
-                csi = np.round(c[si, :], 3)
-                csi[np.abs(csi) < 0.0001] = 0
                 fs = set_args(self.skeleton, list(c[si, :]))
                 if 'x' not in str(fs.free_symbols):
                     if fs.is_real:
@@ -89,27 +89,27 @@ class CoefficientFitting(Problem):
                     ys = fs_lambda(self.x_values)
             else:
                 ys = np.repeat(c[si, :], len(self.x_values), axis=0)
-            # Calculate correlation between the results of the new expression and the original estimated vector
-            try:
-                if len(np.argwhere((np.isinf(ys)) | (np.isnan(ys)) | (np.abs(ys) > 10**14))) > 0:
-                    error += 1000
-                else:
-                    # r = pearsonr(self.y_est, ys)[0]
-                    # if np.isnan(r):
-                    error += np.mean(np.abs(self.y_est - ys))
-                    # else:
-                    #     error += np.mean((self.y_est - ys)**2) * (2 - r)
-            except:
-                print()
 
-            # if error <= 1e-05:
-            # error = 0
+            if len(np.argwhere((np.isinf(ys)) | (np.isnan(ys)) | (np.abs(ys) > 10**14))) > 0:
+                error += 1000
+            else:
+                # r = pearsonr(self.y_est, ys)[0]
+                # if np.isnan(r):
+                er = np.mean(np.abs(self.y_est - ys))
+                penalty = 0
+                if er < 0.01:
+                    penalty = -(np.sum(csi == 0) + np.sum(csi == 1))
+
+                error += er + penalty
+                # else:
+                #     error += np.mean((self.y_est - ys)**2) * (2 - r)
+
             outs[si, 0] = error
 
         out["F"] = outs
         self.iteration += 1
 
-        print("\t\t\tGA Iteration " + str(self.iteration) + "...", end='\r')
+        print("\t\t\tGA Iteration " + str(self.iteration) + "... Best error = " + str(np.min(outs)), end='\r')
 
 
 class FitGA:
