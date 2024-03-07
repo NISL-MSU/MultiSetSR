@@ -157,8 +157,18 @@ class FitGA:
         res = minimize(problem, algorithm, self.termination, seed=1, verbose=False)
         resX = np.round(res.X, 3)
         resX[np.abs(resX) < 0.0001] = 0
+        fs = set_args(self.skeleton, list(resX))
+        if 'x' not in str(fs.free_symbols):
+            if fs.is_real:
+                ys = np.repeat(float(fs), len(self.Xs), axis=0)
+            else:
+                ys = np.repeat(1000, len(self.Xs), axis=0)  # Penalize these cases
+        else:
+            # Evaluate new expression
+            fs_lambda = sp.lambdify(flatten(fs.free_symbols), fs)
+            ys = fs_lambda(self.Xs)
 
         if len(self.skeleton.args) > 0:
-            return set_args(self.skeleton, list(resX)), res.F
+            return fs, np.mean(np.abs(self.Ys - ys))
         else:
             return resX, res.F
