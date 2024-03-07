@@ -130,38 +130,38 @@ def sample_constants(eq, cfg):
                         val = np.random.uniform(low=-3, high=3)
                         while np.abs(val) < 0.05:  # Avoid too small values
                             val = np.random.uniform(low=-3, high=3)
-                        exp = exp.subs(c, val)
+                        exp = exp.subs(c, np.round(val, 3))
                     elif ('sin' in op) or ('cos' in op) or ('tan' in op):
                         val = np.random.uniform(low=-2, high=2)
                         while np.abs(val) < 0.1:  # Avoid too small values
                             val = np.random.uniform(low=-2, high=2)
-                        exp = exp.subs(c, val)
+                        exp = exp.subs(c, np.round(val, 3))
                     elif isinstance(op, tuple):
                         if 'Pow' in op[0] and op[1] == 4:
                             val = np.random.uniform(low=-3, high=3)
-                            exp = exp.subs(c, val)
+                            exp = exp.subs(c, np.round(val, 3))
                         else:
-                            exp = exp.subs(c, np.random.uniform(low=cfg.constants.multiplicative.min,
-                                                                high=cfg.constants.multiplicative.max))
+                            exp = exp.subs(c, np.round(np.random.uniform(low=cfg.constants.multiplicative.min,
+                                                                         high=cfg.constants.multiplicative.max), 3))
                     else:
-                        exp = exp.subs(c, np.random.uniform(low=cfg.constants.multiplicative.min,
-                                                            high=cfg.constants.multiplicative.max))
+                        exp = exp.subs(c, np.round(np.random.uniform(low=cfg.constants.multiplicative.min,
+                                                                     high=cfg.constants.multiplicative.max), 3))
                 else:
-                    exp = exp.subs(c, np.random.uniform(low=cfg.constants.multiplicative.min,
-                                                        high=cfg.constants.multiplicative.max))
+                    exp = exp.subs(c, np.round(np.random.uniform(low=cfg.constants.multiplicative.min,
+                                                                 high=cfg.constants.multiplicative.max), 3))
         elif c[:2] == "ca":
             if c in eq.coeff_dict and not isinstance(eq.coeff_dict[c], int):
                 # Check if constant is inside an exponential  or hyperbolic function. Limit its values from -3 to 3
                 op = get_op_constant(exp, c)
                 if not isinstance(op, bool) and op is not None:
                     if ('exp' in op) or ('sinh' in op) or ('cosh' in op) or ('tanh' in op):
-                        exp = exp.subs(c, np.random.uniform(low=-1, high=1))
+                        exp = exp.subs(c, np.round(np.random.uniform(low=-1, high=1), 3))
                     else:
-                        exp = exp.subs(c, np.random.uniform(low=cfg.constants.additive.min,
-                                                            high=cfg.constants.additive.max))
+                        exp = exp.subs(c, np.round(np.random.uniform(low=cfg.constants.additive.min,
+                                                                     high=cfg.constants.additive.max), 3))
                 else:
-                    exp = exp.subs(c, np.random.uniform(low=cfg.constants.additive.min,
-                                                        high=cfg.constants.additive.max))
+                    exp = exp.subs(c, np.round(np.random.uniform(low=cfg.constants.additive.min,
+                                                                 high=cfg.constants.additive.max), 3))
     eq2.expr = exp
     return eq2
 

@@ -75,7 +75,7 @@ class CoefficientFitting(Problem):
             error = 0
             if len(self.skeleton.args) > 0:
                 # Replace the coefficients
-                csi = c[si, :]
+                csi = np.round(c[si, :], 3)
                 csi[np.abs(csi) < 0.0001] = 0
                 fs = set_args(self.skeleton, list(c[si, :]))
                 if 'x' not in str(fs.free_symbols):
@@ -155,7 +155,7 @@ class FitGA:
         problem = CoefficientFitting(skeleton=self.skeleton, x_values=self.Xs, y_est=self.Ys, climits=self.c_limits)
         algorithm = GA(pop_size=400)
         res = minimize(problem, algorithm, self.termination, seed=1, verbose=False)
-        resX = res.X
+        resX = np.round(res.X, 3)
         resX[np.abs(resX) < 0.0001] = 0
 
         if len(self.skeleton.args) > 0:
