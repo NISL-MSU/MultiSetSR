@@ -1,3 +1,3 @@
 c*tanh(c*x0) + c
 c*Abs(x1) + c
-TODO: c*cos(c*x2 + c) + c
+c*cos(c*(c + x2)**2) + c
