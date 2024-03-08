@@ -75,6 +75,7 @@ class CoefficientFitting(Problem):
             error = 0
             # Replace the coefficients
             csi = np.round(c[si, :], 6)
+            csi[np.abs(csi) <= 0.001] = 0
             # csi[csi == 3.142] = np.pi
             # csi[csi == -3.142] = -np.pi
             if len(self.skeleton.args) > 0:
@@ -156,6 +157,7 @@ class FitGA:
         algorithm = GA(pop_size=400, selection=selection)
         res = minimize(problem, algorithm, self.termination, seed=1, verbose=False)
         resX = np.round(res.X, 6)
+        resX[np.abs(resX) <= 0.001] = 0
         # resX[resX == 3.142] = np.pi
         # resX[resX == -3.142] = -np.pi
         # resX[resX == 6.283] = 2*np.pi
