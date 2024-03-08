@@ -1,1 +1,1 @@
-log(c * |x1| / |x0|)
+log(2 * abs(x1) / abs(x0))
