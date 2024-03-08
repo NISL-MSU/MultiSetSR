@@ -177,11 +177,11 @@ class DataLoader:
             x3 = sample_exclude(-20, 20, n, -10, 10)
         self.X = np.array([x1, x2, x3]).T
         # Calculate output
-        self.Y = np.tanh(x1 / 2) + (np.abs(x2)) / (np.sin(2 * np.pi * np.exp(x3 / 5)) - 1.5)
+        self.Y = np.tanh(x1 / 2) + (np.abs(x2)) * np.cos(x3 ** 2 / 5)
         self.names = ['x0', 'x1', 'x2']
         self.types = ['continuous', 'continuous', 'continuous']
         symb = sp.symbols("{}:{}".format('x', 3))
-        self.expr = sp.tanh(symb[0] / 2) + (sp.Abs(symb[1])) / (sp.sin(2 * np.pi * sp.exp(symb[2] / 5)) - 1.5)
+        self.expr = sp.tanh(symb[0] / 2) + (sp.Abs(symb[1])) * sp.cos(symb[2] ** 2 / 5)
 
     def E7(self, n=50000):  # S0 in "Informed Equation Learning" paper
         np.random.seed(7)
