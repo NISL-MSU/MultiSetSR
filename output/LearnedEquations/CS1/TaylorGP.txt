@@ -1,1 +1,1 @@
-x0*exp(-sqrt(x1))
+x0*exp(-sqrt(abs(x1)))
