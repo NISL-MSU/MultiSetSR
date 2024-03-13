@@ -50,20 +50,9 @@ def seq2equation(tokenized, id2word, printFlag=False):
 
 def loss_sample(output, trg):
     """Loss function that combines cross-entropy and information entropy for a single sample"""
-    # Cross-entropy
     ce = nn.CrossEntropyLoss(ignore_index=0)
     ce.cuda()
-    L1 = ce(output, trg)
-
-    # Information entropy
-    # L2 = torch.tensor(0, device=z_sets.device, dtype=z_sets.dtype)
-    # for i in range(z_sets.shape[2]):  # Across the embedding dimension
-    #     q = z_sets[:, :, i]
-    #     p = nn.functional.softmax(q, dim=0)
-    #     logp = nn.functional.log_softmax(q, dim=0)
-    #     # Calculate entropy
-    #     L2 += torch.sum(torch.mul(p, logp))
-    return L1  # , L2 / z_sets.shape[2]
+    return ce(output, trg)
 
 
 class TransformerTrainer:
@@ -185,12 +174,6 @@ class TransformerTrainer:
                     # Normalize data
                     means, std = np.mean(Ys, axis=0), np.std(Ys, axis=0)
                     Ys = (Ys - means) / std
-                    # if isinstance(Xs, np.ndarray):  # Some blocks were stored as numpy arrays and others as tensors
-                    #     Xs, Ys = torch.from_numpy(Xs), torch.from_numpy(Ys)
-                    # XY_block[ib, :, 0, :] = Xs.cuda()
-                    # XY_block[ib, :, 1, :] = Ys.cuda()
-                    # skeletons_block.append(torch.tensor(tokenized).long().cuda())
-                    # xpr_block.append(xpr)
 
                     if np.isnan(Ys).any() or np.min(std) < 0.01 or 'E' in xpr:
                         remove_indices.append(ib)

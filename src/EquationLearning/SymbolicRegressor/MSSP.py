@@ -49,8 +49,8 @@ class MSSP:
         # Initialize class variables
         self.univariate_skeletons = []
         self.merged_expressions = []
-        self.n_sets = 10
-        self.n_samples = 3000
+        self.n_sets = self.cfg.architecture.number_of_sets
+        self.n_samples = self.cfg.architecture.block_size
 
     def _load_models(self):
         # Load weights of MST
