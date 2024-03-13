@@ -8,7 +8,6 @@ from pymoo.algorithms.soo.nonconvex.ga import GA
 from pymoo.termination.robust import RobustTermination
 from src.EquationLearning.models.utilities_expressions import *
 from pymoo.termination.ftol import MultiObjectiveSpaceTermination
-# from scipy.stats import pearsonr
 warnings.filterwarnings("ignore")
 
 from pymoo.operators.selection.tournament import TournamentSelection
@@ -154,14 +153,10 @@ class FitGA:
 
         # Fit coefficients
         problem = CoefficientFitting(skeleton=self.skeleton, x_values=self.Xs, y_est=self.Ys, climits=self.c_limits)
-        algorithm = GA(pop_size=400, selection=selection)
+        algorithm = GA(pop_size=300)
         res = minimize(problem, algorithm, self.termination, seed=1, verbose=False)
         resX = np.round(res.X, 6)
-        resX[np.abs(resX) <= 0.001] = 0
-        # resX[resX == 3.142] = np.pi
-        # resX[resX == -3.142] = -np.pi
-        # resX[resX == 6.283] = 2*np.pi
-        # resX[resX == -6.283] = -2*np.pi
+        resX[np.abs(resX) <= 0.0001] = 0
         fs = None
         if len(self.skeleton.args) > 0:
             fs = set_args(self.skeleton, list(resX))

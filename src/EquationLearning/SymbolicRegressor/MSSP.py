@@ -1,6 +1,4 @@
 import sys
-
-import numpy as np
 import torch
 import omegaconf
 import sympy as sp
@@ -72,7 +70,7 @@ class SymbolicRegressor:
             if self.n_features > 1:
                 sys.exit("We haven't trained a NN for this problem yet. Use the TrainNNModel.py file first.")
         # Load weights of MST
-        MST_path = os.path.join(root, "src//EquationLearning//models//saved_models/Model512-batch_12-Q2")
+        MST_path = os.path.join(root, "src//EquationLearning//models//saved_models/Model512-batch_12-Q1")
         self.model.load_state_dict(torch.load(MST_path))
         self.model.cuda()
 
@@ -174,7 +172,7 @@ class SymbolicRegressor:
                 best_error, best_sk = np.Infinity, ''
                 # for ip, skeleton in enumerate(pred_skeletons):
                 #     # Fit coefficients of the estimated skeletons
-                #     problem = FitGA(skeleton, Xi, Yi, [np.min(Xi), np.max(Xi)], [-10, 10], max_it=50)
+                #     problem = FitGA(skeleton, Xi, Yi, [np.min(Xi), np.max(Xi)], [-20, 20], max_it=100)
                 #     est_expr, error = problem.run()
                 #     print("\tSkeleton: " + str(skeleton) + ". Error: " + str(error))
                 #     if error < best_error:
@@ -192,5 +190,5 @@ class SymbolicRegressor:
 if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
-    regressor = SymbolicRegressor(dataset='E4')
+    regressor = SymbolicRegressor(dataset='E8')
     regressor.get_skeleton()

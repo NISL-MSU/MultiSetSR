@@ -53,7 +53,10 @@ def set_args(xp, target_args, return_symbols=False):
                 new_args.append(target_args.pop(0))
             else:  # If it's composed, explore a lower level of the tree
                 new_args.append(set_args(arg, target_args, return_symbols=return_symbols))
-    new_xp = xp.func(*new_args)
+    try:
+        new_xp = xp.func(*new_args)
+    except:
+        print()
     return new_xp
 
 
@@ -272,9 +275,9 @@ def get_skeletons(expr, var_names):
     skeletons = []
     for var in var_names:
         skeleton = get_skeleton_var(expr, var, var_names, expand=True)
-        skeleton2 = get_skeleton_var(expr, var, var_names, expand=False)
-        if count_placeholders(skeleton) > count_placeholders(skeleton2):
-            skeleton = skeleton2  # Choose the skeleton form with the fewest coefficient placeholders
+        # skeleton2 = get_skeleton_var(expr, var, var_names, expand=False)
+        # if count_placeholders(skeleton) > count_placeholders(skeleton2):
+        #     skeleton = skeleton2  # Choose the skeleton form with the fewest coefficient placeholders
         skeletons.append(skeleton)
     return skeletons
 

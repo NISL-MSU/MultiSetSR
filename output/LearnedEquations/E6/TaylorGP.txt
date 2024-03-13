@@ -1,1 +1,1 @@
--sin(0.343*x2**2)/(-sqrt(x2) + sin(sqrt(x2)))
+-sin(0.343*x2**2)/(-sqrt(abs(x2)) + sin(sqrt(abs(x2))))

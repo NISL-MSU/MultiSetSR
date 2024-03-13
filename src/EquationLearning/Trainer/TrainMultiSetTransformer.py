@@ -23,7 +23,7 @@ def open_pickle(path):
 def open_h5(path):
     block = []
     with h5py.File(path, "r") as hf:
-        # Iterate through the groups in the HDF5 file (assuming group names are integers)
+        # Iterate through the groups in the HDF5 file (group names are integers)
         for group_name in hf:
             group = hf[group_name]
             # Read data from the group
@@ -105,14 +105,15 @@ class TransformerTrainer:
     def sample_domain(self, Xs, Ys, equations):
         """Use a random domain (e.g., between -10 and 10, or -5 and 5, etc)"""
         dva = np.random.randint(3, 10)
-        minX, maxX = -dva, dva
         X, Y = np.zeros((self.cfg.architecture.block_size, self.cfg.architecture.number_of_sets)), np.zeros(
             (self.cfg.architecture.block_size, self.cfg.architecture.number_of_sets))
-        for ns in range(self.cfg.architecture.number_of_sets):
+        ns = 0
+        while ns < self.cfg.architecture.number_of_sets:
+            minX, maxX = -dva, dva
             # Select rows where the value of the first column is between minX and maxX
             selected_rows_indices = np.where((Xs[:, ns] >= minX) & (Xs[:, ns] <= maxX))[0]
             remaining = self.cfg.architecture.block_size - len(selected_rows_indices)
-            # Randomly select 1000 rows from the selected rows
+            # Randomly select 'self.cfg.architecture.block_size' rows from the selected rows
             if len(selected_rows_indices) > self.cfg.architecture.block_size:
                 selected_rows_indices = np.random.choice(selected_rows_indices, self.cfg.architecture.block_size, replace=False)
             elif len(selected_rows_indices) < self.cfg.architecture.block_size and remaining < 200:
@@ -131,6 +132,7 @@ class TransformerTrainer:
             scaling_factor = 20 / (np.max(X[:, ns]) - np.min(X[:, ns]))
             X[:, ns] = (X[:, ns] - np.min(X[:, ns])) * scaling_factor - 10
             Y[:, ns] = Ys[:, ns][selected_rows_indices]
+            ns += 1
         # With a chance of 0.3, fix all sets to the same function
         if np.random.random(1) < 0.3:
             ns = np.random.randint(0, self.cfg.architecture.number_of_sets)
@@ -159,7 +161,7 @@ class TransformerTrainer:
             np.random.shuffle(indexes)
 
             batch_count = 0
-            for b_ind in indexes:  # Block loop (each block contains 1000 inputs)
+            for b_ind in indexes:  # Block loop (each block contains 8000 inputs)
                 # Read block
                 block = open_h5(train_files[b_ind])
 

@@ -132,9 +132,9 @@ def sample_constants(eq, cfg):
                             val = np.random.uniform(low=-3, high=3)
                         exp = exp.subs(c, np.round(val, 3))
                     elif ('sin' in op) or ('cos' in op) or ('tan' in op):
-                        val = np.random.uniform(low=-2, high=2)
+                        val = np.random.uniform(low=-2.5, high=2.5)
                         while np.abs(val) < 0.1:  # Avoid too small values
-                            val = np.random.uniform(low=-2, high=2)
+                            val = np.random.uniform(low=-2.5, high=2.5)
                         exp = exp.subs(c, np.round(val, 3))
                     elif isinstance(op, tuple):
                         if 'Pow' in op[0] and op[1] == 4:
@@ -182,18 +182,18 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False, n_
     eq.variables = {'x_1'}
     exprs = eq.expr
     curr_p = cfg.max_number_of_points
-    # # Uncomment the code below if you have a specific skeleton from which you want to sample data as an example
-    # sk = sympy.sympify('c + 1 / (sin(c * x_1) + c)')
-    # sk, _, _ = add_constant_identifier(sk)
-    # coeff_dict = dict()
-    # var = None
-    # for constant in sk.free_symbols:
-    #     if 'c' in str(constant):
-    #         coeff_dict[str(constant)] = constant
-    #     if 'x' in str(constant):
-    #         var = constant
-    # eq = SimpleEquation(expr=sk, coeff_dict=coeff_dict, variables=[var])
-    # exprs = eq.expr
+    # Uncomment the code below if you have a specific skeleton from which you want to sample data as an example
+    sk = sympy.sympify('c + c / (sin(c * x_1) + c)')
+    sk, _, _ = add_constant_identifier(sk)
+    coeff_dict = dict()
+    var = None
+    for constant in sk.free_symbols:
+        if 'c' in str(constant):
+            coeff_dict[str(constant)] = constant
+        if 'x' in str(constant):
+            var = constant
+    eq = SimpleEquation(expr=sk, coeff_dict=coeff_dict, variables=[var])
+    exprs = eq.expr
 
     # Randomly stretch or shrink input domain. E.g., from [-10, 10] to [-5, 5] or [-2, 2]
     divider = 1  # np.random.randint(2, 10) / 2
@@ -515,7 +515,7 @@ def is_nan(x, bound=None):
 
 
 def modify_constants_avoidNaNs(expr, x, bounded_ops, npoints, Xbounds, variable=sympy.sympify('x_1'), extrapolate=False,
-                               avoid_x=None, threshold=0.05):
+                               avoid_x=None, threshold=0.05, in_trig=False):
     """Modifies the constants inside unary bounded operations to avoid generating NaN values
     :param expr: Original expression
     :param x: Support vector of variable x values
@@ -526,6 +526,7 @@ def modify_constants_avoidNaNs(expr, x, bounded_ops, npoints, Xbounds, variable=
     :param extrapolate: If True, sample support values that go beond the training domain
     :param avoid_x:List of points that the support should avoid
     :param threshold: Minimum distance w.r.t. a point that causes undefined values
+    :param in_trig: If True, indicates that the current analyzed expression is inside a trig. function
     """
     args = expr.args
     new_args = []
@@ -558,6 +559,9 @@ def modify_constants_avoidNaNs(expr, x, bounded_ops, npoints, Xbounds, variable=
                 # Now check if there's any other unary and bounded function inside the current function
                 # Note that inside this IF statement, it is true that arg is a unary and bounded function, so it has
                 # only one argument
+                intrig = False
+                if any([f in str(arg.func) for f in ['sin', 'cos', 'tan']]):
+                    intrig = True
                 arg_init = copy.deepcopy(arg)
                 if any([f in str(arg.args[0]) for f in list(bounded_ops[0].keys())]) or \
                         any([f in str(arg.args[0]) for f in list(bounded_ops[1].keys())]) or \
@@ -567,8 +571,7 @@ def modify_constants_avoidNaNs(expr, x, bounded_ops, npoints, Xbounds, variable=
                     # If that's the case, go to a deeper level of the tree to obtain new function arguments
                     x, arg, avoid_x = modify_constants_avoidNaNs(arg, x, bounded_ops, npoints, Xbounds, variable,
                                                                  extrapolate=extrapolate, avoid_x=avoid_x,
-                                                                 threshold=threshold)
-
+                                                                 threshold=threshold, in_trig=intrig)
                 # Check if the operation function has changed. If yes, the new argument must be a number
                 # For example, suppose the original expr is (4x + 7)**.5 and it changes to (4x + 16)**.5, then Sympy will
                 # factorize it as 2(x + 4)**.5
@@ -589,7 +592,7 @@ def modify_constants_avoidNaNs(expr, x, bounded_ops, npoints, Xbounds, variable=
                 if any(is_nan(vals)) or ('exp' in str(arg_init.func) and 0 in vals) or \
                         any([f in str(arg_init.func) for f in list(bounded_ops[2].keys())]) or \
                         any([f in str(arg_init.func) for f in ['sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh']]) or \
-                        is_div or is_sqrt:
+                        is_div or is_sqrt or in_trig:
                     # If NaN values were found, evaluate the values of the arguments inside the current function
                     arg_function = lambdify(flatten(variable), args2)
                     vals_arg = np.array(arg_function(*list(x)))
@@ -651,7 +654,15 @@ def modify_constants_avoidNaNs(expr, x, bounded_ops, npoints, Xbounds, variable=
                         # Restrict the range of values that can be encountered inside trig functions
                         arg_range = np.max(vals_arg) - np.min(vals_arg)
                         if arg_range > 50:
-                            args2 = args2 / arg_range * 30
+                            args2 = args2 / arg_range * 50
+
+                    # Check if there's an exponential or power term inside and restrict their arg values
+                    if any(['exp' in str(arg_init.func) or '**3' in str(arg_init.func) or
+                            '**4' in str(arg_init.func) or '**5' in str(arg_init.func)]):
+                        arg_function = lambdify(flatten(variable), args2)
+                        vals_arg = np.array(arg_function(*list(x)))
+                        if np.max(vals_arg) > 3:
+                            args2 = args2 / np.max(np.abs(vals_arg)) * 3
 
                 # Update function
                 if is_sqrt or is_div:
@@ -663,7 +674,7 @@ def modify_constants_avoidNaNs(expr, x, bounded_ops, npoints, Xbounds, variable=
                     arg = constant * arg
             else:
                 # Go to a deeper level of the tree to obtain new function arguments
-                result = modify_constants_avoidNaNs(arg, x, bounded_ops, npoints, Xbounds, variable,
+                result = modify_constants_avoidNaNs(arg, x, bounded_ops, npoints, Xbounds, variable, in_trig=in_trig,
                                                     extrapolate=extrapolate, avoid_x=avoid_x, threshold=threshold)
                 if result is None:
                     return None
