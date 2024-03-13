@@ -433,7 +433,6 @@ if __name__ == '__main__':
     import matplotlib.pyplot as plt
 
     plt.figure()
-    dataLoader = DataLoader(name='U3', extrapolation=False)
+    dataLoader = DataLoader(name='E1', extrapolation=False)
     X, Y, var_names = dataLoader.X, dataLoader.Y, dataLoader.names
     plt.scatter(X, Y)
-    print()
