@@ -16,3 +16,4 @@
 /SampleDataInParallel.py
 /src/EquationLearning/Trainer/CrossValidationNNmodel.py
 /src/Evaluation.py
+/output/metrics/

@@ -5,8 +5,10 @@ import random
 import omegaconf
 import sympy as sp
 import numpy as np
-from sympy import sympify, lambdify
+from sympy import lambdify
+from typing import List, Any
 from src.utils import get_project_root
+from dataclasses import dataclass, field
 from src.EquationLearning.Data.FeynmanReader import FeynmanReader
 from src.EquationLearning.Data.data_utils import bounded_operations
 from src.EquationLearning.Transformers.GenerateTransformerData import skeleton2dataset, Dataset, modify_constants_avoidNaNs
@@ -25,17 +27,44 @@ def sample_exclude(lo, hi, k, exclude_low, exclude_high):
     return np.array(sample)
 
 
+@dataclass
+class InputData:
+    """Collects data in the format required by the MSSP solver"""
+    X: np.array
+    Y: np.array
+    names: List[str]
+    types: List[str]
+    expr: str
+    limits: Any = field(init=False)
+    n_features: int = field(init=False)
+
+    def __post_init__(self):
+        # Shuffle dataset
+        indexes = np.arange(len(self.X))
+        np.random.seed(7)
+        np.random.shuffle(indexes)
+        self.X = self.X[indexes]
+        self.Y = self.Y[indexes]
+
+        self.n_features = self.X.shape[1]
+        # Calculate limits of each variable
+        if self.X.ndim == 1:
+            self.limits = (np.min(self.X), np.max(self.X))
+        else:
+            self.limits = [(np.min(self.X[:, xdim]), np.max(self.X[:, xdim])) for xdim in range(self.X.shape[1])]
+
+
 class DataLoader:
     """Class used to load or generate datasets used for equation learning"""
 
-    def __init__(self, name: str = 'S0', extrapolation: bool = False):
+    def __init__(self, name=None, extrapolation: bool = False):
         """
         Initialize DataLoader class
-        :param name: Dataset name
+        :param name: Dataset name (If known, otherwise create a new temporal dataset)
         :param extrapolation: If True, generate extrapolation data
         """
         self.X, self.Y, self.names = np.zeros(0), np.zeros(0), None
-        self.expr, self.cfg, self.types = None, None, None
+        self.expr, self.cfg, self.types = None, None, []
         self.extrapolation = extrapolation
 
         if "U" in name or "E" in name or "CS" in name:
@@ -55,18 +84,8 @@ class DataLoader:
             except FileNotFoundError:
                 sys.exit('The provided dataset name does not exist')
 
-        # Shuffle dataset
-        indexes = np.arange(len(self.X))
-        np.random.seed(7)
-        np.random.shuffle(indexes)
-        self.X = self.X[indexes]
-        self.Y = self.Y[indexes]
-
-        # Calculate limits of each variable
-        if self.X.ndim == 1:
-            self.limits = (np.min(self.X), np.max(self.X))
-        else:
-            self.limits = [(np.min(self.X[:, xdim]), np.max(self.X[:, xdim])) for xdim in range(self.X.shape[1])]
+        self.dataset = InputData(X=self.X, Y=self.Y, names=self.names, types=self.types,
+                                 expr=self.expr)
 
     def E1(self, n=10000):  # S4 in "Informed Equation Learning" (Werner et. al, 2021)
         np.random.seed(7)

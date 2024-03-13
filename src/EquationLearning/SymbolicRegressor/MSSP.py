@@ -7,27 +7,28 @@ from sklearn.metrics import r2_score
 from sklearn.linear_model import LinearRegression
 from src.EquationLearning.models.NNModel import NNModel
 from src.EquationLearning.Transformers.model import Model
-from src.EquationLearning.Data.GenerateDatasets import DataLoader
 from src.EquationLearning.Optimization.CoefficientFitting import FitGA
+from src.EquationLearning.Data.GenerateDatasets import DataLoader, InputData
 from src.EquationLearning.Transformers.GenerateTransformerData import Dataset
 from src.EquationLearning.Trainer.TrainMultiSetTransformer import seq2equation
 
 
-class SymbolicRegressor:
+class MSSP:
 
-    def __init__(self, dataset: str = 'E1'):
-        """Distills symbolic skeleton expressions given an experimental dataset"""
+    def __init__(self, dataset: InputData, bb_model):
+        """Distills symbolic skeleton expressions given an experimental dataset
+        :param: dataset: A DataLoader object
+        :param bb_model: Black-box prediction model that was trained to capture the association between inputs and
+                         outputs of the system (e.g., a feedforward neural-network)
+        """
         # Define problem
-        self.dataset = dataset
-        dataLoader = DataLoader(name=self.dataset)
-        self.X, self.Y, self.var_names, self.types = dataLoader.X, dataLoader.Y, dataLoader.names, dataLoader.types
-        self.target_function = dataLoader.expr
-        self.f_lambdified = sp.lambdify(sp.utilities.iterables.flatten(sp.sympify(dataLoader.names)), dataLoader.expr)
-        self.limits = dataLoader.limits
-        self.modelType = dataLoader.modelType
-        self.n_features = self.X.shape[1]
+        self.X, self.Y, self.var_names, self.types = dataset.X, dataset.Y, dataset.names, dataset.types
+        self.target_function = dataset.expr
+        self.f_lambdified = sp.lambdify(sp.utilities.iterables.flatten(sp.sympify(dataset.names)), dataset.expr)
+        self.limits, self.n_features = dataset.limits, dataset.n_features
         self.symbols = sp.symbols("{}:{}".format('x', self.n_features))
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.bb_model = bb_model
 
         # Read config yaml
         try:
@@ -52,29 +53,12 @@ class SymbolicRegressor:
         self.n_samples = 3000
 
     def _load_models(self):
-        # Define NN and load weights
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        root = get_project_root()
-        folder = os.path.join(root, "src//EquationLearning//models//saved_NNs//" + self.dataset)
-        self.filepath = folder + "//weights-NN-" + self.dataset
-        if os.path.exists(self.filepath.replace("weights", "NNModel") + '.pth'):
-            # If this file exists, it means we saved the whole model
-            network = torch.load(self.filepath.replace("weights", "NNModel") + '.pth')
-            self.nn_model = NNModel(device=device, n_features=self.n_features, loaded_NN=network)
-        elif os.path.exists(self.filepath):
-            # If this file exists, initiate a model and load the weigths
-            self.nn_model = NNModel(device=device, n_features=self.n_features, NNtype=self.modelType)
-            self.nn_model.loadModel(self.filepath)
-        else:
-            # If neither files exist, we haven't trained a NN for this problem yet
-            if self.n_features > 1:
-                sys.exit("We haven't trained a NN for this problem yet. Use the TrainNNModel.py file first.")
         # Load weights of MST
         MST_path = os.path.join(root, "src//EquationLearning//models//saved_models/Model512-batch_12-Q1")
         self.model.load_state_dict(torch.load(MST_path))
         self.model.cuda()
 
-    def get_skeleton(self):
+    def get_skeletons(self):
         """Retrieve the estimated symbolic equation"""
         # Analyze each variable and obtain univariate expressions
         for iv, va in enumerate(self.symbols):
@@ -114,7 +98,7 @@ class SymbolicRegressor:
                             sample = np.random.uniform(self.limits[iv][0], self.limits[iv][1], self.n_samples)
                             values[iv, :] = sample
                             # Estimate the response of the generated set
-                            Y = np.array(self.nn_model.evaluateFold(values.T, batch_size=values.shape[1]))[:, 0]
+                            Y = np.array(self.bb_model.evaluateFold(values.T, batch_size=values.shape[1]))[:, 0]
                             X = sample
                             # Fit linear regression model and calculate R2
                             model = LinearRegression()
@@ -170,25 +154,56 @@ class SymbolicRegressor:
 
                 print("\n Choosing the best skeleton...")
                 best_error, best_sk = np.Infinity, ''
-                # for ip, skeleton in enumerate(pred_skeletons):
-                #     # Fit coefficients of the estimated skeletons
-                #     problem = FitGA(skeleton, Xi, Yi, [np.min(Xi), np.max(Xi)], [-20, 20], max_it=100)
-                #     est_expr, error = problem.run()
-                #     print("\tSkeleton: " + str(skeleton) + ". Error: " + str(error))
-                #     if error < best_error:
-                #         best_error = error
-                #         best_sk = skeleton
-                #         if error < 0.001:  # If the error is very low, assume this is the best
-                #             break
-                # print("Selected skeleton: " + str(best_sk))
-                #
-                # self.univariate_skeletons.append(best_sk)
+                for ip, skeleton in enumerate(pred_skeletons):
+                    # Fit coefficients of the estimated skeletons
+                    problem = FitGA(skeleton, Xi, Yi, [np.min(Xi), np.max(Xi)], [-20, 20], max_it=100)
+                    est_expr, error = problem.run()
+                    print("\tSkeleton: " + str(skeleton) + ". Error: " + str(error))
+                    if error < best_error:
+                        best_error = error
+                        best_sk = skeleton
+                        if error < 0.001:  # If the error is very low, assume this is the best
+                            break
+                print("Selected skeleton: " + str(best_sk))
+
+                self.univariate_skeletons.append(best_sk)
 
         return self.univariate_skeletons
 
 
 if __name__ == '__main__':
-    import matplotlib.pyplot as plt
+    # import matplotlib.pyplot as plt
 
-    regressor = SymbolicRegressor(dataset='E8')
-    regressor.get_skeleton()
+    ###########################################
+    # Import data
+    ###########################################
+    datasetName = 'E8'
+    data_loader = DataLoader(name=datasetName)
+    data = data_loader.dataset
+
+    ###########################################
+    # Define NN and load weights
+    ###########################################
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    root = get_project_root()
+    folder = os.path.join(root, "src//EquationLearning//models//saved_NNs//" + datasetName)
+    filepath = folder + "//weights-NN-" + datasetName
+    nn_model = None
+    if os.path.exists(filepath.replace("weights", "NNModel") + '.pth'):
+        # If this file exists, it means we saved the whole model
+        network = torch.load(filepath.replace("weights", "NNModel") + '.pth')
+        nn_model = NNModel(device=device, n_features=data.n_features, loaded_NN=network)
+    elif os.path.exists(filepath):
+        # If this file exists, initiate a model and load the weigths
+        nn_model = NNModel(device=device, n_features=data.n_features, NNtype=data.modelType)
+        nn_model.loadModel(filepath)
+    else:
+        # If neither files exist, we haven't trained a NN for this problem yet
+        if data.n_features > 1:
+            sys.exit("We haven't trained a NN for this problem yet. Use the TrainNNModel.py file first.")
+
+    ###########################################
+    # Get skeletons
+    ###########################################
+    regressor = MSSP(dataset=data, bb_model=nn_model)
+    regressor.get_skeletons()
