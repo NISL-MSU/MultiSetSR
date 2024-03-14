@@ -25,16 +25,18 @@ Our method generates univariate skeletons that are more similar to those corresp
 From an interpretability standpoint, producing more faithful univariate skeletons means that we can provide better explanations of how each variable is related to the system's response.
 In addition, the generated skeletons may be used as building blocks that could be used to estimate the overall function of the system (future work). 
 
+
 ## Installation
-
-To install the package, run `pip install git+https://github.com/NISL-MSU/MultiSetSR` in the terminal. 
-This will also install additional packages such as pymoo, sklearn, and tensorboard.
-
-## Usage
 
 The following libraries have to be installed:
 * [Git](https://git-scm.com/download/) 
 * [Pytorch](https://pytorch.org/)
+
+To install the package, run `pip install git+https://github.com/NISL-MSU/MultiSetSR` in the terminal. 
+This will also install additional packages such as pymoo, sklearn, and tensorboard.
+
+
+## Usage
 
 This repository contains the following main scripts:
 
