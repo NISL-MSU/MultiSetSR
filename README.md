@@ -22,8 +22,19 @@ of MSSP problems:
 </p>
 
 Our method generates univariate skeletons that are more similar to those corresponding to the underlying equations in comparison to other SR methods.
-From an interpretability standpoint, producing more faithful univariate skeletons means that we are able to provide better explanations of how each variable is related to the system's response.
+From an interpretability standpoint, producing more faithful univariate skeletons means that we can provide better explanations of how each variable is related to the system's response.
 In addition, the generated skeletons may be used as building blocks that could be used to estimate the overall function of the system (future work). 
+
+
+## Installation
+
+The following libraries have to be installed:
+* [Git](https://git-scm.com/download/) 
+* [Pytorch](https://pytorch.org/)
+
+To install the package, run `pip install git+https://github.com/NISL-MSU/MultiSetSR` in the terminal. 
+This will also install additional packages such as pymoo, sklearn, and tensorboard.
+
 
 ## Usage
 
