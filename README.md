@@ -27,7 +27,7 @@ In addition, the generated skeletons may be used as building blocks that could b
 
 ## Installation
 
-To install the package, run `pip install git+https://github.com/NISL-MSU/MultiSetSR` in the terminal 
+To install the package, run `pip install git+https://github.com/NISL-MSU/MultiSetSR` in the terminal. 
 This will also install additional packages such as pymoo, sklearn, and tensorboard.
 
 ## Usage
