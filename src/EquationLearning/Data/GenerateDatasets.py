@@ -110,7 +110,7 @@ class DataLoader:
         if not self.extrapolation:
             x1 = np.random.uniform(-10, 10, size=n)
             x2 = np.random.uniform(-10, 10, size=n)
-            x3 = np.random.uniform(-10, 10, size=n)
+            x3 = np.random.uniform(-15, 15, size=n)
         else:
             x1 = sample_exclude(-20, 20, n, -10, 10)
             x2 = sample_exclude(-20, 20, n, -10, 10)
@@ -223,11 +223,11 @@ class DataLoader:
         np.random.seed(7)
         # Define features
         if not self.extrapolation:
-            x1 = np.random.uniform(-5, 5, size=n)
-            x2 = np.random.uniform(-5, 5, size=n)
+            x1 = np.random.uniform(-25, 25, size=n)
+            x2 = np.random.uniform(-25, 25, size=n)
         else:
-            x1 = sample_exclude(-10, 10, n, -5, 5)
-            x2 = sample_exclude(-10, 10, n, -5, 5)
+            x1 = sample_exclude(-50, 50, n, -25, 25)
+            x2 = sample_exclude(-50, 50, n, -25, 25)
         self.X = np.array([x1, x2]).T
         # Calculate output
         self.Y = x1**4 / (x1**4 + 1) + x2**4 / (x2**4 + 1)

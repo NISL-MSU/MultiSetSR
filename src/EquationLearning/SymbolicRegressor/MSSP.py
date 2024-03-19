@@ -11,6 +11,8 @@ from src.EquationLearning.Optimization.CoefficientFitting import FitGA
 from src.EquationLearning.Data.GenerateDatasets import DataLoader, InputData
 from src.EquationLearning.Transformers.GenerateTransformerData import Dataset
 from src.EquationLearning.Trainer.TrainMultiSetTransformer import seq2equation
+from src.EquationLearning.models.utilities_expressions import avoid_operations_between_constants
+from src.EquationLearning.models.utilities_expressions import expr2skeleton
 
 
 class MSSP:
@@ -54,7 +56,7 @@ class MSSP:
 
     def _load_models(self):
         # Load weights of MST
-        MST_path = os.path.join(root, "src//EquationLearning//models//saved_models/Model512-batch_12-Q1")
+        MST_path = os.path.join(root, "src//EquationLearning//models//saved_models/Model512-batch_12-Q2")
         self.model.load_state_dict(torch.load(MST_path))
         self.model.cuda()
 
@@ -133,7 +135,7 @@ class MSSP:
                 Xs = (Xs - np.min(Xs)) * scaling_factor - 10
                 # Xs = (Xs - np.mean(Xs))  # Xs = (Xs - np.min(Xs)) * scaling_factor - 10
                 XY_block = torch.zeros((1, self.n_samples, 2, self.n_sets)).to(self.device)
-                Xs, Ys = torch.from_numpy(Xs), torch.from_numpy(Ys)
+                Xs, Ys = torch.from_numpy(Xs), torch.from_numpy(Ys_real)
                 Xs = Xs.to(self.device)
                 Ys = Ys.to(self.device)
                 XY_block[0, :, 0, :] = Xs
@@ -152,21 +154,23 @@ class MSSP:
                     except:  # TypeError:
                         print("Invalid response created by the model")
 
-                print("\n Choosing the best skeleton...")
+                print("\n Choosing the best skeleton... (skeletons ordered based on length)")
                 best_error, best_sk = np.Infinity, ''
-                for ip, skeleton in enumerate(pred_skeletons):
-                    # Fit coefficients of the estimated skeletons
-                    problem = FitGA(skeleton, Xi, Yi, [np.min(Xi), np.max(Xi)], [-20, 20], max_it=100)
-                    est_expr, error = problem.run()
-                    print("\tSkeleton: " + str(skeleton) + ". Error: " + str(error))
-                    if error < best_error:
-                        best_error = error
-                        best_sk = skeleton
-                        if error < 0.001:  # If the error is very low, assume this is the best
-                            break
-                print("Selected skeleton: " + str(best_sk))
-
-                self.univariate_skeletons.append(best_sk)
+                pred_skeletons = sorted(pred_skeletons, key=lambda expr: len(str(expr)))
+                # for ip, skeleton in enumerate(pred_skeletons):
+                #     # Fit coefficients of the estimated skeletons
+                #     skeleton = avoid_operations_between_constants(sp.expand(skeleton))
+                #     problem = FitGA(skeleton, Xi, Yi, [np.min(Xi), np.max(Xi)], [-20, 20], max_it=100)
+                #     est_expr, error = problem.run()
+                #     print("\tSkeleton: " + str(skeleton) + ". Error: " + str(error) + ". Expr: " + str(est_expr))
+                #     if error < best_error:
+                #         best_error = error
+                #         best_sk = expr2skeleton(est_expr)
+                #         if error < 0.001:  # If the error is very low, assume this is the best
+                #             break
+                # print("Selected skeleton: " + str(best_sk))
+                #
+                # self.univariate_skeletons.append(best_sk)
 
         return self.univariate_skeletons
 
@@ -177,7 +181,7 @@ if __name__ == '__main__':
     ###########################################
     # Import data
     ###########################################
-    datasetName = 'E8'
+    datasetName = 'E9'
     data_loader = DataLoader(name=datasetName)
     data = data_loader.dataset
 
@@ -195,7 +199,7 @@ if __name__ == '__main__':
         nn_model = NNModel(device=device, n_features=data.n_features, loaded_NN=network)
     elif os.path.exists(filepath):
         # If this file exists, initiate a model and load the weigths
-        nn_model = NNModel(device=device, n_features=data.n_features, NNtype=data.modelType)
+        nn_model = NNModel(device=device, n_features=data.n_features, NNtype=data_loader.modelType)
         nn_model.loadModel(filepath)
     else:
         # If neither files exist, we haven't trained a NN for this problem yet

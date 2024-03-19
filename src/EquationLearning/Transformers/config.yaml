@@ -73,10 +73,10 @@ architecture:
   sinuisodal_embeddings: False
   dec_pf_dim: 512
   dec_layers: 5
-  dim_hidden: 512 #420
+  dim_hidden: 480 #420
   lr: 0.0001
   dropout: 0
-  num_features: 5  # 10? TODO
+  num_features: 5  # 10
   ln: True
   N_p: 0
   num_inds: 50
@@ -92,12 +92,12 @@ architecture:
   mean: 0.5
   std: 0.5
   dim_input: 2
-  num_heads: 8 # 16
+  num_heads: 16 # 16
   output_dim: 32
   number_of_sets: 10
 
 inference:
-  beam_size: 6
+  beam_size: 8
   bfgs:
     activated: True
     n_restarts: 10

@@ -53,10 +53,7 @@ def set_args(xp, target_args, return_symbols=False):
                 new_args.append(target_args.pop(0))
             else:  # If it's composed, explore a lower level of the tree
                 new_args.append(set_args(arg, target_args, return_symbols=return_symbols))
-    try:
-        new_xp = xp.func(*new_args)
-    except:
-        print()
+    new_xp = xp.func(*new_args)
     return new_xp
 
 
@@ -306,3 +303,11 @@ def count_placeholders(expr):
         if str(atom).startswith('ca_') or str(atom).startswith('cm_'):
             count += 1
     return count
+
+
+def expr2skeleton(expr):
+    """Compare the coefficients of a skeleton to a known expression and remove useless coefficients"""
+    args_expr = get_args(expr)
+    args_expr = [e if abs(e) > 0.001 else 0 for e in args_expr]
+    expr = set_args(expr, args_expr)
+    return numeric_to_placeholder(expr)

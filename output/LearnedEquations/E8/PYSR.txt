@@ -1,1 +1,1 @@
-cos(tan(tanh(0.044280197 / x0**2))) + cos(tan(tanh(0.04456933 / x1**2)))
+(tanh(cosh(x0) - 1.0369) + tanh(cosh(x1) - 1.0381))

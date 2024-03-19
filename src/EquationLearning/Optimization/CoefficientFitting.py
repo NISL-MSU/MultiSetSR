@@ -8,9 +8,8 @@ from pymoo.algorithms.soo.nonconvex.ga import GA
 from pymoo.termination.robust import RobustTermination
 from src.EquationLearning.models.utilities_expressions import *
 from pymoo.termination.ftol import MultiObjectiveSpaceTermination
-warnings.filterwarnings("ignore")
-
 from pymoo.operators.selection.tournament import TournamentSelection
+warnings.filterwarnings("ignore")
 
 
 class CoefficientFitting(Problem):
@@ -73,6 +72,13 @@ class CoefficientFitting(Problem):
         for si in range(x.shape[0]):
             error = 0
             # Replace the coefficients
+            # c[si, 0] = 2
+            # c[si, 1] = -1
+            # c[si, 2] = 1
+            # c[si, 3] = 0
+            # c[si, 4] = 0
+            # c[si, 5] = 0
+            # c[si, 6] = 1
             csi = np.round(c[si, :], 6)
             csi[np.abs(csi) <= 0.001] = 0
             # csi[csi == 3.142] = np.pi
@@ -97,13 +103,15 @@ class CoefficientFitting(Problem):
                 # r = pearsonr(self.y_est, ys)[0]
                 # if np.isnan(r):
                 er = np.mean(np.abs(self.y_est - ys))
-                penalty = -(np.sum(csi == 0) + np.sum(csi == 1))/20
-
+                penalty = -(np.sum(csi == 0) + np.sum(csi == 1))/1000
                 error += er + penalty
                 # else:
-                #     error += np.mean((self.y_est - ys)**2) * (2 - r)
-            if error <= 0.0001:
-                error = 0
+                #     if self.iteration < 50:
+                #         error += (2 - r)
+                #     else:
+                #         error += np.mean(np.abs(self.y_est - ys)) * (2 - r)
+            # if error <= 0.000001:
+            #     error = 0
             outs[si, 0] = error
 
         out["F"] = outs
@@ -156,7 +164,7 @@ class FitGA:
         algorithm = GA(pop_size=300)
         res = minimize(problem, algorithm, self.termination, seed=1, verbose=False)
         resX = np.round(res.X, 6)
-        resX[np.abs(resX) <= 0.0001] = 0
+        resX[np.abs(resX) <= 0.00001] = 0
         fs = None
         if len(self.skeleton.args) > 0:
             fs = set_args(self.skeleton, list(resX))

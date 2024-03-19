@@ -182,18 +182,18 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False, n_
     eq.variables = {'x_1'}
     exprs = eq.expr
     curr_p = cfg.max_number_of_points
-    # Uncomment the code below if you have a specific skeleton from which you want to sample data as an example
-    sk = sympy.sympify('c + c / (sin(c * x_1) + c)')
-    sk, _, _ = add_constant_identifier(sk)
-    coeff_dict = dict()
-    var = None
-    for constant in sk.free_symbols:
-        if 'c' in str(constant):
-            coeff_dict[str(constant)] = constant
-        if 'x' in str(constant):
-            var = constant
-    eq = SimpleEquation(expr=sk, coeff_dict=coeff_dict, variables=[var])
-    exprs = eq.expr
+    # # Uncomment the code below if you have a specific skeleton from which you want to sample data as an example
+    # sk = sympy.sympify('c + c / (sin(c * x_1) + c)')
+    # sk, _, _ = add_constant_identifier(sk)
+    # coeff_dict = dict()
+    # var = None
+    # for constant in sk.free_symbols:
+    #     if 'c' in str(constant):
+    #         coeff_dict[str(constant)] = constant
+    #     if 'x' in str(constant):
+    #         var = constant
+    # eq = SimpleEquation(expr=sk, coeff_dict=coeff_dict, variables=[var])
+    # exprs = eq.expr
 
     # Randomly stretch or shrink input domain. E.g., from [-10, 10] to [-5, 5] or [-2, 2]
     divider = 1  # np.random.randint(2, 10) / 2

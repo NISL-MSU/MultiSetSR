@@ -20,7 +20,7 @@ clim = [-20, 20]
 cfg = omegaconf.OmegaConf.load("./EquationLearning/Transformers/config.yaml")
 training_dataset = Dataset(cfg.train_path, cfg.dataset_train, mode="train")
 word2id = training_dataset.word2id
-scratch = False  # If False, just load saved results and plot them
+scratch = True  # If False, just load saved results and plot them
 
 # Methods
 methods = ['PYSR', 'TaylorGP', 'NESYMRES', 'E2E', 'MST']
