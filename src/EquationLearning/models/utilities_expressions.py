@@ -311,3 +311,10 @@ def expr2skeleton(expr):
     args_expr = [e if abs(e) > 0.001 else 0 for e in args_expr]
     expr = set_args(expr, args_expr)
     return numeric_to_placeholder(expr)
+
+
+def count_nodes(expr):
+    node_count = 0
+    for node in sp.preorder_traversal(expr):
+        node_count += 1
+    return node_count

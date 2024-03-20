@@ -9,12 +9,11 @@ from src.EquationLearning.models.functions import get_function
 class MLP(nn.Module, ABC):
     """Defines conventional NN architecture"""
 
-    def __init__(self, input_features: int = 10, output_size: int = 1, n_layers: int = 3):
+    def __init__(self, input_features: int = 10, output_size: int = 1):
         """
         Initialize NN
         :param input_features: Input shape of the network.
         :param output_size: Output shape of the network.
-        :param n_layers: Number of hidden layers.
         """
         super(MLP, self).__init__()
         self.hidden_layer1 = nn.Sequential(
@@ -44,7 +43,7 @@ class MLP(nn.Module, ABC):
 class MLP2(nn.Module, ABC):
     """Defines conventional NN architecture"""
 
-    def __init__(self, input_features: int = 10, output_size: int = 1, n_layers: int = 3):
+    def __init__(self, input_features: int = 10, output_size: int = 1):
         """
         Initialize NN
         :param input_features: Input shape of the network.
@@ -70,10 +69,6 @@ class MLP2(nn.Module, ABC):
 
     def forward(self, x):
         x = self.hidden_layer1(x)
-        # x = self.drop1(x)
-        # x = self.hidden_layer2(x)
-        # x = self.hidden_layer3(x)
-        # x = self.drop2(x)
         x = self.hidden_layer4(x)
         x = self.hidden_layer5(x)
         return self.out(x)
@@ -82,12 +77,11 @@ class MLP2(nn.Module, ABC):
 class MLP3(nn.Module, ABC):
     """Defines conventional NN architecture"""
 
-    def __init__(self, input_features: int = 10, output_size: int = 1, n_layers: int = 3):
+    def __init__(self, input_features: int = 10, output_size: int = 1):
         """
         Initialize NN
         :param input_features: Input shape of the network.
         :param output_size: Output shape of the network.
-        :param n_layers: Number of hidden layers.
         """
         super(MLP3, self).__init__()
         self.hidden_layer1 = nn.Sequential(

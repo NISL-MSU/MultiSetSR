@@ -2,37 +2,32 @@ import torch
 from src.utils import *
 from sklearn.model_selection import KFold
 from src.EquationLearning.models.NNModel import NNModel
-from src.EquationLearning.Data.GenerateDatasets import DataLoader
+from src.EquationLearning.Data.GenerateDatasets import DataLoader, InputData
 
 
 class Trainer:
     """Train NN model using cross-validation"""
 
-    def __init__(self, dataset: str = 'S0', method: str = 'NN', n_layers: int = 3):
+    def __init__(self, dataset: InputData, modelType: str = 'NN', name: str = ''):
         """
         Initialize Trainer class
-        :param dataset: Name of the dataset to be used. E.g., 'S0', 'S1', ..., 'S7', 'A1', ..., 'A5'.
-        :param method: Name of the chosen equation learning method. E.g., 'EQL', 'iEQL', 'iEQL-GA'.
-        :param n_layers: Number of hidden layers used by the neural network
+        :param dataset: An InputData object.
         """
         # Class variables
         self.dataset = dataset
-        self.method = method
-        self.n_layers = n_layers
-
+        if name == '':
+            name = 'temp'
+        self.name = name
         # Read dataset
-        dataLoader = DataLoader(name=dataset)
-        self.X, self.Y, self.var_names = dataLoader.X, dataLoader.Y, dataLoader.names
-        self.modelType = dataLoader.modelType
+        self.X, self.Y, self.var_names = self.dataset.X, self.dataset.Y, self.dataset.names
+        self.modelType = modelType
         self.n_features = self.X.shape[1]
-
         # Load model
-        print("Loading model...")
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.model = self.reset_model()
 
     def reset_model(self):
-        return NNModel(device=self.device, n_features=self.n_features, n_layers=self.n_layers, NNtype=self.modelType)
+        return NNModel(device=self.device, n_features=self.n_features, NNtype=self.modelType)
 
     def init_kfold(self):
         # Initialize kfold object
@@ -40,7 +35,7 @@ class Trainer:
         iterator = kfold.split(self.X)
         return iterator
 
-    def train(self, batch_size=32, epochs=500, printProcess=True, scratch: bool = False):
+    def train(self, batch_size=32, epochs=500, printProcess=True, scratch: bool = True):
         """Train using cross validation
         :param batch_size: Mini batch size. It is recommended a small number, like 16
         :param epochs: Number of training epochs
@@ -50,16 +45,16 @@ class Trainer:
 
         # If the folder does not exist, create it
         root = get_project_root()
-        folder = os.path.join(root, "src//EquationLearning//models//saved_NNs//" + self.dataset)
-        if not os.path.exists(os.path.join(root, "src//EquationLearning//models//saved_NNs//" + self.dataset)):
-            os.mkdir(os.path.join(root, "src//EquationLearning//models//saved_NNs//" + self.dataset))
-        if not os.path.exists(folder):
-            os.mkdir(folder)
+        folder = ''
+        if self.name != '':
+            folder = os.path.join(root, "src//EquationLearning//models//saved_NNs//" + self.name)
+            if not os.path.exists(os.path.join(root, "src//EquationLearning//models//saved_NNs//" + self.name)):
+                os.mkdir(os.path.join(root, "src//EquationLearning//models//saved_NNs//" + self.name))
+            if not os.path.exists(folder):
+                os.mkdir(folder)
 
-        print("\n*****************************************")
         print("*****************************************")
         print("Start MLP training")
-        print("*****************************************")
         print("*****************************************")
         iterator = self.init_kfold()
         # Use only first partition
@@ -73,24 +68,28 @@ class Trainer:
             Yval = self.Y[test]  # applyMinMaxScale(self.Y[test], maxs, mins)
 
             # Train the model using the current training-validation split
-            filepath = folder + "//weights-" + self.method + "-" + self.dataset
+            filepath = None
+            if self.name != '':
+                filepath = folder + "//weights-NN-" + self.name
             if scratch or not os.path.exists(filepath):
                 _, val_mse = self.model.trainFold(Xtrain=Xtrain, Ytrain=Ytrain, Xval=Xval, Yval=Yval,
                                                   batch_size=batch_size, epochs=epochs, filepath=filepath,
                                                   printProcess=printProcess,
                                                   yscale=[maxs, mins])
+                self.model.loadModel(path=filepath)
             else:  # Or just load pre-trained NN
                 self.model.loadModel(path=filepath)
                 # Evaluate model on the validation set
                 val_mse = mse(Yval, np.array(self.model.evaluateFold(Xval))[:, 0])
             # Reset all weights
-            self.model = self.reset_model()
+            # self.model = self.reset_model()
             print("Val MSE: " + str(val_mse))
             break
 
 
 if __name__ == '__main__':
-    names = ['E2']
-    for name in names:
-        predictor = Trainer(dataset=name)
-        predictor.train(scratch=True, batch_size=128, epochs=1000, printProcess=True)
+    names = ['E6']
+    for nme in names:
+        data_loader = DataLoader(name=nme)
+        predictor = Trainer(dataset=data_loader.dataset, modelType=data_loader.modelType, name=data_loader.name)
+        predictor.train(scratch=True, batch_size=64, epochs=3000, printProcess=True)

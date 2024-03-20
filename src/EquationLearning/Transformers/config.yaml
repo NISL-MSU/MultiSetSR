@@ -97,7 +97,7 @@ architecture:
   number_of_sets: 10
 
 inference:
-  beam_size: 8
+  beam_size: 5
   bfgs:
     activated: True
     n_restarts: 10

@@ -72,17 +72,8 @@ class CoefficientFitting(Problem):
         for si in range(x.shape[0]):
             error = 0
             # Replace the coefficients
-            # c[si, 0] = 2
-            # c[si, 1] = -1
-            # c[si, 2] = 1
-            # c[si, 3] = 0
-            # c[si, 4] = 0
-            # c[si, 5] = 0
-            # c[si, 6] = 1
             csi = np.round(c[si, :], 6)
             csi[np.abs(csi) <= 0.001] = 0
-            # csi[csi == 3.142] = np.pi
-            # csi[csi == -3.142] = -np.pi
             if len(self.skeleton.args) > 0:
                 fs = set_args(self.skeleton, list(c[si, :]))
                 if 'x' not in str(fs.free_symbols):
@@ -106,18 +97,13 @@ class CoefficientFitting(Problem):
                 penalty = -(np.sum(csi == 0) + np.sum(csi == 1))/1000
                 error += er + penalty
                 # else:
-                #     if self.iteration < 50:
-                #         error += (2 - r)
-                #     else:
-                #         error += np.mean(np.abs(self.y_est - ys)) * (2 - r)
-            # if error <= 0.000001:
-            #     error = 0
+                #     error += np.mean(np.abs(self.y_est - ys)) * (2 - r)
             outs[si, 0] = error
 
         out["F"] = outs
         self.iteration += 1
 
-        print("\t\t\tGA Iteration " + str(self.iteration) + "... Best error = " + str(np.min(outs)), end='\r')
+        # print("\t\t\tGA Iteration " + str(self.iteration) + "... Best error = " + str(np.min(outs)), end='\r')
 
 
 class FitGA:

@@ -11,22 +11,22 @@ from src.EquationLearning.Optimization.CoefficientFitting import FitGA
 from src.EquationLearning.Data.GenerateDatasets import DataLoader, InputData
 from src.EquationLearning.Transformers.GenerateTransformerData import Dataset
 from src.EquationLearning.Trainer.TrainMultiSetTransformer import seq2equation
-from src.EquationLearning.models.utilities_expressions import avoid_operations_between_constants
-from src.EquationLearning.models.utilities_expressions import expr2skeleton
+from src.EquationLearning.models.utilities_expressions import expr2skeleton, avoid_operations_between_constants, count_nodes
 
 
 class MSSP:
 
     def __init__(self, dataset: InputData, bb_model):
         """Distills symbolic skeleton expressions given an experimental dataset
-        :param: dataset: A DataLoader object
+        :param: dataset: An InputData object
         :param bb_model: Black-box prediction model that was trained to capture the association between inputs and
                          outputs of the system (e.g., a feedforward neural-network)
         """
         # Define problem
         self.X, self.Y, self.var_names, self.types = dataset.X, dataset.Y, dataset.names, dataset.types
         self.target_function = dataset.expr
-        self.f_lambdified = sp.lambdify(sp.utilities.iterables.flatten(sp.sympify(dataset.names)), dataset.expr)
+        if self.target_function != '':
+            self.f_lambdified = sp.lambdify(sp.utilities.iterables.flatten(sp.sympify(dataset.names)), dataset.expr)
         self.limits, self.n_features = dataset.limits, dataset.n_features
         self.symbols = sp.symbols("{}:{}".format('x', self.n_features))
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -55,6 +55,7 @@ class MSSP:
         self.n_samples = self.cfg.architecture.block_size
 
     def _load_models(self):
+        root = get_project_root()
         # Load weights of MST
         MST_path = os.path.join(root, "src//EquationLearning//models//saved_models/Model512-batch_12-Q2")
         self.model.load_state_dict(torch.load(MST_path))
@@ -119,7 +120,8 @@ class MSSP:
                         best_X, best_Y, best_values = XXs[ind], YYs[ind], valuess[ind]
                         Ys[:, ns] = best_Y
                         Xs[:, ns] = best_X
-                        Ys_real[:, ns] = np.array(self.f_lambdified(*list(best_values)))
+                        if self.target_function != '':
+                            Ys_real[:, ns] = np.array(self.f_lambdified(*list(best_values)))
                         Rs[ns] = R2s[ind]
                 # Normalize data
                 sorted_indices = np.argsort(np.array(Rs))
@@ -135,7 +137,7 @@ class MSSP:
                 Xs = (Xs - np.min(Xs)) * scaling_factor - 10
                 # Xs = (Xs - np.mean(Xs))  # Xs = (Xs - np.min(Xs)) * scaling_factor - 10
                 XY_block = torch.zeros((1, self.n_samples, 2, self.n_sets)).to(self.device)
-                Xs, Ys = torch.from_numpy(Xs), torch.from_numpy(Ys_real)
+                Xs, Ys = torch.from_numpy(Xs), torch.from_numpy(Ys)
                 Xs = Xs.to(self.device)
                 Ys = Ys.to(self.device)
                 XY_block[0, :, 0, :] = Xs
@@ -147,30 +149,30 @@ class MSSP:
                 for ip, pred in enumerate(preds):
                     try:
                         tokenized = list(pred[1].cpu().numpy())[1:]
-                        skeleton = seq2equation(tokenized, self.id2word, printFlag=True)
+                        skeleton = seq2equation(tokenized, self.id2word, printFlag=False)
                         skeleton = sp.sympify(skeleton.replace('x_1', str(va)))
                         pred_skeletons.append(skeleton)
                         print('Predicted skeleton ' + str(ip + 1) + ' for variable ' + str(va) + ': ' + str(skeleton))
                     except:  # TypeError:
                         print("Invalid response created by the model")
 
-                print("\n Choosing the best skeleton... (skeletons ordered based on length)")
+                print("\n Choosing the best skeleton... (skeletons ordered based on number of nodes)")
                 best_error, best_sk = np.Infinity, ''
-                pred_skeletons = sorted(pred_skeletons, key=lambda expr: len(str(expr)))
-                # for ip, skeleton in enumerate(pred_skeletons):
-                #     # Fit coefficients of the estimated skeletons
-                #     skeleton = avoid_operations_between_constants(sp.expand(skeleton))
-                #     problem = FitGA(skeleton, Xi, Yi, [np.min(Xi), np.max(Xi)], [-20, 20], max_it=100)
-                #     est_expr, error = problem.run()
-                #     print("\tSkeleton: " + str(skeleton) + ". Error: " + str(error) + ". Expr: " + str(est_expr))
-                #     if error < best_error:
-                #         best_error = error
-                #         best_sk = expr2skeleton(est_expr)
-                #         if error < 0.001:  # If the error is very low, assume this is the best
-                #             break
-                # print("Selected skeleton: " + str(best_sk))
-                #
-                # self.univariate_skeletons.append(best_sk)
+                pred_skeletons = sorted(pred_skeletons, key=lambda expr: count_nodes(expr))
+                for ip, skeleton in enumerate(pred_skeletons):
+                    # Fit coefficients of the estimated skeletons
+                    skeleton = avoid_operations_between_constants(sp.expand(skeleton))
+                    problem = FitGA(skeleton, Xi, Yi, [np.min(Xi), np.max(Xi)], [-20, 20], max_it=100)
+                    est_expr, error = problem.run()
+                    print("\tSkeleton: " + str(skeleton) + ". Error: " + str(error) + ". Expr: " + str(est_expr))
+                    if best_error - error > 0.002:
+                        best_error = error
+                        best_sk = expr2skeleton(est_expr)
+                        if error < 0.001:  # If the error is very low, assume this is the best
+                            break
+                print("Selected skeleton: " + str(best_sk) + "\n")
+
+                self.univariate_skeletons.append(best_sk)
 
         return self.univariate_skeletons
 
@@ -181,33 +183,59 @@ if __name__ == '__main__':
     ###########################################
     # Import data
     ###########################################
-    datasetName = 'E9'
-    data_loader = DataLoader(name=datasetName)
-    data = data_loader.dataset
+    # datasetName = 'E6'
+    # data_loader = DataLoader(name=datasetName)
+    # data = data_loader.dataset
+    #
+    # ###########################################
+    # # Define NN and load weights
+    # ###########################################
+    # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    # folder = os.path.join(get_project_root(), "src//EquationLearning//models//saved_NNs//" + datasetName)
+    # filepath = folder + "//weights-NN-" + datasetName
+    # nn_model = None
+    # if os.path.exists(filepath.replace("weights", "NNModel") + '.pth'):
+    #     # If this file exists, it means we saved the whole model
+    #     network = torch.load(filepath.replace("weights", "NNModel") + '.pth')
+    #     nn_model = NNModel(device=device, n_features=data.n_features, loaded_NN=network)
+    # elif os.path.exists(filepath):
+    #     # If this file exists, initiate a model and load the weigths
+    #     nn_model = NNModel(device=device, n_features=data.n_features, NNtype=data_loader.modelType)
+    #     nn_model.loadModel(filepath)
+    # else:
+    #     # If neither files exist, we haven't trained a NN for this problem yet
+    #     if data.n_features > 1:
+    #         sys.exit("We haven't trained a NN for this problem yet. Use the TrainNNModel.py file first.")
 
-    ###########################################
-    # Define NN and load weights
-    ###########################################
+    datasetName = 'temp'
+    np.random.seed(7)
+    n = 10000
+    # Generate data from the equation
+    x1 = np.random.uniform(-5, 5, size=n)
+    x2 = np.random.uniform(-5, 5, size=n)
+    x3 = np.array([np.random.choice(np.linspace(-8, 8, 100)) for _ in range(n)])  # Example of discrete variable
+    X = np.array([x1, x2, x3]).T
+    Y = np.sin(x1 + 1.2 * x2) * (x3 ** 2 / 2)
+
+    # Format the dataset
+    names = ['x0', 'x1']  # Specify the names of the variables
+    types = ['continuous', 'continuous', 'discrete']  # Specify if the variables are continuous or discrete
+    dataset = InputData(X=X, Y=Y, names=names, types=types)
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    root = get_project_root()
-    folder = os.path.join(root, "src//EquationLearning//models//saved_NNs//" + datasetName)
+    folder = os.path.join(get_project_root(), "src//EquationLearning//models//saved_NNs//" + datasetName)
     filepath = folder + "//weights-NN-" + datasetName
     nn_model = None
     if os.path.exists(filepath.replace("weights", "NNModel") + '.pth'):
         # If this file exists, it means we saved the whole model
         network = torch.load(filepath.replace("weights", "NNModel") + '.pth')
-        nn_model = NNModel(device=device, n_features=data.n_features, loaded_NN=network)
+        nn_model = NNModel(device=device, n_features=dataset.n_features, loaded_NN=network)
     elif os.path.exists(filepath):
         # If this file exists, initiate a model and load the weigths
-        nn_model = NNModel(device=device, n_features=data.n_features, NNtype=data_loader.modelType)
+        nn_model = NNModel(device=device, n_features=dataset.n_features, NNtype='NN')
         nn_model.loadModel(filepath)
-    else:
-        # If neither files exist, we haven't trained a NN for this problem yet
-        if data.n_features > 1:
-            sys.exit("We haven't trained a NN for this problem yet. Use the TrainNNModel.py file first.")
 
     ###########################################
     # Get skeletons
     ###########################################
-    regressor = MSSP(dataset=data, bb_model=nn_model)
-    regressor.get_skeletons()
+    regressor = MSSP(dataset=dataset, bb_model=nn_model)
+    print(regressor.get_skeletons())

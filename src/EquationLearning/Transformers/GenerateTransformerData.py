@@ -132,9 +132,9 @@ def sample_constants(eq, cfg):
                             val = np.random.uniform(low=-3, high=3)
                         exp = exp.subs(c, np.round(val, 3))
                     elif ('sin' in op) or ('cos' in op) or ('tan' in op):
-                        val = np.random.uniform(low=-2.5, high=2.5)
+                        val = np.random.uniform(low=-5, high=5)
                         while np.abs(val) < 0.1:  # Avoid too small values
-                            val = np.random.uniform(low=-2.5, high=2.5)
+                            val = np.random.uniform(low=-5, high=5)
                         exp = exp.subs(c, np.round(val, 3))
                     elif isinstance(op, tuple):
                         if 'Pow' in op[0] and op[1] == 4:
@@ -182,18 +182,18 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False, n_
     eq.variables = {'x_1'}
     exprs = eq.expr
     curr_p = cfg.max_number_of_points
-    # # Uncomment the code below if you have a specific skeleton from which you want to sample data as an example
-    # sk = sympy.sympify('c + c / (sin(c * x_1) + c)')
-    # sk, _, _ = add_constant_identifier(sk)
-    # coeff_dict = dict()
-    # var = None
-    # for constant in sk.free_symbols:
-    #     if 'c' in str(constant):
-    #         coeff_dict[str(constant)] = constant
-    #     if 'x' in str(constant):
-    #         var = constant
-    # eq = SimpleEquation(expr=sk, coeff_dict=coeff_dict, variables=[var])
-    # exprs = eq.expr
+    # Uncomment the code below if you have a specific skeleton from which you want to sample data as an example
+    sk = sympy.sympify('c*x1/tanh(c*x1 + c) + c')
+    sk, _, _ = add_constant_identifier(sk)
+    coeff_dict = dict()
+    var = None
+    for constant in sk.free_symbols:
+        if 'c' in str(constant):
+            coeff_dict[str(constant)] = constant
+        if 'x' in str(constant):
+            var = constant
+    eq = SimpleEquation(expr=sk, coeff_dict=coeff_dict, variables=[var])
+    exprs = eq.expr
 
     # Randomly stretch or shrink input domain. E.g., from [-10, 10] to [-5, 5] or [-2, 2]
     divider = 1  # np.random.randint(2, 10) / 2
@@ -653,8 +653,8 @@ def modify_constants_avoidNaNs(expr, x, bounded_ops, npoints, Xbounds, variable=
                     if any([f in str(arg_init.func) for f in ['sin', 'cos', 'tan']]):
                         # Restrict the range of values that can be encountered inside trig functions
                         arg_range = np.max(vals_arg) - np.min(vals_arg)
-                        if arg_range > 50:
-                            args2 = args2 / arg_range * 50
+                        if arg_range > 100:
+                            args2 = args2 / arg_range * 100
 
                     # Check if there's an exponential or power term inside and restrict their arg values
                     if any(['exp' in str(arg_init.func) or '**3' in str(arg_init.func) or

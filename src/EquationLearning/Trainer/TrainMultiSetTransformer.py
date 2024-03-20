@@ -324,19 +324,11 @@ class TransformerTrainer:
                     output = self.model.validation_step(XY_batch, skeletons_batch)
                     # Loss calculation
                     for bi in range(output.shape[1]):
-                        # out = output[bi].contiguous().view(-1, output[bi].shape[-1])
-                        # tokenized = skeletons_batch[bi, :][1:].contiguous().view(-1)
-                        # padding_size = np.abs(output[bi].size(0) - tokenized.size(0))
-                        # if out.size(0) > tokenized.size(0):
-                        #     tokenized = nn.functional.pad(tokenized, (0, padding_size))
-                        # else:
-                        #     out = nn.functional.pad(out, pad=(0, 0, 0, padding_size))
                         out = output[:, bi, :].contiguous().view(-1, output.shape[-1])
                         tokenized = skeletons_batch[bi, :][1:].contiguous().view(-1)
                         L1s = loss_sample(out, tokenized.long())
                         L1v += L1s
                         iv += 1
-
                         try:
                             res = output.cpu().numpy()[:, 0, :]
                             max_indices = np.argmax(res, axis=1)

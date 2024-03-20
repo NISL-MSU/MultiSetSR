@@ -34,7 +34,7 @@ class InputData:
     Y: np.array
     names: List[str]
     types: List[str]
-    expr: str
+    expr: str = field(default='')
     limits: Any = field(init=False)
     n_features: int = field(init=False)
 
@@ -66,6 +66,16 @@ class DataLoader:
         self.X, self.Y, self.names = np.zeros(0), np.zeros(0), None
         self.expr, self.cfg, self.types = None, None, []
         self.extrapolation = extrapolation
+        self.name = name
+
+        if name == 'E10':
+            name = 'CS1'
+        elif name == 'E11':
+            name = 'CS2'
+        elif name == 'E12':
+            name = 'CS3'
+        elif name == 'E13':
+            name = 'CS4'
 
         if "U" in name or "E" in name or "CS" in name:
             self.modelType = "NN"
@@ -162,7 +172,7 @@ class DataLoader:
         self.expr = ((1 - symb[0]) ** 2 + (1 - symb[2]) ** 2 + 100 * (symb[1] - symb[0] ** 2) ** 2 +
                      100 * (symb[3] - symb[2] ** 2) ** 2) / 10000
 
-    def E5(self, n=10000):  # Ours
+    def E5(self, n=50000):  # Ours
         np.random.seed(7)
         # Define features
         if not self.extrapolation:
@@ -259,11 +269,11 @@ class DataLoader:
         if not self.extrapolation:
             x1 = np.random.uniform(-2, 2, size=n)
             range_values = np.linspace(-3, 3, 100)
-            x2 = [np.random.choice(range_values) for _ in range(n)]
+            x2 = np.array([np.random.choice(range_values) for _ in range(n)])
         else:
             x1 = np.random.uniform(-4, 4, size=n)
             range_values = np.linspace(-6, 6, 200)
-            x2 = [np.random.choice(range_values) for _ in range(n)]
+            x2 = np.array([np.random.choice(range_values) for _ in range(n)])
         self.X = np.array([x1, x2]).T
         # Calculate output
         self.Y = np.sin(x1 * np.exp(x2))
