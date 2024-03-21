@@ -1,2 +1,2 @@
-TODO: c*(c + x0)**2 + c
+c + c/(c + sin(c*x0 + c))
 c*x1**2 + c
