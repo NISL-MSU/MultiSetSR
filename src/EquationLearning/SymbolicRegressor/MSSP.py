@@ -68,111 +68,110 @@ class MSSP:
             print("********************************")
             print("Analyzing variable " + str(va))
             print("********************************")
-            if iv >= 0:
-                Rs = np.zeros(self.n_sets)
-                # Generate multiple sets of data where only the current variable is allowed to vary
-                if len(self.symbols) == 1:
-                    if len(self.X) > self.n_samples:
-                        ra = np.arange(0, len(self.X))
-                        np.random.shuffle(ra)
-                        ra = ra[0:self.n_samples]
-                        self.X, self.Y = self.X[ra, :], self.Y[ra]
-                    Xs = np.repeat(self.X, self.n_sets, axis=1)
-                    Ys = np.repeat(self.Y[:, None], self.n_sets, axis=1)
-                    Ys_real = Ys
-                else:
-                    Xs = np.zeros((self.n_samples, self.n_sets))
-                    Ys = np.zeros((self.n_samples, self.n_sets))
-                    Ys_real = np.zeros((self.n_samples, self.n_sets))
-                    for ns in range(self.n_sets):
-                        # Repeat the sampling process a few times and keep the one the looks more different from a line
-                        R2s, XXs, YYs, valuess = [], [], [], []
-                        for it in range(10):
-                            # Sample random values for all the variables
-                            values = np.zeros((len(self.symbols)))
-                            for isy in range(len(self.symbols)):
-                                if self.types[isy] == 'continuous':
-                                    values[isy] = np.random.uniform(self.limits[isy][0], self.limits[isy][1])
-                                else:
-                                    range_values = np.linspace(self.limits[isy][0], self.limits[isy][1], 100)
-                                    values[isy] = np.random.choice(range_values)
-                            values = np.repeat(values[:, None], self.n_samples, axis=1)
-                            # Sample values of the variable that is being analyzed
-                            sample = np.random.uniform(self.limits[iv][0], self.limits[iv][1], self.n_samples)
-                            values[iv, :] = sample
-                            # Estimate the response of the generated set
-                            Y = np.array(self.bb_model.evaluateFold(values.T, batch_size=values.shape[1]))[:, 0]
-                            X = sample
-                            # Fit linear regression model and calculate R2
-                            model = LinearRegression()
-                            model.fit(X[:, None], Y)
-                            Y_pred = model.predict(X[:, None])
-                            r2 = r2_score(Y, Y_pred)
-                            if np.std(Y) < 0.3:
-                                R2s.append(0)
+            Rs = np.zeros(self.n_sets)
+            # Generate multiple sets of data where only the current variable is allowed to vary
+            if len(self.symbols) == 1:
+                if len(self.X) > self.n_samples:
+                    ra = np.arange(0, len(self.X))
+                    np.random.shuffle(ra)
+                    ra = ra[0:self.n_samples]
+                    self.X, self.Y = self.X[ra, :], self.Y[ra]
+                Xs = np.repeat(self.X, self.n_sets, axis=1)
+                Ys = np.repeat(self.Y[:, None], self.n_sets, axis=1)
+                Ys_real = Ys
+            else:
+                Xs = np.zeros((self.n_samples, self.n_sets))
+                Ys = np.zeros((self.n_samples, self.n_sets))
+                Ys_real = np.zeros((self.n_samples, self.n_sets))
+                for ns in range(self.n_sets):
+                    # Repeat the sampling process a few times and keep the one the looks more different from a line
+                    R2s, XXs, YYs, valuess = [], [], [], []
+                    for it in range(10):
+                        # Sample random values for all the variables
+                        values = np.zeros((len(self.symbols)))
+                        for isy in range(len(self.symbols)):
+                            if self.types[isy] == 'continuous':
+                                values[isy] = np.random.uniform(self.limits[isy][0], self.limits[isy][1])
                             else:
-                                R2s.append(r2)
-                            XXs.append(X.copy())
-                            YYs.append(Y.copy())
-                            valuess.append(values.copy())
-                        sorted_indices = np.argsort(np.array(R2s))
-                        ind = sorted_indices[3]
-                        best_X, best_Y, best_values = XXs[ind], YYs[ind], valuess[ind]
-                        Ys[:, ns] = best_Y
-                        Xs[:, ns] = best_X
-                        if self.target_function != '':
-                            Ys_real[:, ns] = np.array(self.f_lambdified(*list(best_values)))
-                        Rs[ns] = R2s[ind]
-                # Normalize data
-                sorted_indices = np.argsort(np.array(Rs))
-                ind = sorted_indices[2]
-                Xi, Yi = Xs[:, ind].copy(), Ys[:, ind].copy()
-                means, std = np.mean(Ys, axis=0), np.std(Ys, axis=0)
-                Ys = (Ys - means) / std
-                means, std = np.mean(Ys_real, axis=0), np.std(Ys_real, axis=0)
-                Ys_real = (Ys_real - means) / std
+                                range_values = np.linspace(self.limits[isy][0], self.limits[isy][1], 100)
+                                values[isy] = np.random.choice(range_values)
+                        values = np.repeat(values[:, None], self.n_samples, axis=1)
+                        # Sample values of the variable that is being analyzed
+                        sample = np.random.uniform(self.limits[iv][0], self.limits[iv][1], self.n_samples)
+                        values[iv, :] = sample
+                        # Estimate the response of the generated set
+                        Y = np.array(self.bb_model.evaluateFold(values.T, batch_size=values.shape[1]))[:, 0]
+                        X = sample
+                        # Fit linear regression model and calculate R2
+                        model = LinearRegression()
+                        model.fit(X[:, None], Y)
+                        Y_pred = model.predict(X[:, None])
+                        r2 = r2_score(Y, Y_pred)
+                        if np.std(Y) < 0.3:
+                            R2s.append(0)
+                        else:
+                            R2s.append(r2)
+                        XXs.append(X.copy())
+                        YYs.append(Y.copy())
+                        valuess.append(values.copy())
+                    sorted_indices = np.argsort(np.array(R2s))
+                    ind = sorted_indices[3]
+                    best_X, best_Y, best_values = XXs[ind], YYs[ind], valuess[ind]
+                    Ys[:, ns] = best_Y
+                    Xs[:, ns] = best_X
+                    if self.target_function != '':
+                        Ys_real[:, ns] = np.array(self.f_lambdified(*list(best_values)))
+                    Rs[ns] = R2s[ind]
+            # Normalize data
+            sorted_indices = np.argsort(np.array(Rs))
+            ind = sorted_indices[2]
+            Xi, Yi = Xs[:, ind].copy(), Ys[:, ind].copy()
+            means, std = np.mean(Ys, axis=0), np.std(Ys, axis=0)
+            Ys = (Ys - means) / std
+            means, std = np.mean(Ys_real, axis=0), np.std(Ys_real, axis=0)
+            Ys_real = (Ys_real - means) / std
 
-                # Format the data as inputs to the Multi-set transformer
-                scaling_factor = 20 / (np.max(Xs) - np.min(Xs))
-                Xs = (Xs - np.min(Xs)) * scaling_factor - 10
-                # Xs = (Xs - np.mean(Xs))  # Xs = (Xs - np.min(Xs)) * scaling_factor - 10
-                XY_block = torch.zeros((1, self.n_samples, 2, self.n_sets)).to(self.device)
-                Xs, Ys = torch.from_numpy(Xs), torch.from_numpy(Ys)
-                Xs = Xs.to(self.device)
-                Ys = Ys.to(self.device)
-                XY_block[0, :, 0, :] = Xs
-                XY_block[0, :, 1, :] = Ys
+            # Format the data as inputs to the Multi-set transformer
+            scaling_factor = 20 / (np.max(Xs) - np.min(Xs))
+            Xs = (Xs - np.min(Xs)) * scaling_factor - 10
+            # Xs = (Xs - np.mean(Xs))  # Xs = (Xs - np.min(Xs)) * scaling_factor - 10
+            XY_block = torch.zeros((1, self.n_samples, 2, self.n_sets)).to(self.device)
+            Xs, Ys = torch.from_numpy(Xs), torch.from_numpy(Ys)
+            Xs = Xs.to(self.device)
+            Ys = Ys.to(self.device)
+            XY_block[0, :, 0, :] = Xs
+            XY_block[0, :, 1, :] = Ys
 
-                # Perform Multi-Set Skeleton Prediction
-                preds = self.model.inference(XY_block)
-                pred_skeletons = []
-                for ip, pred in enumerate(preds):
-                    try:
-                        tokenized = list(pred[1].cpu().numpy())[1:]
-                        skeleton = seq2equation(tokenized, self.id2word, printFlag=False)
-                        skeleton = sp.sympify(skeleton.replace('x_1', str(va)))
-                        pred_skeletons.append(skeleton)
-                        print('Predicted skeleton ' + str(ip + 1) + ' for variable ' + str(va) + ': ' + str(skeleton))
-                    except:  # TypeError:
-                        print("Invalid response created by the model")
+            # Perform Multi-Set Skeleton Prediction
+            preds = self.model.inference(XY_block)
+            pred_skeletons = []
+            for ip, pred in enumerate(preds):
+                try:
+                    tokenized = list(pred[1].cpu().numpy())[1:]
+                    skeleton = seq2equation(tokenized, self.id2word, printFlag=False)
+                    skeleton = sp.sympify(skeleton.replace('x_1', str(va)))
+                    pred_skeletons.append(skeleton)
+                    print('Predicted skeleton ' + str(ip + 1) + ' for variable ' + str(va) + ': ' + str(skeleton))
+                except:  # TypeError:
+                    print("Invalid response created by the model")
 
-                print("\n Choosing the best skeleton... (skeletons ordered based on number of nodes)")
-                best_error, best_sk = np.Infinity, ''
-                pred_skeletons = sorted(pred_skeletons, key=lambda expr: count_nodes(expr))
-                for ip, skeleton in enumerate(pred_skeletons):
-                    # Fit coefficients of the estimated skeletons
-                    skeleton = avoid_operations_between_constants(sp.expand(skeleton))
-                    problem = FitGA(skeleton, Xi, Yi, [np.min(Xi), np.max(Xi)], [-20, 20], max_it=100)
-                    est_expr, error = problem.run()
-                    print("\tSkeleton: " + str(skeleton) + ". Error: " + str(error) + ". Expr: " + str(est_expr))
-                    if best_error - error > 0.002:
-                        best_error = error
-                        best_sk = expr2skeleton(est_expr)
-                        if error < 0.001:  # If the error is very low, assume this is the best
-                            break
-                print("Selected skeleton: " + str(best_sk) + "\n")
+            print("\n Choosing the best skeleton... (skeletons ordered based on number of nodes)")
+            best_error, best_sk = np.Infinity, ''
+            pred_skeletons = sorted(pred_skeletons, key=lambda expr: count_nodes(expr))
+            for ip, skeleton in enumerate(pred_skeletons):
+                # Fit coefficients of the estimated skeletons
+                skeleton = avoid_operations_between_constants(sp.expand(skeleton))
+                problem = FitGA(skeleton, Xi, Yi, [np.min(Xi), np.max(Xi)], [-20, 20], max_it=100)
+                est_expr, error = problem.run()
+                print("\tSkeleton: " + str(skeleton) + ". Error: " + str(error) + ". Expr: " + str(est_expr))
+                if best_error - error > 0.002:
+                    best_error = error
+                    best_sk = expr2skeleton(est_expr)
+                    if error < 0.001:  # If the error is very low, assume this is the best
+                        break
+            print("Selected skeleton: " + str(best_sk) + "\n")
 
-                self.univariate_skeletons.append(best_sk)
+            self.univariate_skeletons.append(best_sk)
 
         return self.univariate_skeletons
 
@@ -180,47 +179,16 @@ class MSSP:
 if __name__ == '__main__':
     # import matplotlib.pyplot as plt
 
-    ###########################################
-    # Import data
-    ###########################################
-    # datasetName = 'E6'
-    # data_loader = DataLoader(name=datasetName)
-    # data = data_loader.dataset
-    #
-    # ###########################################
-    # # Define NN and load weights
-    # ###########################################
-    # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    # folder = os.path.join(get_project_root(), "src//EquationLearning//models//saved_NNs//" + datasetName)
-    # filepath = folder + "//weights-NN-" + datasetName
-    # nn_model = None
-    # if os.path.exists(filepath.replace("weights", "NNModel") + '.pth'):
-    #     # If this file exists, it means we saved the whole model
-    #     network = torch.load(filepath.replace("weights", "NNModel") + '.pth')
-    #     nn_model = NNModel(device=device, n_features=data.n_features, loaded_NN=network)
-    # elif os.path.exists(filepath):
-    #     # If this file exists, initiate a model and load the weigths
-    #     nn_model = NNModel(device=device, n_features=data.n_features, NNtype=data_loader.modelType)
-    #     nn_model.loadModel(filepath)
-    # else:
-    #     # If neither files exist, we haven't trained a NN for this problem yet
-    #     if data.n_features > 1:
-    #         sys.exit("We haven't trained a NN for this problem yet. Use the TrainNNModel.py file first.")
+    ##########################################
+    Import data
+    ##########################################
+    datasetName = 'E6'
+    data_loader = DataLoader(name=datasetName)
+    data = data_loader.dataset
 
-    datasetName = 'temp'
-    np.random.seed(7)
-    n = 10000
-    # Generate data from the equation
-    x1 = np.random.uniform(-5, 5, size=n)
-    x2 = np.random.uniform(-5, 5, size=n)
-    x3 = np.array([np.random.choice(np.linspace(-8, 8, 100)) for _ in range(n)])  # Example of discrete variable
-    X = np.array([x1, x2, x3]).T
-    Y = np.sin(x1 + 1.2 * x2) * (x3 ** 2 / 2)
-
-    # Format the dataset
-    names = ['x0', 'x1']  # Specify the names of the variables
-    types = ['continuous', 'continuous', 'discrete']  # Specify if the variables are continuous or discrete
-    dataset = InputData(X=X, Y=Y, names=names, types=types)
+    ###########################################
+    # Define NN and load weights
+    ###########################################
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     folder = os.path.join(get_project_root(), "src//EquationLearning//models//saved_NNs//" + datasetName)
     filepath = folder + "//weights-NN-" + datasetName
@@ -228,14 +196,12 @@ if __name__ == '__main__':
     if os.path.exists(filepath.replace("weights", "NNModel") + '.pth'):
         # If this file exists, it means we saved the whole model
         network = torch.load(filepath.replace("weights", "NNModel") + '.pth')
-        nn_model = NNModel(device=device, n_features=dataset.n_features, loaded_NN=network)
+        nn_model = NNModel(device=device, n_features=data.n_features, loaded_NN=network)
     elif os.path.exists(filepath):
         # If this file exists, initiate a model and load the weigths
-        nn_model = NNModel(device=device, n_features=dataset.n_features, NNtype='NN')
+        nn_model = NNModel(device=device, n_features=data.n_features, NNtype=data_loader.modelType)
         nn_model.loadModel(filepath)
-
-    ###########################################
-    # Get skeletons
-    ###########################################
-    regressor = MSSP(dataset=dataset, bb_model=nn_model)
-    print(regressor.get_skeletons())
+    else:
+        # If neither files exist, we haven't trained a NN for this problem yet
+        if data.n_features > 1:
+            sys.exit("We haven't trained a NN for this problem yet. Use the TrainNNModel.py file first.")
