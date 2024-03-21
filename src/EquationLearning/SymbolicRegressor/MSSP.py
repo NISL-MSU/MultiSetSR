@@ -179,9 +179,9 @@ class MSSP:
 if __name__ == '__main__':
     # import matplotlib.pyplot as plt
 
-    ##########################################
-    Import data
-    ##########################################
+    ###########################################
+    # Import data
+    ###########################################
     datasetName = 'E6'
     data_loader = DataLoader(name=datasetName)
     data = data_loader.dataset
@@ -205,3 +205,9 @@ if __name__ == '__main__':
         # If neither files exist, we haven't trained a NN for this problem yet
         if data.n_features > 1:
             sys.exit("We haven't trained a NN for this problem yet. Use the TrainNNModel.py file first.")
+
+    ###########################################
+    # Get skeletons
+    ###########################################
+    regressor = MSSP(dataset=data, bb_model=nn_model)
+    print(regressor.get_skeletons())
