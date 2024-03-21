@@ -32,7 +32,7 @@ The following libraries have to be installed:
 * [Git](https://git-scm.com/download/) 
 * [Pytorch](https://pytorch.org/)
 
-To install the package, run `pip install git+https://github.com/NISL-MSU/MultiSetSR` in the terminal. 
+To install the package, run `pip install git+https://github.com/NISL-MSU/MultiSetSR` in the terminal (this option will be available after the paper acceptance). 
 This will also install additional packages such as pymoo, sklearn, and tensorboard.
 
 
