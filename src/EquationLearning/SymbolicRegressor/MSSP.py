@@ -180,47 +180,16 @@ class MSSP:
 if __name__ == '__main__':
     # import matplotlib.pyplot as plt
 
-    ###########################################
+    # ##########################################
     # Import data
+    # ##########################################
+    datasetName = 'E6'
+    data_loader = DataLoader(name=datasetName)
+    data = data_loader.dataset
+
     ###########################################
-    # datasetName = 'E6'
-    # data_loader = DataLoader(name=datasetName)
-    # data = data_loader.dataset
-    #
-    # ###########################################
-    # # Define NN and load weights
-    # ###########################################
-    # device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    # folder = os.path.join(get_project_root(), "src//EquationLearning//models//saved_NNs//" + datasetName)
-    # filepath = folder + "//weights-NN-" + datasetName
-    # nn_model = None
-    # if os.path.exists(filepath.replace("weights", "NNModel") + '.pth'):
-    #     # If this file exists, it means we saved the whole model
-    #     network = torch.load(filepath.replace("weights", "NNModel") + '.pth')
-    #     nn_model = NNModel(device=device, n_features=data.n_features, loaded_NN=network)
-    # elif os.path.exists(filepath):
-    #     # If this file exists, initiate a model and load the weigths
-    #     nn_model = NNModel(device=device, n_features=data.n_features, NNtype=data_loader.modelType)
-    #     nn_model.loadModel(filepath)
-    # else:
-    #     # If neither files exist, we haven't trained a NN for this problem yet
-    #     if data.n_features > 1:
-    #         sys.exit("We haven't trained a NN for this problem yet. Use the TrainNNModel.py file first.")
-
-    datasetName = 'temp'
-    np.random.seed(7)
-    n = 10000
-    # Generate data from the equation
-    x1 = np.random.uniform(-5, 5, size=n)
-    x2 = np.random.uniform(-5, 5, size=n)
-    x3 = np.array([np.random.choice(np.linspace(-8, 8, 100)) for _ in range(n)])  # Example of discrete variable
-    X = np.array([x1, x2, x3]).T
-    Y = np.sin(x1 + 1.2 * x2) * (x3 ** 2 / 2)
-
-    # Format the dataset
-    names = ['x0', 'x1']  # Specify the names of the variables
-    types = ['continuous', 'continuous', 'discrete']  # Specify if the variables are continuous or discrete
-    dataset = InputData(X=X, Y=Y, names=names, types=types)
+    # Define NN and load weights
+    ###########################################
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     folder = os.path.join(get_project_root(), "src//EquationLearning//models//saved_NNs//" + datasetName)
     filepath = folder + "//weights-NN-" + datasetName
@@ -228,14 +197,18 @@ if __name__ == '__main__':
     if os.path.exists(filepath.replace("weights", "NNModel") + '.pth'):
         # If this file exists, it means we saved the whole model
         network = torch.load(filepath.replace("weights", "NNModel") + '.pth')
-        nn_model = NNModel(device=device, n_features=dataset.n_features, loaded_NN=network)
+        nn_model = NNModel(device=device, n_features=data.n_features, loaded_NN=network)
     elif os.path.exists(filepath):
         # If this file exists, initiate a model and load the weigths
-        nn_model = NNModel(device=device, n_features=dataset.n_features, NNtype='NN')
+        nn_model = NNModel(device=device, n_features=data.n_features, NNtype=data_loader.modelType)
         nn_model.loadModel(filepath)
+    else:
+        # If neither files exist, we haven't trained a NN for this problem yet
+        if data.n_features > 1:
+            sys.exit("We haven't trained a NN for this problem yet. Use the TrainNNModel.py file first.")
 
     ###########################################
     # Get skeletons
     ###########################################
-    regressor = MSSP(dataset=dataset, bb_model=nn_model)
+    regressor = MSSP(dataset=data, bb_model=nn_model)
     print(regressor.get_skeletons())
