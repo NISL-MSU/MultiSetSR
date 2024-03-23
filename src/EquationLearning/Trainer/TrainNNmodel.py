@@ -36,7 +36,7 @@ class Trainer:
         return iterator
 
     def train(self, batch_size=32, epochs=500, printProcess=True, scratch: bool = True):
-        """Train using cross validation
+        """Train using 90% of the data for training and 10% for validation
         :param batch_size: Mini batch size. It is recommended a small number, like 16
         :param epochs: Number of training epochs
         :param printProcess: If True, print the training process (loss and validation metrics after each epoch)
