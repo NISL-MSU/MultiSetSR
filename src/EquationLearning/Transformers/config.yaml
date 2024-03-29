@@ -1,19 +1,19 @@
-train_path: data/Q2/training
-val_path: data/Q2/validation
-dataset: Q2
+train_path: data/Q1/training
+val_path: data/Q1/validation
+dataset: Q1
 
 wandb: True
 num_of_workers: 32
-batch_size: 12
+batch_size: 16
 epochs: 100
 val_check_interval: 1.0
 precision: 16
 gpu: 2
 
 dataset_train:
-  total_variables: #Do not fill
-  total_coefficients: #Do not fill
-  max_number_of_points: 8000  #2000 before
+  total_variables:
+  total_coefficients:
+  max_number_of_points: 10000
   number_of_sets: 10
   lambda_: 0.5
   type_of_sampling_points: constant
@@ -31,8 +31,8 @@ dataset_train:
       min: -5
 
 dataset_val:
-  total_variables: #Do not fill
-  total_coefficients: #Do not fill
+  total_variables:
+  total_coefficients:
   max_number_of_points: 5000
   number_of_sets: 10
   type_of_sampling_points: constant
@@ -50,8 +50,8 @@ dataset_val:
       min: -5
 
 dataset_test:
-  total_variables: #Do not fill
-  total_coefficients: #Do not fill
+  total_variables:
+  total_coefficients:
   max_number_of_points: 500
   number_of_sets: 10
   type_of_sampling_points: constant
@@ -97,7 +97,7 @@ architecture:
   number_of_sets: 10
 
 inference:
-  beam_size: 5
+  beam_size: 10
   bfgs:
     activated: True
     n_restarts: 10

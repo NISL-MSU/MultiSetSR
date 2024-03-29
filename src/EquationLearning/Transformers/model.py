@@ -34,7 +34,7 @@ class Model(nn.Module):
         self.eq = None
         self.loss = loss
 
-        self.dummy_param = nn.Parameter(torch.empty(0))
+        self.dummy_param = nn.Parameter(torch.empty(0))  # Turnaround to allow multi-GPU training
 
     def set_train(self):
         self.enc.train()
@@ -96,7 +96,6 @@ class Model(nn.Module):
 
         # Merge outputs from all sets
         enc_output = self.aggregator(z_sets)
-        # enc_output = torch.sum(z_sets, dim=0, keepdim=True)
 
         output = self.decoder_transfomer(
             trg_.permute(1, 0, 2),
@@ -108,10 +107,9 @@ class Model(nn.Module):
         output = self.fc_out(output)
 
         if torch.cuda.device_count() > 1:
-            # Calcualte loss
+            # Calculate loss
             L1 = torch.zeros(1).to(self.dummy_param.device)
             output2 = torch.clone(output)
-            # print(output.shape)
             for bi in range(output.shape[1]):
                 out = output[:, bi, :].contiguous().view(-1, output.shape[-1])
                 tokenized = skeleton[bi, :][1:].contiguous().view(-1)

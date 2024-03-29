@@ -1,10 +1,8 @@
-import pickle
-
 import numpy as np
 import omegaconf
 from tqdm import trange
 from src.utils import *
-from src.EquationLearning.Transformers.GenerateTransformerData import Dataset, evaluate_and_wrap
+from src.EquationLearning.Transformers.GenerateTransformerData import Dataset, evaluate_and_wrap, de_tokenize
 import matplotlib.pyplot as plt
 
 
@@ -32,6 +30,17 @@ class SampleData:
         self.training_dataset = Dataset(self.data_train_path, self.cfg.dataset_train, mode="train")
         self.validation_dataset = Dataset(self.data_val_path, self.cfg.dataset_val, mode="val")
         self.word2id = self.training_dataset.word2id
+        self.id2word = self.training_dataset.id2word
+
+    def get_unary_ops(self, tokenized):
+        """Extract unary operators present in the expression"""
+        prefix = de_tokenize(tokenized, self.id2word)
+        un_ops = []
+        for op in prefix:
+            if op in ['abs', 'acos', 'asin', 'atan', 'cos', 'cosh', 'div', 'exp', 'ln', 'pow', 'sin',
+                      'sinh', 'sqrt', 'tan', 'tanh']:
+                un_ops.append(op)
+        return un_ops
 
     def sample_domain(self, Xs, Ys, equations):
         """Use a random domain (e.g., between -10 and 10, or -5 and 5, etc)"""
@@ -90,6 +99,8 @@ class SampleData:
                 #     plt.scatter(sampled_data[0][:, i], sampled_data[1][:, i])
                 #     plt.xticks(fontsize=16)
                 #     plt.yticks(fontsize=16)
+
+                ops = self.get_unary_ops(sampled_data[2])
 
                 Xs, Ys, _ = self.sample_domain(sampled_data[0], sampled_data[1], sampled_data[-1])
 
