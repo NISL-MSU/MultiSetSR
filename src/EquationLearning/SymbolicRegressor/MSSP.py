@@ -57,7 +57,7 @@ class MSSP:
     def _load_models(self):
         root = get_project_root()
         # Load weights of MST
-        MST_path = os.path.join(root, "src//EquationLearning//models//saved_models/Model512-batch_12-Q2")
+        MST_path = os.path.join(root, "src//EquationLearning//models//saved_models/Model480-batch_16-Q1")
         self.model.load_state_dict(torch.load(MST_path))
         self.model.cuda()
 
@@ -182,7 +182,7 @@ if __name__ == '__main__':
     ###########################################
     # Import data
     ###########################################
-    datasetName = 'E6'
+    datasetName = 'E7'
     data_loader = DataLoader(name=datasetName)
     data = data_loader.dataset
 
