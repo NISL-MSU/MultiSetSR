@@ -221,6 +221,15 @@ def _avoid_operations_between_constants(xp):
                 va = args2
             t_args = [va, sympy.sympify("1")]
 
+    if isinstance(xp, sp.exp):  # If it's a power function, ignore the power and focus only on the base
+        args1 = args[0]
+        if (args1.is_number or (
+                isinstance(args1, sp.Symbol) and ("cm" in str(args1) or "ca" in str(args1) or "c" in str(args1)))):
+            va = None
+            if isinstance(args1, sp.Symbol) and ("cm" in str(args1) or "ca" in str(args1) or "c" in str(args1)):
+                va = args1
+            t_args = sympy.sympify("0")
+
     if isinstance(xp, sp.Mul) or isinstance(xp, sp.Add):
         t_args = []
         # Check if two or more of the arguments are constants and replace them for just one constant

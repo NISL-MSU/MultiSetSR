@@ -12,8 +12,19 @@ from collections import OrderedDict
 from sympy.calculus.util import AccumBounds
 from src.EquationLearning.Data.generate_expression import GenExpression
 from sympy.parsing.sympy_parser import parse_expr
+from src.EquationLearning.Data.sympy_utils import numeric_to_placeholder
 from .sympy_utils import remove_root_constant_terms, add_constants, remove_numeric_constants
-from src.EquationLearning.models.utilities_expressions import check_forbidden_combination
+from src.EquationLearning.models.utilities_expressions import add_constant_identifier, avoid_operations_between_constants
+
+
+def constants_to_placeholder(s, coeffs, symbol="c"):
+    sympy_expr = s
+    for si in set(coeffs.keys()):
+        if "c" in si:
+            sympy_expr = sympy_expr.subs(si, symbol)
+            sympy_expr = sympy_expr.subs(si, symbol)
+    return sympy_expr
+
 
 CLEAR_SYMPY_CACHE_FREQ = 10000
 
@@ -36,6 +47,15 @@ class ImAccomulationBounds(Exception):
 
 class InvalidPrefixExpression(Exception):
     pass
+
+
+def constants_to_placeholder(s, coeffs, symbol="c"):
+    sympy_expr = s
+    for si in set(coeffs.keys()):
+        if "c" in si:
+            sympy_expr = sympy_expr.subs(si, symbol)
+            sympy_expr = sympy_expr.subs(si, symbol)
+    return sympy_expr
 
 
 class Generator(object):
@@ -538,6 +558,23 @@ class Generator(object):
             return sp.sympify('1')
         return f2
 
+    def simplify_expr(self, fstr):
+        prefix = self.add_identifier_constants(self.sympy_to_prefix(sp.sympify(fstr)))
+        consts = self.return_constants(prefix)
+        infix, _ = self._prefix_to_infix(prefix, coefficients=self.coefficients, variables=self.variables)
+        coeff_dict = {y: y for x in consts.values() for y in x}
+        f0 = sp.sympify(infix.format(**coeff_dict))
+        expr_with_placeholder = numeric_to_placeholder(f0)
+        eq_sympy_infix = constants_to_placeholder(expr_with_placeholder, coeff_dict)
+        eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('*(c + x_1)', '*(c*x_1 + c)'))
+        eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('c*(c*x_1 + c)', 'c*(x_1 + c)'))
+        eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('+ (c*x_1 + c)**', '+ c*(x_1 + c)**'))
+        eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('+ Abs(c*x_1)', '+ c*Abs(x_1)'))
+        eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('c*Abs(c*x_1)', 'c*Abs(x_1)'))
+        eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('c*(c*', 'c*('))
+        skeleton, _, _ = add_constant_identifier(eq_sympy_infix)
+        return skeleton
+
     def generate_equation(self, rng):
         """
         Generate pairs of (function, primitive).
@@ -572,7 +609,17 @@ class Generator(object):
             fstr = fstr.replace('csc', 'sin')
         elif 'cot' in fstr:
             fstr = fstr.replace('cot', 'tan')
-        f = sp.sympify(fstr)
+
+
+        # infix = str(remove_dummy_constants(sympify(constants_expression)))
+
+        # f0 = self.add_identifier_constants(sp.sympify(fstr))
+        f = self.simplify_expr(fstr)
+        f0 = None
+        while f0 != f:
+            f0 = f.copy()
+            f = self.simplify_expr(f0)
+        f = avoid_operations_between_constants(f)
 
         f_prefix = self.sympy_to_prefix(f)
         # skip too long sequences

@@ -135,7 +135,6 @@ class Model(nn.Module):
 
             # Merge outputs from all sets
             enc_output = self.aggregator(z_sets)
-            # enc_output = torch.sum(z_sets, dim=0, keepdim=True)
 
             #############################################################
             # DECODER
@@ -159,39 +158,7 @@ class Model(nn.Module):
             )
             outputs = self.fc_out(output)
 
-            # # Perform autoregressive generation
-            # outputs = []
-            # seqs = []
-            # for b in range(batch.size(0)):
-            #     tgt = torch.tensor([1]).to(self.dummy_param.device)[None, :]
-            #     seq = []
-            #     scores = torch.Tensor().to(self.dummy_param.device)
-            #     for i in range(self.cfg.length_eq):
-            #         pos = self.pos_embedding(
-            #             torch.arange(0, tgt.shape[1])
-            #             .unsqueeze(0)
-            #             .type_as(tgt)
-            #         )
-            #         te = self.tok_embedding(tgt)
-            #         tgt_ = self.dropout(te + pos)
-            #         # Forward pass through the decoder using tgt and memory
-            #         output = self.decoder_transfomer(tgt_.permute(1, 0, 2),
-            #                                          memory=enc_output[b:b+1, :, :].permute(1, 0, 2))
-            #         output = self.fc_out(output)
-            #         scores = torch.cat((scores, output[-1, :, :]), dim=0)
-            #
-            #         # Sample the next token from the probability distribution
-            #         next_token = torch.argmax(output[-1, :, :], dim=-1)
-            #         seq.append(int(next_token.cpu()))
-            #
-            #         if i < self.cfg.length_eq - 1:
-            #             # Append the next token to tgt for the next step
-            #             tgt = torch.cat([tgt, next_token[None, :]], dim=-1)
-            #         if next_token == 2:
-            #             break
-            #     outputs.append(scores)
-            #     seqs.append(seq)
-        return outputs  # , seqs
+        return outputs
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.cfg.lr)

@@ -136,7 +136,7 @@ class MSSP:
             Xs = (Xs - np.min(Xs)) * scaling_factor - 10
             # Xs = (Xs - np.mean(Xs))  # Xs = (Xs - np.min(Xs)) * scaling_factor - 10
             XY_block = torch.zeros((1, self.n_samples, 2, self.n_sets)).to(self.device)
-            Xs, Ys = torch.from_numpy(Xs), torch.from_numpy(Ys)
+            Xs, Ys = torch.from_numpy(Xs), torch.from_numpy(Ys_real)
             Xs = Xs.to(self.device)
             Ys = Ys.to(self.device)
             XY_block[0, :, 0, :] = Xs
@@ -158,20 +158,20 @@ class MSSP:
             print("\n Choosing the best skeleton... (skeletons ordered based on number of nodes)")
             best_error, best_sk = np.Infinity, ''
             pred_skeletons = sorted(pred_skeletons, key=lambda expr: count_nodes(expr))
-            for ip, skeleton in enumerate(pred_skeletons):
-                # Fit coefficients of the estimated skeletons
-                skeleton = avoid_operations_between_constants(sp.expand(skeleton))
-                problem = FitGA(skeleton, Xi, Yi, [np.min(Xi), np.max(Xi)], [-20, 20], max_it=100)
-                est_expr, error = problem.run()
-                print("\tSkeleton: " + str(skeleton) + ". Error: " + str(error) + ". Expr: " + str(est_expr))
-                if best_error - error > 0.002:
-                    best_error = error
-                    best_sk = expr2skeleton(est_expr)
-                    if error < 0.001:  # If the error is very low, assume this is the best
-                        break
-            print("Selected skeleton: " + str(best_sk) + "\n")
-
-            self.univariate_skeletons.append(best_sk)
+            # for ip, skeleton in enumerate(pred_skeletons):
+            #     # Fit coefficients of the estimated skeletons
+            #     skeleton = avoid_operations_between_constants(sp.expand(skeleton))
+            #     problem = FitGA(skeleton, Xi, Yi, [np.min(Xi), np.max(Xi)], [-20, 20], max_it=100)
+            #     est_expr, error = problem.run()
+            #     print("\tSkeleton: " + str(skeleton) + ". Error: " + str(error) + ". Expr: " + str(est_expr))
+            #     if best_error - error > 0.002:
+            #         best_error = error
+            #         best_sk = expr2skeleton(est_expr)
+            #         if error < 0.001:  # If the error is very low, assume this is the best
+            #             break
+            # print("Selected skeleton: " + str(best_sk) + "\n")
+            #
+            # self.univariate_skeletons.append(best_sk)
 
         return self.univariate_skeletons
 
@@ -182,7 +182,7 @@ if __name__ == '__main__':
     ###########################################
     # Import data
     ###########################################
-    datasetName = 'E7'
+    datasetName = 'E8'
     data_loader = DataLoader(name=datasetName)
     data = data_loader.dataset
 
