@@ -38,8 +38,8 @@ class GenExpression:
             # Create current node
             currentNode = Node(nodeOp=bin_op, nodeType='binary', parent=prev_node)
             init_nest_bin = nest_bin
-            nest_bin += 1
             nt += 1
+            nest_bin += 1
             # Create children nodes
             child1, nt, nest_level, _ = self.addNode(prev_node=currentNode, nt=nt, nest_level=nest_level, nest_bin=nest_bin)
             child2, nt, nest_level, _ = self.addNode(prev_node=currentNode, nt=nt, nest_level=nest_level, nest_bin=nest_bin)
@@ -51,7 +51,7 @@ class GenExpression:
                 # Find what's the previous unary operator
                 parent = prev_node
                 while parent.nodeType != 'unary':
-                    parent = prev_node.parent
+                    parent = parent.parent
                 # Prevent forbidden operations
                 ops_to_eliminate = []
                 if parent.nodeOp == 'abs':

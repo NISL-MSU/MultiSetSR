@@ -234,16 +234,23 @@ def add_constants(expr, placeholders, prev_expr=None):
         if iarg == len(expr.args) - 1:
             if isinstance(expr, sp.Pow):  # If it's a power function, ignore the power and focus only on the base
                 continue
-        new_args.append(add_constants(sub_expr, placeholders, str(expr.func)))
-
+        try:
+            if isinstance(expr, sp.Pow) and expr.args[1] < 0 and expr.args[1] != -1:
+                new_args.append(placeholders["ca"] + (add_constants(sub_expr, placeholders, str(expr.func))) ** sp.Abs(expr.args[1]))
+            else:
+                new_args.append(add_constants(sub_expr, placeholders, str(expr.func)))
+        except:
+            print()
     if isinstance(expr, sp.Pow):
-        new_args.append(expr.args[1])
+        if expr.args[1] < 0 and expr.args[1] != -1:
+            new_args.append(-1)
+        else:
+            new_args.append(expr.args[1])
 
     new_xp = expr.func(*new_args)
-    # if len(new_xp.args) == 1:
-    #     if str(new_xp.args[0]) != 'ca + cm*x_1':
-    #         new_arg = placeholders["ca"] + new_xp.args[0] * placeholders["cm"]
-    #         new_xp = new_xp.func(new_arg)
+    if len(new_xp.args) == 1:  # If it's a unary operations
+        new_xp = placeholders["ca"] + new_xp * placeholders["cm"]
+
     return new_xp
 
 
