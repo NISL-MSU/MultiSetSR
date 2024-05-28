@@ -8,8 +8,8 @@ from src.utils import *
 from torch import optim
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.tensorboard import SummaryWriter
-from ..Transformers.model import Model
-from ..Transformers.GenerateTransformerData import Dataset, de_tokenize
+from src.EquationLearning.Transformers.model import Model
+from src.EquationLearning.Transformers.GenerateTransformerData import Dataset, de_tokenize
 
 
 def open_pickle(path):
@@ -46,7 +46,7 @@ def seq2equation(tokenized, id2word, printFlag=False):
     return infix
 
 
-def loss_sample(output, trg):
+def loss_sample(output, trg, length_penalty_factor=0.1):
     """Loss function that combines cross-entropy and information entropy for a single sample"""
     ce = nn.CrossEntropyLoss(ignore_index=0)
     ce.cuda()
@@ -68,6 +68,12 @@ class TransformerTrainer:
             print("Using ", torch.cuda.device_count(), "GPUs!")
             self.model = nn.DataParallel(self.model)
 
+        # Training parameters
+        self.optimizer = optim.Adadelta(self.model.parameters(), lr=self.cfg.architecture.lr)
+        self.writer = SummaryWriter('runs')
+        self.lambda_ = self.cfg.dataset_train.lambda_
+
+    def _config_datasets(self):
         # Configuration datasets
         self.sampledData_train_path = 'src/EquationLearning/Data/sampled_data/' + self.cfg.dataset + '/training'
         self.sampledData_val_path = 'src/EquationLearning/Data/sampled_data/' + self.cfg.dataset + '/validation'
@@ -76,16 +82,12 @@ class TransformerTrainer:
         self.word2id = self.training_dataset.word2id
         self.id2word = self.training_dataset.id2word
 
-        # Training parameters
-        self.optimizer = optim.Adadelta(self.model.parameters(), lr=self.cfg.architecture.lr)
-        self.writer = SummaryWriter('runs')
-        self.lambda_ = self.cfg.dataset_train.lambda_
-
     def _init_model(self):
         try:  # Read config yaml
             self.cfg = omegaconf.OmegaConf.load("src/EquationLearning/Transformers/config.yaml")
         except FileNotFoundError:
             self.cfg = omegaconf.OmegaConf.load("../Transformers/config.yaml")
+        self._config_datasets()
 
         # Name structure: "Model{dim_hidden}-batch_{batch_size}-{dataset_name}"
         self.model_name = 'src/EquationLearning/models/saved_models/Model' + str(self.cfg.architecture.dim_hidden) + \
@@ -124,6 +126,9 @@ class TransformerTrainer:
             scaling_factor = 20 / (np.max(X[:, ns]) - np.min(X[:, ns]))
             X[:, ns] = (X[:, ns] - np.min(X[:, ns])) * scaling_factor - 10
             Y[:, ns] = Ys[:, ns][selected_rows_indices]
+            if np.min(np.std(Y, axis=0)) < 0.0001 and dva < 10:
+                ns, dva = 0, dva + 1  # If the selected domain is too flat, try with a larger one
+                continue
             ns += 1
         # With a chance of 0.3, fix all sets to the same function
         if np.random.random(1) < 0.3:
@@ -155,7 +160,7 @@ class TransformerTrainer:
             means, std = np.mean(Ys, axis=0), np.std(Ys, axis=0)
             Ys = (Ys - means) / std
 
-            if np.isnan(Ys).any() or np.min(std) < 0.01 or 'E' in xpr:
+            if np.isnan(Ys).any() or np.min(std) < 0.0001 or 'E' in xpr:
                 remove_indices.append(ib)
             else:
                 Xs, Ys = torch.from_numpy(Xs), torch.from_numpy(Ys)
@@ -206,6 +211,7 @@ class TransformerTrainer:
         print("Start training")
         print("""""""""""""""""""""""""""""")
         global_batch_count = 0
+        prev_loss = np.inf
         for epoch in range(epochs):  # Epoch loop
             np.random.shuffle(indexes)
 
@@ -242,11 +248,11 @@ class TransformerTrainer:
 
                     # Forward pass
                     if torch.cuda.device_count() > 1:
-                        output, z_sets, L1 = self.model.forward(input_batch.cuda(), skeletons_batch.cuda())
+                        output, z_sets, L1 = self.model.forward(input_batch, skeletons_batch.cuda())
                         # Aggregate loss terms in the batch
                         L1 = L1.sum()
                     else:
-                        output, z_sets = self.model.forward(input_batch.cuda(), skeletons_batch.cuda())
+                        output, z_sets = self.model.forward(input_batch, skeletons_batch.cuda())
                         # Loss calculation
                         L1 = torch.zeros(1).cuda()
                         for bi in range(output.shape[1]):
@@ -285,7 +291,6 @@ class TransformerTrainer:
             else:
                 self.model.set_eval()
             L1v, L2v, iv = 0, 0, 0
-            prev_loss = np.inf
 
             cc = 0
             for b_ind in indexes2:  # Block loop (each block contains 1000 inputs)
@@ -308,7 +313,10 @@ class TransformerTrainer:
                     # Combine the padded skeletons into a single tensor
                     skeletons_batch = pad_sequence(padded_tensors, batch_first=True).type(torch.int)
                     # Forward pass
-                    output = self.model.validation_step(input_batch, skeletons_batch)
+                    if torch.cuda.device_count() > 1:
+                        output = self.model.module.validation_step(input_batch, skeletons_batch)
+                    else:
+                        output = self.model.validation_step(input_batch, skeletons_batch)
                     # Loss calculation
                     for bi in range(output.shape[1]):
                         out = output[:, bi, :].contiguous().view(-1, output.shape[-1])
@@ -316,15 +324,12 @@ class TransformerTrainer:
                         L1s = loss_sample(out, tokenized.long())
                         L1v += L1s
                         iv += 1
-                        try:
-                            res = output.cpu().numpy()[:, 0, :]
-                            max_indices = np.argmax(res, axis=1)
-                            infix = sympy.sympify(seq2equation(max_indices, self.id2word))
-                            infixT = sympy.sympify(
-                                seq2equation(list(skeletons_block[step].cpu().numpy())[1:], self.id2word))
-                            print("Target: " + str(infixT) + " . Pred: " + str(infix))
-                        except:
-                            pass
+                        res = output.cpu().numpy()[:, 0, :]
+                        max_indices = np.argmax(res, axis=1)
+                        infix = sympy.sympify(seq2equation(max_indices, self.id2word))
+                        infixT = sympy.sympify(
+                            seq2equation(list(skeletons_block[step].cpu().numpy())[1:], self.id2word))
+                        print("Target: " + str(infixT) + " . Pred: " + str(infix))
                 cc += 1
                 with open('src/EquationLearning/models/saved_models/validation_performance.txt', 'w') as file:
                     file.write(str(L1v / (5000 * cc)))
@@ -333,7 +338,7 @@ class TransformerTrainer:
             loss = L1v / iv
             self.writer.add_scalar('validation loss', loss, global_batch_count)
             if loss < prev_loss:
-                prev_loss = np.copy(loss)
+                prev_loss = loss
                 if torch.cuda.device_count() > 1:
                     torch.save(self.model.module.state_dict(), self.model_name)
                 else:

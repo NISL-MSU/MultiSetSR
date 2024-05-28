@@ -227,7 +227,7 @@ class DataLoader:
         self.names = ['x0', 'x1']
         self.types = ['continuous', 'continuous']
         symb = sp.symbols("{}:{}".format('x', 2))
-        self.expr = (1 - symb[1]**2) / (sp.sin(2 * np.pi * symb[0]) + 1.5)
+        self.expr = (1 - symb[1]**2) / (sp.sin(np.pi * symb[0]) + 1.5)
 
     def E8(self, n=50000):  # S5 in "Informed Equation Learning" (Werner et. al, 2021)
         np.random.seed(7)

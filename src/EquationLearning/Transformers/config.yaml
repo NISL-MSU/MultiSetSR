@@ -4,7 +4,7 @@ dataset: Q1
 
 wandb: True
 num_of_workers: 32
-batch_size: 16
+batch_size: 20
 epochs: 100
 val_check_interval: 1.0
 precision: 16
@@ -97,7 +97,7 @@ architecture:
   number_of_sets: 10
 
 inference:
-  beam_size: 10
+  beam_size: 1
   bfgs:
     activated: True
     n_restarts: 10

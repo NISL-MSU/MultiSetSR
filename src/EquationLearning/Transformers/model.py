@@ -4,12 +4,13 @@ import torch.nn.functional as F
 from .set_transformer import PMA
 from .set_encoder import SetEncoder
 from .beam_search import BeamHypotheses
+from .sym_encoder import SymEncoder
 
 
 class Model(nn.Module):
-    def __init__(self, cfg, cfg_inference, word2id, loss=None):
+    def __init__(self, cfg, cfg_inference, word2id, loss=None, priors=False):
         super(Model, self).__init__()
-        # self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.priors = priors
         self.enc = SetEncoder(cfg)
         self.trg_pad_idx = cfg.trg_pad_idx
         self.cfg = cfg
@@ -34,6 +35,10 @@ class Model(nn.Module):
         self.eq = None
         self.loss = loss
 
+        self.sym_encoder = None
+        if priors:
+            self.sym_encoder = SymEncoder(cfg=self.cfg)
+
         self.dummy_param = nn.Parameter(torch.empty(0))  # Turnaround to allow multi-GPU training
 
     def set_train(self):
@@ -43,6 +48,8 @@ class Model(nn.Module):
         self.dropout.train()
         self.tok_embedding.train()
         self.pos_embedding.train()
+        if self.priors:
+            self.sym_encoder.set_train()
 
     def set_eval(self):
         self.enc.eval()
@@ -51,6 +58,8 @@ class Model(nn.Module):
         self.dropout.eval()
         self.tok_embedding.eval()
         self.pos_embedding.eval()
+        if self.priors:
+            self.sym_encoder.set_eval()
 
     def make_src_mask(self, src):
         src_mask = (src != self.src_pad_idx).unsqueeze(1).unsqueeze(2)
@@ -86,16 +95,34 @@ class Model(nn.Module):
         te = self.tok_embedding(trg[:, :-1])
         trg_ = self.dropout(te + pos)
 
+        # Inputs are handled differently if the model uses symbolic inputs as priors
+        sym_batch, sym_enc_output = None, None
+        if self.priors:
+            sets_batch = batch[0].cuda()
+            sym_batch = batch[1]
+        else:
+            sets_batch = batch.cuda()
+
+        #################################################################
+        # Sets encoder
+        #################################################################
         # Separate input sets and apply the encoder layer to each one
-        n_sets = batch.shape[-1]
+        n_sets = sets_batch.shape[-1]
         z_sets = torch.Tensor().to(self.dummy_param.device)
         for i_set in range(n_sets):
-            enc_src = self.enc(batch[:, :, :, i_set].to(self.dummy_param.device))
+            enc_src = self.enc(sets_batch[:, :, :, i_set].to(self.dummy_param.device))
             assert not torch.isnan(enc_src).any()
             z_sets = torch.cat((z_sets, enc_src), dim=1)
-
         # Merge outputs from all sets
         enc_output = self.aggregator(z_sets)
+
+        #################################################################
+        # Symbolic encoder
+        #################################################################
+        if self.priors:
+            sym_enc_output = self.sym_encoder(sym_batch)
+            # Merge outputs from symbolic and numeric encoders
+            enc_output += sym_enc_output
 
         output = self.decoder_transfomer(
             trg_.permute(1, 0, 2),
@@ -125,16 +152,30 @@ class Model(nn.Module):
             #############################################################
             # ENCODER
             #############################################################
+            # Inputs are handled differently if the model uses symbolic inputs as priors
+            sym_batch, sym_enc_output = None, None
+            if self.priors:
+                sets_batch = batch[0].cuda()
+                sym_batch = batch[1]
+            else:
+                sets_batch = batch.cuda()
+
             # Separate input sets and apply the encoder layer to each one
-            n_sets = batch.shape[-1]
+            n_sets = sets_batch.shape[-1]
             z_sets = torch.Tensor().to(self.dummy_param.device)
             for i_set in range(n_sets):
-                enc_src = self.enc(batch[:, :, :, i_set])
+                enc_src = self.enc(sets_batch[:, :, :, i_set])
                 assert not torch.isnan(enc_src).any()
                 z_sets = torch.cat((z_sets, enc_src), dim=1)
 
             # Merge outputs from all sets
             enc_output = self.aggregator(z_sets)
+
+            # Symbolic encoder
+            if self.priors:
+                sym_enc_output = self.sym_encoder(sym_batch)
+                # Merge outputs from symbolic and numeric encoders
+                enc_output += sym_enc_output
 
             #############################################################
             # DECODER
@@ -170,24 +211,36 @@ class Model(nn.Module):
             #############################################################
             # ENCODER
             #############################################################
+            # Inputs are handled differently if the model uses symbolic inputs as priors
+            sym_batch, sym_enc_output = None, None
+            if self.priors:
+                sets_batch = batch[0].cuda()
+                sym_batch = batch[1]
+            else:
+                sets_batch = batch.cuda()
+
             # Separate input sets and apply the encoder layer to each one
-            n_sets = batch.shape[-1]
+            n_sets = sets_batch.shape[-1]
             z_sets = torch.Tensor().to(self.dummy_param.device)
             for i_set in range(n_sets):
-                enc_src = self.enc(batch[:, :, :, i_set])
+                enc_src = self.enc(sets_batch[:, :, :, i_set])
                 assert not torch.isnan(enc_src).any()
                 z_sets = torch.cat((z_sets, enc_src), dim=1)
 
             # Merge outputs from all sets
             enc_output = self.aggregator(z_sets)
 
+            # Symbolic encoder
+            if self.priors:
+                sym_enc_output = self.sym_encoder(sym_batch)
+                # Merge outputs from symbolic and numeric encoders
+                enc_output += sym_enc_output
+
             src_enc = enc_output
             shape_enc_src = (self.cfg_inference.beam_size,) + src_enc.shape[1:]
             enc_src = src_enc.unsqueeze(1).expand(
                 (1, self.cfg_inference.beam_size) + src_enc.shape[1:]).contiguous().view(
                 shape_enc_src)
-            # print("Memory footprint of the encoder: {}GB \n".
-            #       format(enc_src.element_size() * enc_src.nelement() / 10 ** 9))
 
             #############################################################
             # DECODER AND BEAM SEARCH
@@ -203,6 +256,10 @@ class Model(nn.Module):
             beam_scores[1:] = -1e9
 
             cur_len = torch.tensor(1, device=self.dummy_param.device, dtype=torch.int64)
+
+            # Initialize lengths tensor
+            lengths = torch.ones(self.cfg_inference.beam_size, device=self.dummy_param.device, dtype=torch.float32)
+
             # Repeat until maximum length is reached
             while cur_len < self.cfg.length_eq:
                 # Create masks
@@ -245,7 +302,8 @@ class Model(nn.Module):
                     word_id = idx % n_words
                     # End of sentence, or next word
                     if word_id == self.word2id["F"] or cur_len + 1 == self.cfg.length_eq:
-                        generated_hyps.add(generated[beam_id, :cur_len, ].clone().cpu(), value.item(), )
+                        length_penalty = (self.cfg.length_eq - cur_len)
+                        generated_hyps.add(generated[beam_id, :cur_len, ].clone().cpu(), value.item() + cur_len, )
                     else:
                         next_sent_beam.append((value, word_id, beam_id))
 
@@ -268,6 +326,9 @@ class Model(nn.Module):
 
                 # Update current length
                 cur_len += torch.tensor(1, device=self.dummy_param.device, dtype=torch.int64)
+
+                # Update lengths
+                lengths += (beam_words != self.trg_pad_idx).float()
 
             return sorted(generated_hyps.hyp, key=lambda x: x[0], reverse=True)
 

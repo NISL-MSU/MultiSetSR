@@ -47,7 +47,7 @@ class Pipepile:
 
     def return_training_set(self, i) -> dclasses.Equation:
         np.random.seed(i)
-        # np.random.seed(i + int(1e6))
+        # np.random.seed(i + int(1.5e6))
         while True:
             try:
                 res = self.create_lambda()
@@ -109,7 +109,7 @@ class Pipepile:
 @click.command()
 @click.option(
     "--number_of_equations",
-    default=int(1e6),
+    default=int(1.5e6),
     help="Total number of equations to generate",
 )
 @click.option(

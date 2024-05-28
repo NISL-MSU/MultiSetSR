@@ -183,7 +183,7 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False, n_
     exprs = eq.expr
     curr_p = cfg.max_number_of_points
     # # Uncomment the code below if you have a specific skeleton from which you want to sample data as an example
-    # sk = sympy.sympify('c / (sin(c * x_1) + c)')
+    # sk = sympy.sympify('c + c * sin(c * exp(x_1))')
     # sk, _, _ = add_constant_identifier(sk)
     # coeff_dict = dict()
     # var = None
@@ -322,7 +322,7 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False, n_
                 t = tokenize(eq_sympy_prefix2, word2id)
                 # Calculate how much time has passed
                 toc = time.time()
-                if toc - tic > 18:
+                if toc - tic > 20:
                     restart = True
                     break
 
@@ -661,8 +661,8 @@ def modify_constants_avoidNaNs(expr, x, bounded_ops, npoints, Xbounds, variable=
                             '**4' in str(arg_init.func) or '**5' in str(arg_init.func)]):
                         arg_function = lambdify(flatten(variable), args2)
                         vals_arg = np.array(arg_function(*list(x)))
-                        if np.max(vals_arg) > 3:
-                            args2 = args2 / np.max(np.abs(vals_arg)) * 3
+                        if np.max(vals_arg) > 5:
+                            args2 = args2 / np.max(np.abs(vals_arg)) * 5
 
                 # Update function
                 if is_sqrt or is_div:
@@ -782,3 +782,4 @@ def remove_outliers(support, vals):
     support = np.delete(np.array(support), indices_outliers)
     vals = np.delete(np.array(vals), indices_outliers)
     return support[None, :], vals
+#

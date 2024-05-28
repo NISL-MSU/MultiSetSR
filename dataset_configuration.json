@@ -1,6 +1,6 @@
 {
-    "max_len": 15,
-    "max_ops": 5,
+    "max_len": 8,
+    "max_ops": 4,
     "operators": "add:1,mul:1,div:1,sqrt:1,pow2:1,pow3:1,pow4:1,ln:1,exp:1,sin:1,cos:1,tan:1,sinh:1,cosh:1,tanh:1,abs:1",
     "rewrite_functions": "",
     "variables": ["x_1"],

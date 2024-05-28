@@ -1,6 +1,7 @@
 import numpy as np
 import warnings
 from sympy import flatten
+from scipy.stats import pearsonr
 from pymoo.optimize import minimize
 from pymoo.core.variable import Real
 from pymoo.core.problem import Problem
@@ -17,12 +18,13 @@ class CoefficientFitting(Problem):
     Given a skeleton expression, fit its numerical coefficients to minimize error
     """
 
-    def __init__(self, skeleton, x_values, y_est, climits):
+    def __init__(self, skeleton, x_values, y_est, climits, loss_MSE=True):
         """
         :param skeleton: Symbolic expression
         :param x_values: Sampled values of the current analyzed variable
         :param y_est: Corresponding estimated y values
         :param climits: Minimum and maximum coefficient bounds
+        :param loss_MSE: If True, we optimize the MSE, otherwise we optimize the correlation (PearsonR)
         """
         self.skeleton = skeleton
         self.x_values = x_values
@@ -32,6 +34,7 @@ class CoefficientFitting(Problem):
             self.args = [skeleton]
         self.limits = climits
         self.iteration = 0
+        self.loss_MSE = loss_MSE
 
         # Declare optimization variables
         self.n_coeff = len(self.args)
@@ -47,11 +50,11 @@ class CoefficientFitting(Problem):
                     xl.append(-2*np.pi)
                     xu.append(2*np.pi)
                     continue
-                elif ('exp' in ops[-2]) and 'Mul' in ops[-1]:
-                    opt_variables[f"x{k:02}"] = Real(bounds=(-2.5, 2.5))
-                    xl.append(-2.5)
-                    xu.append(2.5)
-                    continue
+                # elif ('exp' in ops[-2]) and 'Mul' in ops[-1]:
+                #     opt_variables[f"x{k:02}"] = Real(bounds=(-2.5, 2.5))
+                #     xl.append(-2.5)
+                #     xu.append(2.5)
+                #     continue
             if len(ops) == 3:
                 if (('sin' in ops[0]) or ('cos' in ops[0]) or ('tan' in ops[0])) and 'Add' in ops[1] and 'Mul' in ops[2]:
                     opt_variables[f"x{k:02}"] = Real(bounds=(0, self.limits[1]))
@@ -93,9 +96,12 @@ class CoefficientFitting(Problem):
             else:
                 # r = pearsonr(self.y_est, ys)[0]
                 # if np.isnan(r):
-                er = np.mean(np.abs(self.y_est - ys))
-                penalty = -(np.sum(csi == 0) + np.sum(csi == 1))/1000
-                error += er + penalty
+                if self.loss_MSE:
+                    er = np.mean(np.abs(self.y_est - ys))
+                    penalty = -(np.sum(csi == 0) + np.sum(csi == 1))/1000
+                    error += er + penalty
+                else:
+                    error -= pearsonr(self.y_est, ys)[0]
                 # else:
                 #     error += np.mean(np.abs(self.y_est - ys)) * (2 - r)
             outs[si, 0] = error
@@ -108,7 +114,7 @@ class CoefficientFitting(Problem):
 
 class FitGA:
 
-    def __init__(self, skeleton, Xs, Ys, v_limits, c_limits, max_it=None):
+    def __init__(self, skeleton, Xs, Ys, v_limits, c_limits, max_it=None, loss_MSE=True):
         """
         Given a univariate symbolic expression, find which coefficients are dependent on other functions
         :param skeleton: Symbolic skeleton generated for the t-th variable
@@ -117,12 +123,14 @@ class FitGA:
         :param v_limits: Limits of the values that all variables can take
         :param c_limits: Limits of the values that all expression coefficients can take
         :param max_it: If not None, specify the maximum number of iterations for the GA
+        :param loss_MSE: If True, we optimize the MSE, otherwise we optimize the correlation (PearsonR)
         """
         self.skeleton = skeleton  # The skeleton is a function of variable x_t (the t-th variable in list_vars)
         self.Xs = Xs
         self.Ys = Ys
         self.v_limits = v_limits
         self.c_limits = c_limits
+        self.loss_MSE = loss_MSE
         if max_it is None:
             self.termination = RobustTermination(MultiObjectiveSpaceTermination(tol=1e-4), period=25)
         else:
@@ -146,7 +154,8 @@ class FitGA:
         selection = TournamentSelection(pressure=2, func_comp=binary_tournament)
 
         # Fit coefficients
-        problem = CoefficientFitting(skeleton=self.skeleton, x_values=self.Xs, y_est=self.Ys, climits=self.c_limits)
+        problem = CoefficientFitting(skeleton=self.skeleton, x_values=self.Xs, y_est=self.Ys, climits=self.c_limits,
+                                     loss_MSE=self.loss_MSE)
         algorithm = GA(pop_size=300)
         res = minimize(problem, algorithm, self.termination, seed=1, verbose=False)
         resX = np.round(res.X, 6)

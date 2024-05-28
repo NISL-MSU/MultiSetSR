@@ -1,5 +1,6 @@
-from src.EquationLearning.SymbolicRegressor.MSSP import SymbolicRegressor
+# from src.EquationLearning.SymbolicRegressor.MSSP import SymbolicRegressor
 from src.EquationLearning.Trainer.TrainMultiSetTransformer import TransformerTrainer
+from src.EquationLearning.Trainer.TrainMultiSetTransformerWPriors import TransformerTrainerwPrior
 
 
 if __name__ == '__main__':
@@ -8,4 +9,6 @@ if __name__ == '__main__':
     # regressor.get_skeleton()
     trainer = TransformerTrainer()
     trainer.fit()
+    # trainer = TransformerTrainerwPrior()
+    # trainer.fit()
 

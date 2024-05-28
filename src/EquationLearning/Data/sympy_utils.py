@@ -234,13 +234,10 @@ def add_constants(expr, placeholders, prev_expr=None):
         if iarg == len(expr.args) - 1:
             if isinstance(expr, sp.Pow):  # If it's a power function, ignore the power and focus only on the base
                 continue
-        try:
-            if isinstance(expr, sp.Pow) and expr.args[1] < 0 and expr.args[1] != -1:
-                new_args.append(placeholders["ca"] + (add_constants(sub_expr, placeholders, str(expr.func))) ** sp.Abs(expr.args[1]))
-            else:
-                new_args.append(add_constants(sub_expr, placeholders, str(expr.func)))
-        except:
-            print()
+        if isinstance(expr, sp.Pow) and expr.args[1] < 0 and expr.args[1] != -1:
+            new_args.append(placeholders["ca"] + (add_constants(sub_expr, placeholders, str(expr.func))) ** sp.Abs(expr.args[1]))
+        else:
+            new_args.append(add_constants(sub_expr, placeholders, str(expr.func)))
     if isinstance(expr, sp.Pow):
         if expr.args[1] < 0 and expr.args[1] != -1:
             new_args.append(-1)
@@ -248,9 +245,53 @@ def add_constants(expr, placeholders, prev_expr=None):
             new_args.append(expr.args[1])
 
     new_xp = expr.func(*new_args)
-    if len(new_xp.args) == 1:  # If it's a unary operations
-        new_xp = placeholders["ca"] + new_xp * placeholders["cm"]
 
+    if prev_expr is not None:
+        is_prev_unary = not any([op in str(prev_expr) for op in ['Pow', 'Mul', 'Add', 'None']])
+        if len(new_xp.args) == 1 and "Pow" in prev_expr:  # If it's a unary operations
+            new_xp = placeholders["ca"] + new_xp
+        elif (len(new_xp.args) == 1 and prev_expr is None) or is_prev_unary:
+            new_xp = placeholders["ca"] + new_xp * placeholders["cm"]
+
+    return new_xp
+
+
+def is_trig(expr):
+    """Check if the current function is trigonometric"""
+    return any([isinstance(expr, op) for op in [sp.sin, sp.cos]])
+
+
+def modify_trig_expr(xp):
+    """If there's a trig operation inside expr multiplied by a constant, the constant should always be positive"""
+    args = xp.args
+    new_args = []
+
+    for arg in args:
+        if not any([op in str(arg) for op in ['sin', 'cos', 'tan']]):
+            new_args.append(arg)
+        elif isinstance(arg, sp.Mul) and ((arg.args[0].is_number and is_trig(arg.args[1])) or
+                                          (arg.args[1].is_number and is_trig(arg.args[0]))):
+            args_mult = [None] * 2
+            # Now check if the inner argument is a sum and if one of the arguments is a constant. E.g. sin(2 + f(x))
+            iarg = 0
+            if arg.args[0].is_number:
+                iarg = 1
+
+            if isinstance(arg.args[iarg].args[0], sp.Add) and float(arg.args[1 - iarg]) < 0:
+                args_mult[1 - iarg] = -arg.args[1 - iarg]
+                if arg.args[iarg].args[0].args[0].is_number or arg.args[iarg].args[0].args[1].is_number:
+                    inn_arg = modify_trig_expr(arg.args[iarg].args[0])
+                    if isinstance(arg.args[iarg], sp.sin):
+                        arg = -arg.args[1 - iarg] * sp.sin(inn_arg + 3.14159265)
+                    else:
+                        arg = -arg.args[1 - iarg] * sp.cos(inn_arg + 3.14159265)
+
+            new_args.append(arg)
+
+        else:  # If it's composed, explore a lower level of the tree
+            new_args.append(modify_trig_expr(arg))
+
+    new_xp = xp.func(*new_args)
     return new_xp
 
 
@@ -471,3 +512,8 @@ def has_I(*args):
         if ff.has(sp.I):
             return True
     return False
+
+
+if __name__ == '__main__':
+    xpp = sp.sympify('2*exp(-1.2 * cos(-7*cos(7*x -1.2) +1.2)) - 1.2 * sin(3*x -0.1)')
+    xpp2 = modify_trig_expr(xpp)

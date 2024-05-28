@@ -568,11 +568,21 @@ class Generator(object):
         eq_sympy_infix = constants_to_placeholder(expr_with_placeholder, coeff_dict)
         eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('*(c + x_1)', '*(c*x_1 + c)'))
         eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('c*(c*x_1 + c)', 'c*(x_1 + c)'))
+        eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('sqrt(c*x_1 + c)', 'sqrt(x_1 + c)'))
         eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('+ (c*x_1 + c)**', '+ c*(x_1 + c)**'))
         eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('+ Abs(c*x_1)', '+ c*Abs(x_1)'))
         eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('c*Abs(c*x_1)', 'c*Abs(x_1)'))
+        eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('c*Abs(c*x_1 + c)', 'c*Abs(x_1 + c)'))
+        eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('Abs(c*x_1 + c)', 'c*Abs(x_1 + c)'))
+        eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('c**2', 'c'))
         eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('c*(c*', 'c*('))
+        eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('/(c + c*(', '/(c + ('))
+
         skeleton, _, _ = add_constant_identifier(eq_sympy_infix)
+
+        if 'ca_1 + cm_1*(ca_2 + x_1)**' == str(skeleton)[:-1]:
+            if random.random() < 0.1:
+                skeleton = sp.sympify('ca_1 + cm_1 / (ca_2 + (ca_3 + x_1)**' + str(skeleton)[-1] + ')')
         return skeleton
 
     def generate_equation(self, rng):
@@ -583,11 +593,13 @@ class Generator(object):
         # nb_ops = rng.randint(2, self.max_ops)
         # f_expr = self._generate_expr(nb_ops, rng)
 
-        nb_un_ops = rng.randint(2, 3)
+        nb_un_ops = rng.randint(1, 2)
         un_ops = random.choices(self.una_ops, k=nb_un_ops)
-        m_tokens = rng.randint(3, self.max_ops)
+        m_tokens = rng.randint(2, self.max_ops)
         gen = GenExpression(max_tokens=m_tokens, unary_ops=un_ops, max_nest=2)
         f_expr = gen.generate_expr_tree()
+        if 'sin' in str(f_expr):
+            print()
         infix = self.prefix_to_infix(f_expr, coefficients=self.coefficients, variables=self.variables)
         f = self.process_equation(infix)
 
@@ -609,7 +621,6 @@ class Generator(object):
             fstr = fstr.replace('csc', 'sin')
         elif 'cot' in fstr:
             fstr = fstr.replace('cot', 'tan')
-
 
         # infix = str(remove_dummy_constants(sympify(constants_expression)))
 

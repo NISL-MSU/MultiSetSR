@@ -26,8 +26,10 @@ class GenExpression:
         else:
             if nt + 1 > self.max_tokens:
                 type_node = random.choice(['leaf'])
+            elif 1 <= nest_level < self.max_nest and len(self.unary_ops) > 0:
+                type_node = random.choice(['unary', 'leaf'])
             elif nest_level == self.max_nest or len(self.unary_ops) == 0:
-                type_node = random.choice(['binary', 'leaf'])
+                type_node = random.choice(['leaf'])
             else:
                 type_node = random.choices(['unary', 'binary', 'leaf'], weights=[2, 1, 1], k=1)[0]
             if nest_bin == 2:
@@ -55,6 +57,8 @@ class GenExpression:
                 # Prevent forbidden operations
                 ops_to_eliminate = []
                 if parent.nodeOp == 'abs':
+                    ops_to_eliminate = ["sqrt", "pow2", "pow4", "abs"]
+                elif parent.nodeOp in ["sqrt"]:
                     ops_to_eliminate = ["sqrt", "pow2", "pow4"]
                 elif parent.nodeOp in ['exp', 'tan', 'ln']:
                     ops_to_eliminate = ['exp', 'sinh', 'cosh', 'tanh', 'tan', 'ln', 'pow3', 'pow4', 'pow5']
