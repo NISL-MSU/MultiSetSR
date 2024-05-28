@@ -6,7 +6,7 @@ from torch.nn.utils.rnn import pad_sequence
 
 
 class SymEncoder(nn.Module):
-    def __init__(self, cfg, dummy_param):
+    def __init__(self, cfg):
         super().__init__()
         self.trg_pad_idx = cfg.trg_pad_idx
 
@@ -21,12 +21,6 @@ class SymEncoder(nn.Module):
         self.enc = nn.TransformerEncoder(self.trasf_enc, num_layers=cfg.cond_num_layers)
 
         self.cfg = cfg
-
-        self.enc = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(d_model=480, nhead=8),
-            num_layers=6
-        )
-        self.dummy_param = dummy_param
 
     def set_train(self):
         self.enc.train()
@@ -53,17 +47,18 @@ class SymEncoder(nn.Module):
         # Combine the padded  prior expressions into a single tensor
         batch = pad_sequence(padded_tensors, batch_first=True).type(torch.int).cuda()
 
-        symbolic_conditioning = batch.long().to(self.dummy_param.device)
-        # mask = self.make_src_mask(symbolic_conditioning)
+        symbolic_conditioning = batch.long()
+        mask = self.make_src_mask(symbolic_conditioning)
 
         # NOTE: This implementation does not use positional encoding
         encoder_input = self.tok_embedding(symbolic_conditioning)
 
-        enc_embedding = self.enc(encoder_input.permute(1, 0, 2))  # src_key_padding_mask=mask.bool())
+        enc_embedding = self.enc(encoder_input.permute(1, 0, 2),
+                                 src_key_padding_mask=mask.bool())
 
         enc_embedding = enc_embedding.permute(1, 0, 2)
 
         if torch.isnan(enc_embedding).any():
             breakpoint()
 
-        return enc_embedding.mean(dim=1, keepdim=True)
+        return enc_embedding

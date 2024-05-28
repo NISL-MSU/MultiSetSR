@@ -4,7 +4,7 @@ dataset: Q1
 
 wandb: True
 num_of_workers: 32
-batch_size: 20
+batch_size: 16
 epochs: 100
 val_check_interval: 1.0
 precision: 16
@@ -13,7 +13,7 @@ gpu: 2
 dataset_train:
   total_variables:
   total_coefficients:
-  max_number_of_points: 10000
+  max_number_of_points: 8000
   number_of_sets: 10
   lambda_: 0.5
   type_of_sampling_points: constant
@@ -100,7 +100,7 @@ architecture:
   cond_num_layers: 3
 
 inference:
-  beam_size: 5
+  beam_size: 10
   bfgs:
     activated: True
     n_restarts: 10

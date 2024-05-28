@@ -24,31 +24,10 @@ class TransformerTrainerwPrior(TransformerTrainer):
             self.cfg = omegaconf.OmegaConf.load("../Transformers/config_withPrior.yaml")
         self._config_datasets()
 
-        self.model_name = 'EquationLearning/saved_models/saved_MSTs/ModelWPriors' + str(self.cfg.architecture.dim_hidden) + \
-                          '-batch_' + str(self.cfg.batch_size) + '-' + self.cfg.dataset
-        self.model_name = os.path.join(get_project_root(), self.model_name)
+        self.model_name = 'src/EquationLearning/models/saved_models/ModelWPriors480-batch_16-' + self.cfg.dataset
 
         return Model(cfg=self.cfg.architecture, cfg_inference=self.cfg.inference, word2id=self.word2id,
                      loss=loss_sample, priors=True)
-
-    def load_model(self, pretrained):
-        # Load pre-trained weights
-        if os.path.exists(self.model_name) and pretrained:
-            if torch.cuda.device_count() > 1:
-                self.model.module.load_state_dict(torch.load(self.model_name))
-            else:
-                self.model.load_state_dict(torch.load(self.model_name))
-        else:  # Try loading just the MST without the symbolic encoder
-            base_model_path = self.model_name.replace('WPriors', '')
-            if os.path.exists(base_model_path) and pretrained:
-                saved_state_dict = torch.load(base_model_path)
-                filtered_state_dict = {k: v for k, v in saved_state_dict.items() if 'sym_encoder' not in k}
-                if torch.cuda.device_count() > 1:
-                    self.model.module.load_state_dict(filtered_state_dict, strict=False)
-                else:
-                    self.model.load_state_dict(filtered_state_dict, strict=False)
-            else:
-                warnings.warn('There was no model saved. Start training from scratch...')
 
     def _process_block(self, block):
         """ Format elements in the block as torch Tensors and remove inputs with NaN values"""
@@ -71,7 +50,6 @@ class TransformerTrainerwPrior(TransformerTrainer):
                 un_ops = all_un_ops
             else:
                 un_ops = random.choices(all_un_ops, k=np.random.randint(1, len(all_un_ops)))  # Select a random subset
-                # un_ops = all_un_ops
 
             # Shuffle data
             for d in range(self.cfg.architecture.number_of_sets):
@@ -98,27 +76,19 @@ class TransformerTrainerwPrior(TransformerTrainer):
         mask[remove_indices] = 0
         # Use torch.index_select to select rows based on the mask
         XY_block = torch.index_select(XY_block, dim=0, index=mask.nonzero().squeeze()).cuda()
-        un_ops_block = pad_sequence(un_ops_block, batch_first=True, padding_value=0).type(torch.int).cuda()
 
         return [XY_block, un_ops_block], skeletons_block, xpr_block
 
     def get_slices(self, input_block, skeletons_block, batch_inds):
         """Create a training batch by selecting certain indices from the data block"""
         XY_batch = input_block[0][batch_inds, :, :, :]
-        un_ops_batch = input_block[1][batch_inds, :]
+        un_ops_batch = [input_block[1][i] for i in batch_inds]
         skeletons_batch = [skeletons_block[i] for i in batch_inds]
         # Check that there's no skeleton larger than the maximum length
         valid_inds = [i for i in range(len(skeletons_batch)) if
                       len(skeletons_batch[i]) < self.cfg.architecture.length_eq]
-
-        if torch.cuda.device_count() > 1:  # Ensure len(valid_inds) is a multiple of 4
-            valid_len = len(valid_inds)
-            if valid_len % 4 != 0:
-                valid_len = (valid_len // 4) * 4
-            valid_inds = valid_inds[:valid_len]
-
         XY_batch = XY_batch[valid_inds, :, :, :]
-        un_ops_batch = un_ops_batch[valid_inds, :]
+        un_ops_batch = [un_ops_batch[i] for i in valid_inds]
         skeletons_batch = [skeletons_batch[i] for i in valid_inds]
         return [XY_batch, un_ops_batch], skeletons_batch, valid_inds
 
