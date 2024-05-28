@@ -139,6 +139,26 @@ def add_constant_identifier(sk, cm_counter=1, ca_counter=1):
     return new_xp, cm_counter, ca_counter
 
 
+def remove_constant_identifier(sk):
+    """Remove the coefficient labels of a skeleton expression and replace them with a placeholder"""
+    args = sk.args
+    new_args = []
+
+    for arg in args:
+        if arg.is_number:  # If it's a number, add it to the list
+            new_args.append(arg)
+        elif isinstance(arg, sp.Symbol) and (('ca_' in str(arg)) or ('cm_' in str(arg))):
+            new_args.append(sp.sympify('c'))
+        elif isinstance(arg, sp.Symbol):
+            new_args.append(arg)
+        else:  # If it's composed, explore a lower level of the tree
+            deep_xp = remove_constant_identifier(arg)
+            new_args.append(deep_xp)
+
+    new_xp = sk.func(*new_args)
+    return new_xp
+
+
 def check_forbidden_combination(xp):
     args = xp.args
     res = []
@@ -324,6 +344,6 @@ def expr2skeleton(expr):
 
 def count_nodes(expr):
     node_count = 0
-    for node in sp.preorder_traversal(expr):
+    for _ in sp.preorder_traversal(expr):
         node_count += 1
     return node_count

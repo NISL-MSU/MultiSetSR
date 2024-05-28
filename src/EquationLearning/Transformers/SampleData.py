@@ -71,6 +71,9 @@ class SampleData:
             scaling_factor = 20 / (np.max(X[:, ns]) - np.min(X[:, ns]))
             X[:, ns] = (X[:, ns] - np.min(X[:, ns])) * scaling_factor - 10
             Y[:, ns] = Ys[:, ns][selected_rows_indices]
+            if np.min(np.std(Ys, axis=0)) < 0.0001:
+                ns, dva = 0, dva + 1  # If the selected domain is too flat, try with a larger one
+                continue
         # With a chance of 0.3, fix all sets to the same function
         if np.random.random(1) < 0.3:
             ns = np.random.randint(0, self.cfg.architecture.number_of_sets)
@@ -103,6 +106,10 @@ class SampleData:
                 ops = self.get_unary_ops(sampled_data[2])
 
                 Xs, Ys, _ = self.sample_domain(sampled_data[0], sampled_data[1], sampled_data[-1])
+                means, std = np.mean(Ys, axis=0), np.std(Ys, axis=0)
+                Ys = (Ys - means) / std
+                if np.isnan(Ys).any() or np.min(std) < 0.0001 or 'E' in sampled_data[2] or (Ys > 100000).any():
+                    print()
 
                 count += 1
                 print(sampled_data[-2])

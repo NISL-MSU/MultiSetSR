@@ -6,12 +6,32 @@ import marshal
 import numpy as np
 from typing import Tuple
 from pathlib import Path
+from sklearn.metrics import r2_score
 from src.EquationLearning.Data import generator
+from sklearn.linear_model import LinearRegression
 from src.EquationLearning.Data.dclasses import DatasetDetails, Equation, GeneratorDetails
 
 
 def get_project_root() -> Path:
     return Path(__file__).parent.parent
+
+
+def test_linearity(X, Y):
+    """Fit linear regression model and calculate R2. If R2 is close to 1, it's a sign of linearity"""
+    model = LinearRegression()
+    model.fit(X[:, None], Y)
+    Y_pred = model.predict(X[:, None])
+    return r2_score(Y, Y_pred)
+
+
+def calc_distance_curves(Ys):
+    """Calculate the sum of all pairwise curve distances (mse) in Ys"""
+    ncurves = len(Ys)
+    total_d = 0
+    for i in range(ncurves):
+        for j in range(i + 1, ncurves):
+            total_d += mse(Ys[i], Ys[j])
+    return total_d
 
 
 def mse(imageA, imageB):
