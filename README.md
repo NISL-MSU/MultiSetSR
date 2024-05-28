@@ -54,3 +54,16 @@ Other important scripts:
 
 The datasets are available online at [https://huggingface.co/datasets/AnonymousGM/MultiSetTransformerData](https://huggingface.co/datasets/AnonymousGM/MultiSetTransformerData).
 To replicate the training process, download the datasets and paste them into the `/src/data/sampled_data` folder.
+
+# Citation
+Use this Bibtex to cite this repository
+
+```
+@INPROCEEDINGS{MultiSetSR,
+author="Giorgio Morales and John W. Sheppard",
+title="Univariate Skeleton Prediction in Multivariate Systems Using Transformers",
+booktitle="Machine Learning and Knowledge Discovery in Databases",
+year="2024",
+location = {Vilnius, Lithuania}
+}
+```
