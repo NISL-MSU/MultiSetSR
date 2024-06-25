@@ -1,3 +1,6 @@
+[//]: # ([![Paper]&#40;https://img.shields.io/badge/Paper-OpenAccess-b31b1b.svg&#41;]&#40;https://www.mdpi.com/2072-4292/13/18/3649&#41;)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NISL-MSU/MultiSetSR/blob/master/DemoMSSP.ipynb)
+
 # MSSP: Multi-Set Symbolic Skeleton Prediction for Symbolic Regression
 
 ## Description
