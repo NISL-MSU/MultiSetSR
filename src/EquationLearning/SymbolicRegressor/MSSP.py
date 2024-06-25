@@ -161,7 +161,7 @@ class MSSP:
                     problem = FitGA(remove_coeffs(skeleton), Xi, Yi, [np.min(Xi), np.max(Xi)], [-20, 20], max_it=100,
                                     loss_MSE=False)
                     est_expr, corr = problem.run()
-                    print("\tSkeleton: " + str(skeleton) + ". Correlation: " + str(corr) + ". Expr: " + str(est_expr))
+                    print("\tSkeleton: " + str(skeleton) + ". Correlation: " + str(abs(corr)) + ". Expr: " + str(est_expr))
                     if abs(best_corr - corr) > 0.002:
                         best_corr = corr
                         best_sk = expr2skeleton(2 * est_expr + 1)

@@ -159,6 +159,8 @@ class RenamedModuleUnpickler(pickle.Unpickler):
     def find_class(self, module, name):
         if module.startswith('src.'):
             module = module[len('src.'):]
+        if module.startswith('utils'):
+            module = 'EquationLearning.utils'
         return super().find_class(module, name)
 
 

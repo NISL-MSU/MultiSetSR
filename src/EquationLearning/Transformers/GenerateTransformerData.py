@@ -188,7 +188,7 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False, n_
     exprs = eq.expr
     curr_p = cfg.max_number_of_points
     # # Uncomment the code below if you have a specific skeleton from which you want to sample data as an example
-    # sk = sympy.sympify('c + c / ((x1)**4 + c)')
+    # sk = sympy.sympify('c*sqrt(c*sin(c*x_1 + c) + c) + c')
     # sk, _, _ = add_constant_identifier(sk)
     # coeff_dict = dict()
     # var = None
