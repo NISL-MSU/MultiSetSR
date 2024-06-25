@@ -1,4 +1,5 @@
 import os
+import io
 import json
 import h5py
 import pickle
@@ -154,6 +155,18 @@ def load_eq_raw(path_folder, idx, num_eqs_per_set):
     return raw_metadata
 
 
+class RenamedModuleUnpickler(pickle.Unpickler):
+    def find_class(self, module, name):
+        if module.startswith('src.'):
+            module = module[len('src.'):]
+        return super().find_class(module, name)
+
+
+def renamed_module_loads(dt):
+    file_like_object = io.BytesIO(dt)
+    return RenamedModuleUnpickler(file_like_object).load()
+
+
 def load_eq(path_folder, idx, num_eqs_per_set) -> Equation:
     index_file = str(int(idx / num_eqs_per_set))
     # if 'train' in str(path_folder):
@@ -163,7 +176,12 @@ def load_eq(path_folder, idx, num_eqs_per_set) -> Equation:
     f = h5py.File(os.path.join(path_folder, f"{index_file}.h5"), 'r')
     dataset_metadata = f[str(idx - int(index_file) * int(num_eqs_per_set))]
     raw_metadata = np.array(dataset_metadata)
-    metadata = pickle.loads(raw_metadata.tobytes())
+    try:
+        metadata = pickle.loads(raw_metadata.tobytes())
+    except ModuleNotFoundError:
+        # Load the pickle data using the custom unpickler
+        data_bytes = raw_metadata.tobytes()
+        metadata = renamed_module_loads(data_bytes)
     f.close()
     return metadata
 
@@ -176,7 +194,12 @@ def load_metadata_hdf5(path_folder: Path) -> DatasetDetails:
     f = h5py.File(os.path.join(path_folder, "metadata.h5"), 'r')
     dataset_metadata = f["other"]
     raw_metadata = np.array(dataset_metadata)
-    metadata = pickle.loads(raw_metadata.tobytes())
+    try:
+        metadata = pickle.loads(raw_metadata.tobytes())
+    except ModuleNotFoundError:
+        # Load the pickle data using the custom unpickler
+        data_bytes = raw_metadata.tobytes()
+        metadata = renamed_module_loads(data_bytes)
     return metadata
 
 
