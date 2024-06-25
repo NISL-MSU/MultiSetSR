@@ -519,6 +519,8 @@ class Generator(object):
 
     def process_equation(self, infix):
         f = self.infix_to_sympy(infix, self.variables, self.rewrite_functions)  # .evalf()
+        if str(f) == 'exp(-x_1)':
+            f = sp.sympify('exp(x_1)')
         if '(E)' in str(f):
             f = sp.sympify(str(f).replace('(E)', '(1)'))
         # Convert any rational operation into a number so that it can be evaluated
@@ -577,6 +579,8 @@ class Generator(object):
         eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('c**2', 'c'))
         eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('c*(c*', 'c*('))
         eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('/(c + c*(', '/(c + ('))
+        eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('c/(c*x_1 + c', 'c/(x_1 + c'))
+        eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('c/(c + c*x_1', 'c/(c + x_1'))
 
         skeleton, _, _ = add_constant_identifier(eq_sympy_infix)
 
@@ -593,13 +597,10 @@ class Generator(object):
         # nb_ops = rng.randint(2, self.max_ops)
         # f_expr = self._generate_expr(nb_ops, rng)
 
-        nb_un_ops = rng.randint(1, 2)
-        un_ops = random.choices(self.una_ops, k=nb_un_ops)
+        nb_un_ops = rng.randint(2, 3)
         m_tokens = rng.randint(2, self.max_ops)
-        gen = GenExpression(max_tokens=m_tokens, unary_ops=un_ops, max_nest=2)
+        gen = GenExpression(max_tokens=m_tokens, unary_ops=self.una_ops, nb_un_ops=nb_un_ops, max_nest=2)
         f_expr = gen.generate_expr_tree()
-        if 'sin' in str(f_expr):
-            print()
         infix = self.prefix_to_infix(f_expr, coefficients=self.coefficients, variables=self.variables)
         f = self.process_equation(infix)
 
@@ -608,7 +609,7 @@ class Generator(object):
             nb_un_ops = rng.randint(1, 3)
             un_ops = random.choices(self.una_ops, k=nb_un_ops)
             m_tokens = rng.randint(3, self.max_ops)
-            gen = GenExpression(max_tokens=m_tokens, unary_ops=un_ops, max_nest=2)
+            gen = GenExpression(max_tokens=m_tokens, unary_ops=un_ops, nb_un_ops=nb_un_ops, max_nest=2)
             f_expr = gen.generate_expr_tree()
             infix = self.prefix_to_infix(f_expr, coefficients=self.coefficients, variables=self.variables)
             f = self.process_equation(infix)
@@ -632,6 +633,11 @@ class Generator(object):
             f = self.simplify_expr(f0)
         f = avoid_operations_between_constants(f)
 
+        if random.random() < 0.001:  # With low probability, just output a linear function
+            f = sp.sympify('ca_1 + cm_1*x_1')
+
+        f = sp.sympify(str(f).replace('ca_1 + ca_2', 'ca_1'))
+
         f_prefix = self.sympy_to_prefix(f)
         # skip too long sequences
         if len(f_expr) + 2 > self.max_len:
@@ -645,4 +651,5 @@ class Generator(object):
         variables = set(map(str, sy)) - set(self.placeholders.keys())
 
         f = sp.sympify(str(f).replace('cm_2**2', 'cm_2'))
+
         return f_prefix, variables, f

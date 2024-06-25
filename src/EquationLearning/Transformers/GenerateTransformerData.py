@@ -178,12 +178,17 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False, n_
     :param xmin: If not None, it explicitly specifies the minimum support value to be used for generation
     :param xmax: If not None, it explicitly specifies the minimum support value to be used for generation
     """
-    eq.expr = sympify(str(eq.expr).replace(list(eq.variables)[0], 'x_1'))
+    var = None
+    for v in list(eq.variables):
+        if 'x' in v:
+            var = v
+            break
+    eq.expr = sympify(str(eq.expr).replace(var, 'x_1'))
     eq.variables = {'x_1'}
     exprs = eq.expr
     curr_p = cfg.max_number_of_points
     # # Uncomment the code below if you have a specific skeleton from which you want to sample data as an example
-    # sk = sympy.sympify('c + c * sin(c * exp(x_1))')
+    # sk = sympy.sympify('c + c / ((x1)**4 + c)')
     # sk, _, _ = add_constant_identifier(sk)
     # coeff_dict = dict()
     # var = None

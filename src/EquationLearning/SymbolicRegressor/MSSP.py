@@ -1,6 +1,4 @@
 import sys
-
-import sympy
 import torch
 import omegaconf
 import sympy as sp
@@ -12,7 +10,8 @@ from src.EquationLearning.Data.GenerateDatasets import DataLoader, InputData
 from src.EquationLearning.Transformers.GenerateTransformerData import Dataset
 from src.EquationLearning.Trainer.TrainMultiSetTransformer import seq2equation
 from src.EquationLearning.Optimization.FindDependentCoefficients import CheckDependency
-from src.EquationLearning.models.utilities_expressions import expr2skeleton, avoid_operations_between_constants, count_nodes
+from src.EquationLearning.models.utilities_expressions import expr2skeleton, avoid_operations_between_constants, \
+                                                              count_nodes, remove_coeffs
 
 
 class MSSP:
@@ -114,7 +113,7 @@ class MSSP:
                             YYs.append(Y.copy())
                             valuess.append(values.copy())
                         sorted_indices = np.argsort(np.array(R2s))
-                        ind = sorted_indices[5]
+                        ind = sorted_indices[7]
                         best_X, best_Y, best_values = XXs[ind], YYs[ind], valuess[ind]
                         Ys[:, ns] = best_Y
                         Xs[:, ns] = best_X
@@ -155,18 +154,19 @@ class MSSP:
                         print("Invalid response created by the model")
 
                 print("\nChoosing the best skeleton... (skeletons ordered based on number of nodes)")
-                best_error, best_sk = np.Infinity, ''
+                best_corr, best_sk = 0, ''
                 pred_skeletons = sorted(pred_skeletons, key=lambda expr: count_nodes(expr))
                 for ip, skeleton in enumerate(pred_skeletons):
                     # Fit coefficients of the estimated skeletons
                     skeleton = avoid_operations_between_constants(sp.expand(skeleton))
-                    problem = FitGA(skeleton, Xi, Yi, [np.min(Xi), np.max(Xi)], [-20, 20], max_it=100)
-                    est_expr, error = problem.run()
-                    print("\tSkeleton: " + str(skeleton) + ". Error: " + str(error) + ". Expr: " + str(est_expr))
-                    if best_error - error > 0.002:
-                        best_error = error
+                    problem = FitGA(remove_coeffs(skeleton), Xi, Yi, [np.min(Xi), np.max(Xi)], [-20, 20], max_it=100,
+                                    loss_MSE=False)
+                    est_expr, corr = problem.run()
+                    print("\tSkeleton: " + str(skeleton) + ". Correlation: " + str(corr) + ". Expr: " + str(est_expr))
+                    if abs(best_corr - corr) > 0.002:
+                        best_corr = corr
                         best_sk = expr2skeleton(est_expr)
-                        if error < 0.001:  # If the error is very low, assume this is the best
+                        if abs(corr) > 0.999:  # If correlation is very high, assume this is the best
                             break
                 print('-----------------------------------------------------------')
                 print("Selected skeleton: " + str(best_sk) + "\n")

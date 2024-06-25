@@ -88,7 +88,7 @@ class Trainer:
 
 
 if __name__ == '__main__':
-    names = ['E6']
+    names = ['E5']
     for nme in names:
         data_loader = DataLoader(name=nme)
         predictor = Trainer(dataset=data_loader.dataset, modelType=data_loader.modelType, name=data_loader.name)

@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from .set_transformer import PMA
 from .set_encoder import SetEncoder
 from .beam_search import BeamHypotheses
-from .sym_encoder import SymEncoder
+# from .sym_encoder import SymEncoder
 
 
 class Model(nn.Module):
@@ -36,8 +36,8 @@ class Model(nn.Module):
         self.loss = loss
 
         self.sym_encoder = None
-        if priors:
-            self.sym_encoder = SymEncoder(cfg=self.cfg)
+        # if priors:
+        #     self.sym_encoder = SymEncoder(cfg=self.cfg)
 
         self.dummy_param = nn.Parameter(torch.empty(0))  # Turnaround to allow multi-GPU training
 
