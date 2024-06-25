@@ -1,1 +1,1 @@
-include src/EquationLearning/saved_models/*.pth
+recursive-include src/EquationLearning/saved_models *
