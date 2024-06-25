@@ -1,1 +1,1 @@
-include src/EquationLearning/saved_models/saved_NNs/*.pth
+include src/EquationLearning/saved_models/*.pth
