@@ -9,9 +9,9 @@ from sympy import lambdify
 from typing import List, Any
 from EquationLearning.utils import get_project_root
 from dataclasses import dataclass, field
-from ...EquationLearning.Data.FeynmanReader import FeynmanReader
-from ...EquationLearning.Data.data_utils import bounded_operations
-from ...EquationLearning.Transformers.GenerateTransformerData import skeleton2dataset, Dataset, modify_constants_avoidNaNs
+from EquationLearning.Data.FeynmanReader import FeynmanReader
+from EquationLearning.Data.data_utils import bounded_operations
+from EquationLearning.Transformers.GenerateTransformerData import skeleton2dataset, Dataset, modify_constants_avoidNaNs
 
 
 def sigmoid(x):

@@ -3,7 +3,7 @@ import random
 from EquationLearning.utils import *
 from tqdm import trange
 from torch import optim
-from ...EquationLearning.models.network import *
+from EquationLearning.models.network import *
 
 np.random.seed(7)  # Initialize seed to get reproducible results
 random.seed(7)

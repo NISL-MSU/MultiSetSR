@@ -7,9 +7,9 @@ from pymoo.core.variable import Real
 from pymoo.core.problem import Problem
 from pymoo.algorithms.soo.nonconvex.ga import GA
 from pymoo.termination.robust import RobustTermination
-from src.EquationLearning.models.utilities_expressions import *
+from EquationLearning.models.utilities_expressions import *
 from pymoo.termination.ftol import MultiObjectiveSpaceTermination
-from pymoo.operators.selection.tournament import TournamentSelection
+# from pymoo.operators.selection.tournament import TournamentSelection
 warnings.filterwarnings("ignore")
 
 

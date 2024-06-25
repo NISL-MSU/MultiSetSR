@@ -1,7 +1,7 @@
 import omegaconf
 from tqdm import trange
 from EquationLearning.utils import *
-from ...EquationLearning.Transformers.GenerateTransformerData import Dataset, evaluate_and_wrap, de_tokenize
+from EquationLearning.Transformers.GenerateTransformerData import Dataset, evaluate_and_wrap, de_tokenize
 
 
 def create_pickle_from_data(block, path, idx):
