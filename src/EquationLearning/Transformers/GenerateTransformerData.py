@@ -29,14 +29,14 @@ class Dataset:
             cfg,
             mode: str
     ):
-        metadata = load_metadata_hdf5(Path(os.path.join(get_project_root(), "../EquationLearning/Data", data_path)))
+        metadata = load_metadata_hdf5(Path(os.path.join(get_project_root(), "EquationLearning/Data", data_path)))
         cfg.total_variables = metadata.total_variables
         cfg.total_coefficients = metadata.total_coefficients
         self.len = metadata.total_number_of_eqs
         self.eqs_per_hdf = metadata.eqs_per_hdf
         self.word2id = metadata.word2id
         self.id2word = metadata.id2word
-        self.data_path = Path(os.path.join(get_project_root(), "../EquationLearning/Data", data_path))
+        self.data_path = Path(os.path.join(get_project_root(), "EquationLearning/Data", data_path))
         self.mode = mode
         self.cfg = cfg
 

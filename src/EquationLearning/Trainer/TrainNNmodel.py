@@ -47,9 +47,9 @@ class Trainer:
         root = get_project_root()
         folder = ''
         if self.name != '':
-            folder = os.path.join(root, "src//EquationLearning//models//saved_NNs//" + self.name)
-            if not os.path.exists(os.path.join(root, "src//EquationLearning//models//saved_NNs//" + self.name)):
-                os.mkdir(os.path.join(root, "src//EquationLearning//models//saved_NNs//" + self.name))
+            folder = os.path.join(root, "EquationLearning//saved_models//saved_NNs//" + self.name)
+            if not os.path.exists(os.path.join(root, "EquationLearning//saved_models//saved_NNs//" + self.name)):
+                os.mkdir(os.path.join(root, "EquationLearning//saved_models//saved_NNs//" + self.name))
             if not os.path.exists(folder):
                 os.mkdir(folder)
 
