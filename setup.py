@@ -14,10 +14,10 @@ setuptools.setup(
     url='https://github.com/NISL-MSU/MultiSetSR',
     project_urls={"Bug Tracker": "https://github.com/NISL-MSU/MultiSetSR/issues"},
     license='MIT',
-    package_dir={"": "src"},
-    include_package_data=True,
-    include_package_saved_models=True,
     packages=setuptools.find_packages('src', exclude=['test']),
+    # packages=setuptools.find_namespace_packages(where="src"),
+    package_dir={"": "src"},
+    package_data={'EquationLearning.saved_models': ['*']},
     install_requires=['matplotlib', 'numpy', 'opencv-python', 'scipy', 'statsmodels', 'tqdm', 'timeout_decorator',
                       'h5py', 'pymoo==0.6.0', 'pyodbc', 'regex', 'tensorboard', 'python-dotenv', 'omegaconf', 'pandas'],
 )
