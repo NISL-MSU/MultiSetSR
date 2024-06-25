@@ -3,12 +3,12 @@ import sympy as sp
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import tukey_hsd
-from src.utils import get_project_root, tukeyLetters
-from src.EquationLearning.Data.dclasses import SimpleEquation
-from src.EquationLearning.Data.GenerateDatasets import DataLoader
-from src.EquationLearning.Optimization.CoefficientFitting import FitGA
-from src.EquationLearning.models.utilities_expressions import add_constant_identifier, get_skeletons
-from src.EquationLearning.Transformers.GenerateTransformerData import Dataset, evaluate_and_wrap
+from utils import get_project_root, tukeyLetters
+from EquationLearning.Data.dclasses import SimpleEquation
+from EquationLearning.Data.GenerateDatasets import DataLoader
+from EquationLearning.Optimization.CoefficientFitting import FitGA
+from EquationLearning.models.utilities_expressions import add_constant_identifier, get_skeletons
+from EquationLearning.Transformers.GenerateTransformerData import Dataset, evaluate_and_wrap
 
 np.random.seed(7)
 

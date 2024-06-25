@@ -2,15 +2,14 @@ import sys
 import torch
 import omegaconf
 import sympy as sp
-from src.utils import *
-from src.EquationLearning.models.NNModel import NNModel
-from src.EquationLearning.Transformers.model import Model
-from src.EquationLearning.Optimization.CoefficientFitting import FitGA
-from src.EquationLearning.Data.GenerateDatasets import DataLoader, InputData
-from src.EquationLearning.Transformers.GenerateTransformerData import Dataset
-from src.EquationLearning.Trainer.TrainMultiSetTransformer import seq2equation
-from src.EquationLearning.Optimization.FindDependentCoefficients import CheckDependency
-from src.EquationLearning.models.utilities_expressions import expr2skeleton, avoid_operations_between_constants, \
+from ...utils import *
+from ...EquationLearning.models.NNModel import NNModel
+from ...EquationLearning.Transformers.model import Model
+from ...EquationLearning.Optimization.CoefficientFitting import FitGA
+from ...EquationLearning.Data.GenerateDatasets import DataLoader, InputData
+from ...EquationLearning.Transformers.GenerateTransformerData import Dataset
+from ...EquationLearning.Trainer.TrainMultiSetTransformer import seq2equation
+from ...EquationLearning.models.utilities_expressions import expr2skeleton, avoid_operations_between_constants, \
                                                               count_nodes, remove_coeffs
 
 
@@ -170,12 +169,6 @@ class MSSP:
                             break
                 print('-----------------------------------------------------------')
                 print("Selected skeleton: " + str(best_sk) + "\n")
-
-                # Cross-variable Dependency Identification
-                check_dependency = CheckDependency(skeleton=best_sk, t=iv, list_vars=self.symbols,
-                                                   gen_func=self.bb_model,
-                                                   v_limits=self.limits, c_limits=[-50, 50], types=self.types)
-                best_sk, _ = check_dependency.run()
 
                 self.univariate_skeletons.append(best_sk)
 

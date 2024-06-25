@@ -4,12 +4,12 @@ import torch
 import warnings
 import omegaconf
 from torch import nn
-from src.utils import *
+from ...utils import *
 from torch import optim
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.tensorboard import SummaryWriter
-from src.EquationLearning.Transformers.model import Model
-from src.EquationLearning.Transformers.GenerateTransformerData import Dataset, de_tokenize
+from ...EquationLearning.Transformers.model import Model
+from ...EquationLearning.Transformers.GenerateTransformerData import Dataset, de_tokenize
 
 
 def open_pickle(path):

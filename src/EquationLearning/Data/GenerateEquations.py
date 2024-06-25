@@ -14,11 +14,11 @@ import multiprocessing
 from pathlib import Path
 from itertools import chain
 from sympy import lambdify, sympify
-from src.EquationLearning.Data import dclasses
-from src.EquationLearning.Data import generator
-from src.utils import create_env, H5FilesCreator
-from src.utils import code_unpickler, code_pickler, get_project_root
-from src.EquationLearning.Data.sympy_utils import remove_dummy_constants
+from ...EquationLearning.Data import dclasses
+from ...EquationLearning.Data import generator
+from ...utils import create_env, H5FilesCreator
+from ...utils import code_unpickler, code_pickler, get_project_root
+from ...EquationLearning.Data.sympy_utils import remove_dummy_constants
 
 
 class Pipepile:

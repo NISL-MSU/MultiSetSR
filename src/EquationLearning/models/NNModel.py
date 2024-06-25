@@ -1,10 +1,9 @@
-import pickle
 import random
 
-from src import utils
+from ...utils import *
 from tqdm import trange
 from torch import optim
-from src.EquationLearning.models.network import *
+from ...EquationLearning.models.network import *
 
 np.random.seed(7)  # Initialize seed to get reproducible results
 random.seed(7)
@@ -128,10 +127,10 @@ class NNModel:
                 ypred = self.evaluateFold(Xval, batch_size=1024)
                 # Reverse normalization
                 if yscale[0] is not None and yscale[1] is not None:
-                    Ytrain_original = utils.reverseMinMaxScale(Ytrain, yscale[0], yscale[1])
-                    Yval_original = utils.reverseMinMaxScale(Yval, yscale[0], yscale[1])
-                    ypredtr = utils.reverseMinMaxScale(ypredtr, yscale[0], yscale[1])
-                    ypred = utils.reverseMinMaxScale(ypred, yscale[0], yscale[1])
+                    Ytrain_original = reverseMinMaxScale(Ytrain, yscale[0], yscale[1])
+                    Yval_original = reverseMinMaxScale(Yval, yscale[0], yscale[1])
+                    ypredtr = reverseMinMaxScale(ypredtr, yscale[0], yscale[1])
+                    ypred = reverseMinMaxScale(ypred, yscale[0], yscale[1])
                 else:
                     Ytrain_original = Ytrain
                     Yval_original = Yval
@@ -139,8 +138,8 @@ class NNModel:
                     ypred = ypred
 
                 # Calculate MSE
-                msetr = utils.mse(Ytrain_original, ypredtr[:, 0])
-                mse = utils.mse(Yval_original, ypred[:, 0])
+                msetr = mse(Ytrain_original, ypredtr[:, 0])
+                mse = mse(Yval_original, ypred[:, 0])
                 MSEtr.append(msetr)
                 MSE.append(mse)  # np.concatenate((Yval_original[:, None], ypred), axis=1)
 
@@ -169,7 +168,7 @@ class NNModel:
     def evaluateFold(self, valxn, maxs=None, mins=None, batch_size=96):
         """Retrieve point predictions."""
         if maxs is not None and mins is not None:
-            valxn = utils.reverseMinMaxScale(valxn, maxs, mins)
+            valxn = reverseMinMaxScale(valxn, maxs, mins)
 
         ypred = []
         with torch.no_grad():
@@ -185,7 +184,7 @@ class NNModel:
     def evaluateFoldMC(self, valxn, maxs=None, mins=None, batch_size=96, MC_samples=100):
         """Retrieve point predictions using MC-Dropout."""
         if maxs is not None and mins is not None:
-            valxn = utils.reverseMinMaxScale(valxn, maxs, mins)
+            valxn = reverseMinMaxScale(valxn, maxs, mins)
 
         preds_MC = np.zeros((len(valxn), MC_samples))
         for it in range(0, MC_samples):  # Test the model 'MC_samples' times

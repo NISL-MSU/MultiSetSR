@@ -2,7 +2,6 @@
 # The "add_additive_constants" was removed, bugs were fixed, and the method was improved
 
 import sympy as sp
-from sympy.parsing.sympy_parser import parse_expr
 
 
 def simplify(ff, seconds):

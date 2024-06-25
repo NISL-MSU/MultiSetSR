@@ -1,7 +1,7 @@
 import sympy as sp
 import numpy as np
 import pandas as pd
-from src.utils import get_project_root
+from ...utils import get_project_root
 
 
 class FeynmanReader:

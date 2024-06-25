@@ -1,9 +1,8 @@
 import numpy as np
 import omegaconf
 from tqdm import trange
-from src.utils import *
-from src.EquationLearning.Transformers.GenerateTransformerData import Dataset, evaluate_and_wrap, de_tokenize
-import matplotlib.pyplot as plt
+from ...utils import *
+from ...EquationLearning.Transformers.GenerateTransformerData import Dataset, evaluate_and_wrap, de_tokenize
 
 
 def create_pickle_from_data(block, path, idx):

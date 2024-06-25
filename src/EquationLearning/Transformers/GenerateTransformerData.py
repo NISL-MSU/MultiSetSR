@@ -9,15 +9,15 @@ from pathlib import Path
 # import matplotlib.pyplot as plt
 from sympy import sympify, lambdify
 from sympy.utilities.iterables import flatten
-from src.EquationLearning.Data.dclasses import Equation
-from src.EquationLearning.Data.generator import Generator
-from src.EquationLearning.Data.dclasses import SimpleEquation
-from src.utils import load_metadata_hdf5, load_eq, get_project_root
-from src.EquationLearning.Data.sympy_utils import numeric_to_placeholder
-from src.EquationLearning.Data.data_utils import sample_symbolic_constants, bounded_operations
-from src.EquationLearning.models.utilities_expressions import add_constant_identifier, \
+from ...EquationLearning.Data.dclasses import Equation
+from ...EquationLearning.Data.generator import Generator
+from ...EquationLearning.Data.dclasses import SimpleEquation
+from ...utils import load_metadata_hdf5, load_eq, get_project_root
+from ...EquationLearning.Data.sympy_utils import numeric_to_placeholder
+from ...EquationLearning.Data.data_utils import sample_symbolic_constants, bounded_operations
+from ...EquationLearning.models.utilities_expressions import add_constant_identifier, \
     avoid_operations_between_constants, get_op_constant
-from src.EquationLearning.models.utilities_expressions import get_args, set_args
+from ...EquationLearning.models.utilities_expressions import get_args, set_args
 
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
@@ -29,14 +29,14 @@ class Dataset:
             cfg,
             mode: str
     ):
-        metadata = load_metadata_hdf5(Path(os.path.join(get_project_root(), "src/EquationLearning/Data", data_path)))
+        metadata = load_metadata_hdf5(Path(os.path.join(get_project_root(), "../EquationLearning/Data", data_path)))
         cfg.total_variables = metadata.total_variables
         cfg.total_coefficients = metadata.total_coefficients
         self.len = metadata.total_number_of_eqs
         self.eqs_per_hdf = metadata.eqs_per_hdf
         self.word2id = metadata.word2id
         self.id2word = metadata.id2word
-        self.data_path = Path(os.path.join(get_project_root(), "src/EquationLearning/Data", data_path))
+        self.data_path = Path(os.path.join(get_project_root(), "../EquationLearning/Data", data_path))
         self.mode = mode
         self.cfg = cfg
 

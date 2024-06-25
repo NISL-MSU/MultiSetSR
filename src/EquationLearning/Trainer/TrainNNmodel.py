@@ -1,8 +1,8 @@
 import torch
-from src.utils import *
+from ...utils import *
 from sklearn.model_selection import KFold
-from src.EquationLearning.models.NNModel import NNModel
-from src.EquationLearning.Data.GenerateDatasets import DataLoader, InputData
+from ...EquationLearning.models.NNModel import NNModel
+from ...EquationLearning.Data.GenerateDatasets import DataLoader, InputData
 
 
 class Trainer:

@@ -1,7 +1,7 @@
 import sympy
 import sympy as sp
 from sympy.parsing.sympy_parser import parse_expr
-from src.EquationLearning.Data.sympy_utils import numeric_to_placeholder
+from ...EquationLearning.Data.sympy_utils import numeric_to_placeholder
 
 
 def get_args(xp, return_symbols=False):
