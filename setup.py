@@ -16,6 +16,7 @@ setuptools.setup(
     license='MIT',
     package_dir={"": "src"},
     include_package_data=True,
+    include_package_saved_models=True,
     packages=setuptools.find_packages('src', exclude=['test']),
     install_requires=['matplotlib', 'numpy', 'opencv-python', 'scipy', 'statsmodels', 'tqdm', 'timeout_decorator',
                       'h5py', 'pymoo==0.6.0', 'pyodbc', 'regex', 'tensorboard', 'python-dotenv', 'omegaconf', 'pandas'],
