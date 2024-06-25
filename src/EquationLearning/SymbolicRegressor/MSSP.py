@@ -164,7 +164,7 @@ class MSSP:
                     print("\tSkeleton: " + str(skeleton) + ". Correlation: " + str(corr) + ". Expr: " + str(est_expr))
                     if abs(best_corr - corr) > 0.002:
                         best_corr = corr
-                        best_sk = expr2skeleton(est_expr)
+                        best_sk = expr2skeleton(2 * est_expr + 1)
                         if abs(corr) > 0.999:  # If correlation is very high, assume this is the best
                             break
                 print('-----------------------------------------------------------')

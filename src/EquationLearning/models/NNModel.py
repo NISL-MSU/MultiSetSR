@@ -139,13 +139,13 @@ class NNModel:
 
                 # Calculate MSE
                 msetr = mse(Ytrain_original, ypredtr[:, 0])
-                mse = mse(Yval_original, ypred[:, 0])
+                msev = mse(Yval_original, ypred[:, 0])
                 MSEtr.append(msetr)
-                MSE.append(mse)  # np.concatenate((Yval_original[:, None], ypred), axis=1)
+                MSE.append(msev)  # np.concatenate((Yval_original[:, None], ypred), axis=1)
 
             # Save model if MSE decreases
-            if mse < val_mse:
-                val_mse = mse
+            if msev < val_mse:
+                val_mse = msev
                 if filepath is not None:
                     torch.save(self.model.network, filepath.replace("weights", "NNModel") + '.pth')  # Save full model
                     torch.save(self.model.network.state_dict(), filepath)
@@ -153,7 +153,7 @@ class NNModel:
             # Print every 10 epochs
             if printProcess and epoch % 10 == 0:
                 print(filepath)
-                print('VALIDATION: Training_MSE: %.10f. MSE val: %.10f. Best_MSE: %.10f' % (msetr, mse, val_mse))
+                print('VALIDATION: Training_MSE: %.10f. MSE val: %.10f. Best_MSE: %.10f' % (msetr, msev, val_mse))
 
         # Save model
         if filepath is not None:
