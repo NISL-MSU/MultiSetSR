@@ -30,10 +30,11 @@ class MSSP:
         self.symbols = sp.symbols("{}:{}".format('x', self.n_features))
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.bb_model = bb_model
+        self.root = get_project_root()
 
         # Read config yaml
         try:
-            self.cfg = omegaconf.OmegaConf.load("EquationLearning/Transformers/config.yaml")
+            self.cfg = omegaconf.OmegaConf.load(os.path.join(self.root, "EquationLearning/Transformers/config.yaml"))
         except FileNotFoundError:
             self.cfg = omegaconf.OmegaConf.load("../Transformers/config.yaml")
 
@@ -54,9 +55,8 @@ class MSSP:
         self.n_samples = self.cfg.architecture.block_size
 
     def _load_models(self):
-        root = get_project_root()
         # Load weights of MST
-        MST_path = os.path.join(root, "EquationLearning//saved_models//saved_MSTs/Model480-batch_20-Q1")
+        MST_path = os.path.join(self.root, "EquationLearning//saved_models//saved_MSTs/Model480-batch_20-Q1")
         self.model.load_state_dict(torch.load(MST_path))
         self.model.cuda()
 
