@@ -17,7 +17,7 @@ setuptools.setup(
     packages=setuptools.find_packages('src', exclude=['test']),
     # packages=setuptools.find_namespace_packages(where="src"),
     package_dir={"": "src"},
-    package_data={'EquationLearning.saved_models': ['*']},
+    include_package_data=True,
     install_requires=['matplotlib', 'numpy', 'opencv-python', 'scipy', 'statsmodels', 'tqdm', 'timeout_decorator',
                       'h5py', 'pymoo==0.6.0', 'pyodbc', 'regex', 'tensorboard', 'python-dotenv', 'omegaconf', 'pandas'],
 )

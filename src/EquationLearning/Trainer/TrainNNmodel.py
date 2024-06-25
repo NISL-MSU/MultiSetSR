@@ -2,7 +2,7 @@ import torch
 from EquationLearning.utils import *
 from sklearn.model_selection import KFold
 from EquationLearning.models.NNModel import NNModel
-from EquationLearning.Data.GenerateDatasets import DataLoader, InputData
+from EquationLearning.EQData.GenerateDatasets import DataLoader, InputData
 
 
 class Trainer:

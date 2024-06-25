@@ -6,7 +6,7 @@ from EquationLearning.utils import *
 from EquationLearning.models.NNModel import NNModel
 from EquationLearning.Transformers.model import Model
 from EquationLearning.Optimization.CoefficientFitting import FitGA
-from EquationLearning.Data.GenerateDatasets import DataLoader, InputData
+from EquationLearning.EQData.GenerateDatasets import DataLoader, InputData
 from EquationLearning.Transformers.GenerateTransformerData import Dataset
 from EquationLearning.Trainer.TrainMultiSetTransformer import seq2equation
 from EquationLearning.models.utilities_expressions import expr2skeleton, avoid_operations_between_constants, \

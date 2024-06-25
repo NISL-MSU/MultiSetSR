@@ -4,8 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import tukey_hsd
 from EquationLearning.utils import get_project_root, tukeyLetters
-from EquationLearning.Data.dclasses import SimpleEquation
-from EquationLearning.Data.GenerateDatasets import DataLoader
+from EquationLearning.EQData.dclasses import SimpleEquation
+from EquationLearning.EQData.GenerateDatasets import DataLoader
 from EquationLearning.Optimization.CoefficientFitting import FitGA
 from EquationLearning.models.utilities_expressions import add_constant_identifier, get_skeletons
 from EquationLearning.Transformers.GenerateTransformerData import Dataset, evaluate_and_wrap
