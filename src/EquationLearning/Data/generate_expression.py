@@ -14,11 +14,12 @@ class Node:
         
 class GenExpression:
     
-    def __init__(self, max_tokens, unary_ops, max_nest):
+    def __init__(self, max_tokens, unary_ops, nb_un_ops, max_nest):
         self.max_tokens = max_tokens
         self.unary_ops = unary_ops
         self.un_ops_orig = self.unary_ops.copy()
         self.max_nest = max_nest
+        self.nb_un_ops = nb_un_ops
 
     def addNode(self, prev_node, nt, nest_level, nest_bin=0):
         if nt == 0:
@@ -31,7 +32,7 @@ class GenExpression:
             elif nest_level == self.max_nest or len(self.unary_ops) == 0:
                 type_node = random.choice(['leaf'])
             else:
-                type_node = random.choices(['unary', 'binary', 'leaf'], weights=[2, 1, 1], k=1)[0]
+                type_node = random.choices(['unary', 'binary', 'leaf'], weights=[1, 1, 1], k=1)[0]
             if nest_bin == 2:
                 type_node = 'leaf'
     
@@ -57,23 +58,24 @@ class GenExpression:
                 # Prevent forbidden operations
                 ops_to_eliminate = []
                 if parent.nodeOp == 'abs':
-                    ops_to_eliminate = ["sqrt", "pow2", "pow4", "abs"]
-                elif parent.nodeOp in ["sqrt"]:
-                    ops_to_eliminate = ["sqrt", "pow2", "pow4"]
-                elif parent.nodeOp in ['exp', 'tan', 'ln']:
-                    ops_to_eliminate = ['exp', 'sinh', 'cosh', 'tanh', 'tan', 'ln', 'pow3', 'pow4', 'pow5']
-                elif parent.nodeOp in ['sinh', 'cosh', 'tanh']:
-                    ops_to_eliminate = ['exp', 'sinh', 'cosh', 'tanh', 'tan', 'ln', 'pow2', 'pow3', 'pow4', 'pow5']
-                elif parent.nodeOp in ['pow2', 'pow3', 'pow4', 'pow5']:
-                    ops_to_eliminate = ['pow2', 'pow3', 'pow4', 'pow5', 'exp', 'sinh', 'cosh', 'tanh']
-                elif parent.nodeOp in ['sin', 'cos', 'tan']:
-                    ops_to_eliminate = ['sin', 'cos', 'tan']
-                elif parent.nodeOp in ['asin', 'acos', 'atan']:
-                    ops_to_eliminate = ['asin', 'acos', 'atan']
+                    ops_to_eliminate.extend(["sqrt", "pow2", "pow4", "abs"])
+                if parent.nodeOp in ["sqrt"]:
+                    ops_to_eliminate.extend(["sqrt", "pow2", "pow4"])
+                if parent.nodeOp in ['exp', 'tan', 'ln']:
+                    ops_to_eliminate.extend(['exp', 'sinh', 'cosh', 'tanh', 'tan', 'ln', 'pow3', 'pow4', 'pow5'])
+                if parent.nodeOp in ['sinh', 'cosh', 'tanh']:
+                    ops_to_eliminate.extend(['exp', 'sinh', 'cosh', 'tanh', 'sin', 'cos', 'tan', 'ln', 'pow2', 'pow3', 'pow4', 'pow5'])
+                if parent.nodeOp in ['pow2', 'pow3', 'pow4', 'pow5']:
+                    ops_to_eliminate.extend(['pow2', 'pow3', 'pow4', 'pow5', 'exp', 'sinh', 'cosh', 'tanh'])
+                if parent.nodeOp in ['sin', 'cos', 'tan']:
+                    ops_to_eliminate.extend(['sin', 'cos', 'tan'])
+                if parent.nodeOp in ['asin', 'acos', 'atan']:
+                    ops_to_eliminate.extend(['asin', 'acos', 'atan'])
 
                 unary_ops = [op for op in self.unary_ops if op not in ops_to_eliminate]
     
-            if len(unary_ops) > 0:
+            if len(unary_ops) > 0 and self.nb_un_ops > 0:
+                self.nb_un_ops -= 1
                 un_op = random.choice(unary_ops)
                 init_nest_level = nest_level
                 nest_level += 1
@@ -126,6 +128,12 @@ class GenExpression:
         while not any([un_op in str(fexpr) for un_op in self.un_ops_orig]):
             fexpr = self.addNode(prev_node=prev_node, nt=init_nt, nest_level=0)
             fexpr = self.tree_to_str(fexpr[0], [])
+        if len(fexpr) == 2 and not any('pow' in exp for exp in fexpr):
+            if random.random() < 0.1:
+                fexpr = ['div', '1'] + fexpr
+            if random.random() < 0.1 and not any('exp' in exp for exp in fexpr):
+                fexpr.remove('x_1')
+                fexpr = fexpr + ['div', '1', 'x_1']
         return fexpr
         
     def tree_to_str(self, node, strng):

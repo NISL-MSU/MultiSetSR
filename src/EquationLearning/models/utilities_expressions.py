@@ -347,3 +347,37 @@ def count_nodes(expr):
     for _ in sp.preorder_traversal(expr):
         node_count += 1
     return node_count
+
+
+def remove_coeffs(skeleton):
+    args = skeleton.args
+    if isinstance(skeleton, sp.Add):
+        terms = 0
+        for arg in args:
+            if isinstance(arg, sp.Symbol) and str(arg) == 'c':
+                terms += 0
+            else:
+                terms += arg
+        skeleton = terms
+
+    args = skeleton.args
+    if isinstance(skeleton, sp.Add) and all([isinstance(arg, sp.Mul) for arg in args]) and all([str(arg)[:2] == 'c*' for arg in args]):
+        terms = 0
+        for ia, arg in enumerate(args):
+            if ia == 0:
+                terms += sp.sympify(str(arg)[2:])
+            else:
+                terms += arg
+        skeleton = terms
+
+    args = skeleton.args
+    if isinstance(skeleton, sp.Mul) and len(args) == 2:
+        terms = 1
+        for arg in args:
+            if isinstance(arg, sp.Symbol) and str(arg) == 'c':
+                terms *= 1
+            else:
+                terms *= arg
+        skeleton = terms
+
+    return skeleton

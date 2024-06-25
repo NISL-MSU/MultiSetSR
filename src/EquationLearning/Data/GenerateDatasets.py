@@ -176,14 +176,14 @@ class DataLoader:
         np.random.seed(7)
         # Define features
         if not self.extrapolation:
-            x1 = np.random.uniform(-5, 5, size=n)
-            x2 = np.random.uniform(-3, 3, size=n)
-            x3 = np.random.uniform(-3, 3, size=n)
+            x1 = np.random.uniform(-10, 10, size=n)
+            x2 = np.random.uniform(-5, 5, size=n)
+            x3 = np.random.uniform(-5, 5, size=n)
             x4 = np.random.uniform(-3, 3, size=n)
         else:
-            x1 = sample_exclude(-10, 10, n, -5, 5)
-            x2 = sample_exclude(-6, 6, n, -3, 3)
-            x3 = sample_exclude(-6, 6, n, -3, 3)
+            x1 = sample_exclude(-20, 20, n, -10, 10)
+            x2 = sample_exclude(-10, 10, n, -5, 5)
+            x3 = sample_exclude(-10, 10, n, -5, 5)
             x4 = sample_exclude(-6, 6, n, -3, 3)
         self.X = np.array([x1, x2, x3, x4]).T
         # Calculate output
@@ -227,17 +227,17 @@ class DataLoader:
         self.names = ['x0', 'x1']
         self.types = ['continuous', 'continuous']
         symb = sp.symbols("{}:{}".format('x', 2))
-        self.expr = (1 - symb[1]**2) / (sp.sin(np.pi * symb[0]) + 1.5)
+        self.expr = (1 - symb[1]**2) / (sp.sin(2 * np.pi * symb[0]) + 1.5)
 
     def E8(self, n=50000):  # S5 in "Informed Equation Learning" (Werner et. al, 2021)
         np.random.seed(7)
         # Define features
         if not self.extrapolation:
-            x1 = np.random.uniform(-25, 25, size=n)
-            x2 = np.random.uniform(-25, 25, size=n)
+            x1 = np.random.uniform(-5, 5, size=n)
+            x2 = np.random.uniform(-5, 5, size=n)
         else:
-            x1 = sample_exclude(-50, 50, n, -25, 25)
-            x2 = sample_exclude(-50, 50, n, -25, 25)
+            x1 = sample_exclude(-10, 10, n, -5, 5)
+            x2 = sample_exclude(-10, 10, n, -5, 5)
         self.X = np.array([x1, x2]).T
         # Calculate output
         self.Y = x1**4 / (x1**4 + 1) + x2**4 / (x2**4 + 1)

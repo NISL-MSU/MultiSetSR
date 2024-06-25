@@ -151,12 +151,12 @@ class FitGA:
             return S
 
         # Create the tournament selection
-        selection = TournamentSelection(pressure=2, func_comp=binary_tournament)
+        # selection = TournamentSelection(pressure=2, func_comp=binary_tournament)
 
         # Fit coefficients
         problem = CoefficientFitting(skeleton=self.skeleton, x_values=self.Xs, y_est=self.Ys, climits=self.c_limits,
                                      loss_MSE=self.loss_MSE)
-        algorithm = GA(pop_size=300)
+        algorithm = GA(pop_size=200)
         res = minimize(problem, algorithm, self.termination, seed=1, verbose=False)
         resX = np.round(res.X, 6)
         resX[np.abs(resX) <= 0.00001] = 0
@@ -176,6 +176,9 @@ class FitGA:
             ys = np.repeat(resX, len(self.Xs), axis=0)
 
         if len(self.skeleton.args) > 0:
-            return fs, np.mean(np.abs(self.Ys - ys))
+            if self.loss_MSE:
+                return fs, np.mean(np.abs(self.Ys - ys))
+            else:
+                return fs, -pearsonr(self.Ys, ys)[0]
         else:
             return resX, res.F
