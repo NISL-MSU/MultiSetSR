@@ -165,7 +165,7 @@ class MSSP:
                     if abs(best_corr - corr) > 0.002:
                         best_corr = corr
                         best_sk = expr2skeleton(2 * est_expr + 1)
-                        if abs(corr) > 0.999:  # If correlation is very high, assume this is the best
+                        if abs(corr) > 0.998:  # If correlation is very high, assume this is the best
                             break
                 print('-----------------------------------------------------------')
                 print("Selected skeleton: " + str(best_sk) + "\n")
