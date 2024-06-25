@@ -3,7 +3,7 @@ import sympy as sp
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import tukey_hsd
-from utils import get_project_root, tukeyLetters
+from EquationLearning.utils import get_project_root, tukeyLetters
 from EquationLearning.Data.dclasses import SimpleEquation
 from EquationLearning.Data.GenerateDatasets import DataLoader
 from EquationLearning.Optimization.CoefficientFitting import FitGA

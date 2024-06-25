@@ -3,7 +3,6 @@ import time
 import h5py
 import types
 import click
-import signal
 import pickle
 import copyreg
 import warnings
@@ -16,8 +15,8 @@ from itertools import chain
 from sympy import lambdify, sympify
 from ...EquationLearning.Data import dclasses
 from ...EquationLearning.Data import generator
-from ...utils import create_env, H5FilesCreator
-from ...utils import code_unpickler, code_pickler, get_project_root
+from EquationLearning.utils import create_env, H5FilesCreator
+from EquationLearning.utils import code_unpickler, code_pickler, get_project_root
 from ...EquationLearning.Data.sympy_utils import remove_dummy_constants
 
 

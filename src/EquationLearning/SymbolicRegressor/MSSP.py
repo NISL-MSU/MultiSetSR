@@ -2,7 +2,7 @@ import sys
 import torch
 import omegaconf
 import sympy as sp
-from ...utils import *
+from EquationLearning.utils import *
 from ...EquationLearning.models.NNModel import NNModel
 from ...EquationLearning.Transformers.model import Model
 from ...EquationLearning.Optimization.CoefficientFitting import FitGA

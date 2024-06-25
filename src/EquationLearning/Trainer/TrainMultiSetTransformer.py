@@ -4,7 +4,7 @@ import torch
 import warnings
 import omegaconf
 from torch import nn
-from ...utils import *
+from EquationLearning.utils import *
 from torch import optim
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.tensorboard import SummaryWriter

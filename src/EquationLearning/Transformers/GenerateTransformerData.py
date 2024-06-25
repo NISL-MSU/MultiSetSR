@@ -12,7 +12,7 @@ from sympy.utilities.iterables import flatten
 from ...EquationLearning.Data.dclasses import Equation
 from ...EquationLearning.Data.generator import Generator
 from ...EquationLearning.Data.dclasses import SimpleEquation
-from ...utils import load_metadata_hdf5, load_eq, get_project_root
+from EquationLearning.utils import load_metadata_hdf5, load_eq, get_project_root
 from ...EquationLearning.Data.sympy_utils import numeric_to_placeholder
 from ...EquationLearning.Data.data_utils import sample_symbolic_constants, bounded_operations
 from ...EquationLearning.models.utilities_expressions import add_constant_identifier, \

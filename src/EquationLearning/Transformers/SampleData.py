@@ -1,7 +1,6 @@
-import numpy as np
 import omegaconf
 from tqdm import trange
-from ...utils import *
+from EquationLearning.utils import *
 from ...EquationLearning.Transformers.GenerateTransformerData import Dataset, evaluate_and_wrap, de_tokenize
 
 

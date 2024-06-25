@@ -1,6 +1,6 @@
 import random
 
-from ...utils import *
+from EquationLearning.utils import *
 from tqdm import trange
 from torch import optim
 from ...EquationLearning.models.network import *

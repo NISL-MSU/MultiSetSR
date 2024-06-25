@@ -7,7 +7,7 @@ import sympy as sp
 import numpy as np
 from sympy import lambdify
 from typing import List, Any
-from ...utils import get_project_root
+from EquationLearning.utils import get_project_root
 from dataclasses import dataclass, field
 from ...EquationLearning.Data.FeynmanReader import FeynmanReader
 from ...EquationLearning.Data.data_utils import bounded_operations
