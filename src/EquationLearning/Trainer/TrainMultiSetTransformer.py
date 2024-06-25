@@ -41,7 +41,7 @@ def seq2equation(tokenized, id2word, printFlag=False):
     prefix = de_tokenize(tokenized, id2word)
     if printFlag:
         print("Prefix notation: " + str(prefix))
-    env, param, config_dict = create_env(os.path.join(get_project_root(), "dataset_configuration.json"))
+    env, param, config_dict = create_env(os.path.join(get_project_root(), "EquationLearning//dataset_configuration.json"))
     infix = env.prefix_to_infix(prefix, coefficients=env.coefficients, variables=env.variables)
     return infix
 

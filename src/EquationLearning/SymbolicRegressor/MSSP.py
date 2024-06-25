@@ -33,7 +33,7 @@ class MSSP:
 
         # Read config yaml
         try:
-            self.cfg = omegaconf.OmegaConf.load("src/EquationLearning/Transformers/config.yaml")
+            self.cfg = omegaconf.OmegaConf.load("EquationLearning/Transformers/config.yaml")
         except FileNotFoundError:
             self.cfg = omegaconf.OmegaConf.load("../Transformers/config.yaml")
 
@@ -56,7 +56,7 @@ class MSSP:
     def _load_models(self):
         root = get_project_root()
         # Load weights of MST
-        MST_path = os.path.join(root, "src//EquationLearning//models//saved_models/Model480-batch_20-Q1")
+        MST_path = os.path.join(root, "EquationLearning//saved_models//saved_MSTs/Model480-batch_20-Q1")
         self.model.load_state_dict(torch.load(MST_path))
         self.model.cuda()
 
@@ -189,7 +189,7 @@ if __name__ == '__main__':
     # Define NN and load weights
     ###########################################
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    folder = os.path.join(get_project_root(), "src//EquationLearning//models//saved_NNs//" + datasetName)
+    folder = os.path.join(get_project_root(), "EquationLearning//saved_models//saved_NNs//" + datasetName)
     filepath = folder + "//weights-NN-" + datasetName
     nn_model = None
     if os.path.exists(filepath.replace("weights", "NNModel") + '.pth'):
