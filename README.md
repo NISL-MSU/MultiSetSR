@@ -13,8 +13,7 @@ and outputs a common skeleton expression, as follows:
 </p>
 
 We present a novel transformer model called "Multi-Set Transformer" to solve the MSSP problem. The model is pre-trained 
-on a large dataset of synthetic symbolic expressions using an entropy-based loss function. The 
-identification process of the functional form between each variable and the system's response is viewed as a sequence 
+on a large dataset of synthetic symbolic expressions. The identification process of the functional form between each variable and the system's response is viewed as a sequence 
 of MSSP problems:
 
 <p align="center">
