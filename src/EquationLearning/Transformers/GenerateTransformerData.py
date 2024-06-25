@@ -9,12 +9,12 @@ from pathlib import Path
 # import matplotlib.pyplot as plt
 from sympy import sympify, lambdify
 from sympy.utilities.iterables import flatten
-from EquationLearning.EQData.dclasses import Equation
-from EquationLearning.EQData.generator import Generator
-from EquationLearning.EQData.dclasses import SimpleEquation
+from EquationLearning.Data.dclasses import Equation
+from EquationLearning.Data.generator import Generator
+from EquationLearning.Data.dclasses import SimpleEquation
 from EquationLearning.utils import load_metadata_hdf5, load_eq, get_project_root
-from EquationLearning.EQData.sympy_utils import numeric_to_placeholder
-from EquationLearning.EQData.data_utils import sample_symbolic_constants, bounded_operations
+from EquationLearning.Data.sympy_utils import numeric_to_placeholder
+from EquationLearning.Data.data_utils import sample_symbolic_constants, bounded_operations
 from EquationLearning.models.utilities_expressions import add_constant_identifier, \
     avoid_operations_between_constants, get_op_constant
 from EquationLearning.models.utilities_expressions import get_args, set_args

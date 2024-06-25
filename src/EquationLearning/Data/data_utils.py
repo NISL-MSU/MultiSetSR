@@ -3,7 +3,7 @@
 
 import random
 from typing import Tuple
-from EquationLearning.EQData.dclasses import Equation
+from EquationLearning.Data.dclasses import Equation
 
 
 def group_symbolically_indetical_eqs(data, indexes_dict, disjoint_sets):

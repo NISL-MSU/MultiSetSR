@@ -10,9 +10,9 @@ from collections import Counter
 from .sympy_utils import simplify
 from collections import OrderedDict
 from sympy.calculus.util import AccumBounds
-from EquationLearning.EQData.generate_expression import GenExpression
+from EquationLearning.Data.generate_expression import GenExpression
 from sympy.parsing.sympy_parser import parse_expr
-from EquationLearning.EQData.sympy_utils import numeric_to_placeholder
+from EquationLearning.Data.sympy_utils import numeric_to_placeholder
 from .sympy_utils import remove_root_constant_terms, add_constants, remove_numeric_constants
 from EquationLearning.models.utilities_expressions import add_constant_identifier, avoid_operations_between_constants
 

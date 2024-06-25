@@ -7,9 +7,9 @@ import numpy as np
 from typing import Tuple
 from pathlib import Path
 from sklearn.metrics import r2_score
-from EquationLearning.EQData import generator
+from EquationLearning.Data import generator
 from sklearn.linear_model import LinearRegression
-from EquationLearning.EQData.dclasses import DatasetDetails, Equation, GeneratorDetails
+from EquationLearning.Data.dclasses import DatasetDetails, Equation, GeneratorDetails
 
 
 def get_project_root() -> Path:
