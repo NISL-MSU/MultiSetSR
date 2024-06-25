@@ -3,11 +3,11 @@ import warnings
 import numpy as np
 from tqdm import trange
 from scipy.stats import pearsonr
-from EquationLearning.utils import calc_distance_curves
-from EquationLearning.models.utilities_expressions import *
-from EquationLearning.Data.sympy_utils import modify_trig_expr
-from EquationLearning.Optimization.CoefficientFitting import FitGA
-from EquationLearning.models.utilities_expressions import add_constant_identifier
+from src.utils import calc_distance_curves
+from src.EquationLearning.models.utilities_expressions import *
+from src.EquationLearning.Data.sympy_utils import modify_trig_expr
+from src.EquationLearning.Optimization.CoefficientFitting import FitGA
+from src.EquationLearning.models.utilities_expressions import add_constant_identifier
 
 
 warnings.filterwarnings("ignore")
@@ -111,19 +111,14 @@ class CheckDependency:
                 skeleton = remove_coeffs(skeleton)
 
             # Fit coefficients
-            est_exprs, resX = [], None
+            est_exprs = []
             print("\tFitting expression...")
             time.sleep(0.5)
             for r in trange(self.ns):
-                # Optimize
-                # if r == 0:
+                # Optimize correlation, not error
                 problem = FitGA(skeleton, xt_values, y[:, r], [np.min(xt_values), np.max(xt_values)],
-                                self.c_limits, max_it=200, loss_MSE=True)
-                est_expr, _, resX = problem.run()
-                # else:
-                #     problem = FitGA(skeleton, xt_values, y[:, r], [np.min(xt_values), np.max(xt_values)],
-                #                     self.c_limits, max_it=100, loss_MSE=True, biased_sol=resX)
-                #     est_expr, _, resX = problem.run()
+                                self.c_limits, max_it=100, loss_MSE=True)
+                est_expr, _ = problem.run()
                 est_exprs.append(modify_trig_expr(est_expr))
             print('\t', est_exprs)
 
@@ -163,12 +158,12 @@ def find_dependent_coeffs(x_values, skeleton, exprs, coeffs=None):
         coeffs = []
     for arg_id in range(len(exprs[0].args)):
         # Evaluate each sub-expression
-        ys, next_exprs, tgt_sk = [], [], None
+        ys = []
         coef = None
         for i, expr in enumerate(exprs):
-            if i == 0:
-                if 'x' not in str(expr.args[arg_id].free_symbols):
-                    ys.append(np.repeat(float(expr.args[arg_id]), len(x_values), axis=0))
+            if 'x' not in str(expr.args[arg_id].free_symbols):
+                ys.append(np.repeat(float(expr.args[arg_id]), len(x_values), axis=0))
+                if i == 0:
                     # Match this number with a coefficient of the skeleton at the same tree level
                     if isinstance(expr, sympy.Mul):  # If this coeff. is inside a mult, it's a mult coeff.
                         for cf in skeleton.args:
@@ -180,39 +175,9 @@ def find_dependent_coeffs(x_values, skeleton, exprs, coeffs=None):
                             if 'ca' in str(cf):
                                 coef = cf
                                 break
-                else:
-                    fs_lambda = sp.lambdify(sympy.flatten(expr.args[arg_id].free_symbols), expr.args[arg_id])
-                    ys.append(fs_lambda(x_values))
-                next_exprs.append(expr.args[arg_id])
-                if coef is not None:
-                    tgt_sk = 'c'
-                elif expr.args[arg_id].is_symbol:
-                    tgt_sk = expr.args[arg_id]
-                else:
-                    tgt_sk = expr2skeleton(expr.args[arg_id])
             else:
-                # Match exprs[0].args[arg_id] with an argument of expr that has the same skeleton
-                next_arg = None
-                for n_arg in expr.args:
-                    if n_arg.is_number:
-                        obj_sk = 'c'
-                    elif n_arg.is_symbol:
-                        obj_sk = n_arg
-                    else:
-                        obj_sk = expr2skeleton(n_arg)
-                    if str(obj_sk) == str(tgt_sk):
-                        next_arg = n_arg
-                        break
-                next_exprs.append(next_arg)
-                try:
-                    if 'x' not in str(next_arg.free_symbols):
-                        ys.append(np.repeat(float(next_arg), len(x_values), axis=0))
-                    else:
-                        fs_lambda = sp.lambdify(sympy.flatten(next_arg.free_symbols), next_arg)
-                        ys.append(fs_lambda(x_values))
-                except:
-                    print()
-
+                fs_lambda = sp.lambdify(sympy.flatten(expr.args[arg_id].free_symbols), expr.args[arg_id])
+                ys.append(fs_lambda(x_values))
         # Check if there's at least one column that differs from the rest
         go_deeper = False  # check_difference(np.array(ys).T)
         if check_correlation(np.array(ys).T):
@@ -223,6 +188,7 @@ def find_dependent_coeffs(x_values, skeleton, exprs, coeffs=None):
             if coef is not None:  # If this subtree is a coefficient leaf of the skeleton
                 coeffs.append(coef)
             else:  # If there's a difference, jump to a deeper level of the tree to find the coeff, that is causing it
+                next_exprs = [expr.args[arg_id] for expr in exprs]
                 # Find what's the subtree of 'skeleton' that matches the skeleton of the analyzed expressions
                 tgt_sk = expr2skeleton(next_exprs[0])
                 skeleton_noid = remove_constant_identifier(skeleton)
@@ -239,7 +205,7 @@ def check_difference(matrix, epsi=0.08):
     num_columns = matrix.shape[1]
     for i in range(num_columns):
         for j in range(i+1, num_columns):
-            if np.mean(np.abs((matrix[:, i] - matrix[:, j]) / matrix[:, i])) >= epsi:
+            if np.min(np.abs((matrix[:, i] - matrix[:, j]) / matrix[:, i])) >= epsi:
                 return True
     return False
 
@@ -276,16 +242,15 @@ if __name__ == '__main__':
     xt = 0  # Variable that is currently being analyzed
 
     # Execute program
-    # print('Initial skeleton: ' + str(g_skeleton(symbols)))
-    # print('-----------------------------------------------------------')
-    # check_dependency = CheckDependency(skeleton=g_skeleton(symbols), t=xt, list_vars=symbols, gen_func=g_func(symbols),
-    #                                    v_limits=limits, c_limits=clim)
-    # new_sk, new_c = check_dependency.run()
+    print('Initial skeleton: ' + str(g_skeleton(symbols)))
+    print('-----------------------------------------------------------')
+    check_dependency = CheckDependency(skeleton=g_skeleton(symbols), t=xt, list_vars=symbols, gen_func=g_func(symbols),
+                                       v_limits=limits, c_limits=clim)
+    new_sk, new_c = check_dependency.run()
 
-    exprsv = [sympy.sympify('-0.26462*x1 + 1.091001*sin(2.512474*x1 + 7.742902) + 0.000432'),
-              sympy.sympify('-2.843676*x1 + 1.02262*sin(11.928201*x1 + 20.29243665) + 0.060983'),
-              sympy.sympify('1.8708*x1 + 1.086215*sin(5.411251*x1 + 15.223195) - 0.000731')]
+    # exprsv = [sympy.sympify('7.6251*exp(-2.5/x0**2)/x0'),
+    #           sympy.sympify('9.25025*exp(-0.356682/x0**2)/x0'),
+    #           sympy.sympify('9.250221*exp(-2.270248/x0**2)/x0')]
 
-    skel, _, _ = add_constant_identifier(sympy.sympify('c*x1 + c*sin(c*x1 + c) + c'))
-    cs = find_dependent_coeffs(np.random.uniform(limits[0], limits[1], size=500), skel, exprsv)
-    print()
+    # skel, _, _ = add_constant_identifier(g_skeleton(symbols))
+    # cs = find_dependent_coeffs(np.random.uniform(limits[0], limits[1], size=500), skel, exprsv)
