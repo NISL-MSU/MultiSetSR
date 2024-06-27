@@ -294,6 +294,15 @@ def modify_trig_expr(xp):
     return new_xp
 
 
+def constants_to_placeholder(s, coeffs, symbol="c"):
+    sympy_expr = s
+    for si in set(coeffs.keys()):
+        if "c" in si:
+            sympy_expr = sympy_expr.subs(si, symbol)
+            sympy_expr = sympy_expr.subs(si, symbol)
+    return sympy_expr
+
+
 def numeric_to_placeholder(expr, var=None):
     """Given an expression with numeric constants, replace all constants with placeholder 'c'
    If var is not None, consider any variable different from 'var' a numeric constant"""

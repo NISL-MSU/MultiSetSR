@@ -14,16 +14,8 @@ from EquationLearning.Data.generate_expression import GenExpression
 from sympy.parsing.sympy_parser import parse_expr
 from EquationLearning.Data.sympy_utils import numeric_to_placeholder
 from .sympy_utils import remove_root_constant_terms, add_constants, remove_numeric_constants
+from EquationLearning.Data.sympy_utils import constants_to_placeholder
 from EquationLearning.models.utilities_expressions import add_constant_identifier, avoid_operations_between_constants
-
-
-def constants_to_placeholder(s, coeffs, symbol="c"):
-    sympy_expr = s
-    for si in set(coeffs.keys()):
-        if "c" in si:
-            sympy_expr = sympy_expr.subs(si, symbol)
-            sympy_expr = sympy_expr.subs(si, symbol)
-    return sympy_expr
 
 
 CLEAR_SYMPY_CACHE_FREQ = 10000
@@ -47,15 +39,6 @@ class ImAccomulationBounds(Exception):
 
 class InvalidPrefixExpression(Exception):
     pass
-
-
-def constants_to_placeholder(s, coeffs, symbol="c"):
-    sympy_expr = s
-    for si in set(coeffs.keys()):
-        if "c" in si:
-            sympy_expr = sympy_expr.subs(si, symbol)
-            sympy_expr = sympy_expr.subs(si, symbol)
-    return sympy_expr
 
 
 class Generator(object):
@@ -568,6 +551,21 @@ class Generator(object):
         f0 = sp.sympify(infix.format(**coeff_dict))
         expr_with_placeholder = numeric_to_placeholder(f0)
         eq_sympy_infix = constants_to_placeholder(expr_with_placeholder, coeff_dict)
+
+        if str(eq_sympy_infix) in ['c*log(c*cos(c*x_1 + c) + c) + c', 'c*log(c*cos(c*x_1) + c) + c', 'c*log(c*cos(c + x_1) + c) + c', 'c*log(c*sin(c*x_1 + c) + c) + c', 'c*log(c*sin(c*x_1) + c) + c', 'c*log(c*sin(c + x_1) + c) + c']:
+            if random.random() < 0.5:
+                if random.random() < 0.5:
+                    eq_sympy_infix = sp.sympify('c + c/(c + cos(c*x_1))')
+                else:
+                    eq_sympy_infix = sp.sympify('c + c/(c + cos(c*x_1))')
+        elif str(eq_sympy_infix) in ['c*sqrt(c + c*cos(c*x_1)) + c', 'c*sqrt(c + c*cos(c*x_1 + c)) + c', 'c*sqrt(c + cos(c*x_1 + c)) + c',
+                                     'c*sqrt(c + c*sin(c*x_1) + c) + c', 'c*sqrt(c + c*sin(c*x_1 + c)) + c', 'c*sqrt(c + sin(c*x_1 + c)) + c']:
+            if random.random() < 0.5:
+                if random.random() < 0.5:
+                    eq_sympy_infix = sp.sympify('c*cos(c*x_1 + c) + c')
+                else:
+                    eq_sympy_infix = sp.sympify('c*sin(c*x_1 + c) + c')
+
         eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('*(c + x_1)', '*(c*x_1 + c)'))
         eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('c*(c*x_1 + c)', 'c*(x_1 + c)'))
         eq_sympy_infix = sp.sympify(str(eq_sympy_infix).replace('sqrt(c*x_1 + c)', 'sqrt(x_1 + c)'))

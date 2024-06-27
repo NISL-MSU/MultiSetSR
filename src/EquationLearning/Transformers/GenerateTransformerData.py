@@ -13,7 +13,7 @@ from EquationLearning.Data.dclasses import Equation
 from EquationLearning.Data.generator import Generator
 from EquationLearning.Data.dclasses import SimpleEquation
 from EquationLearning.utils import load_metadata_hdf5, load_eq, get_project_root
-from EquationLearning.Data.sympy_utils import numeric_to_placeholder
+from EquationLearning.Data.sympy_utils import numeric_to_placeholder, constants_to_placeholder
 from EquationLearning.Data.data_utils import sample_symbolic_constants, bounded_operations
 from EquationLearning.models.utilities_expressions import add_constant_identifier, \
     avoid_operations_between_constants, get_op_constant
@@ -71,15 +71,6 @@ class Dataset:
 
     def __len__(self):
         return self.len
-
-
-def constants_to_placeholder(s, coeffs, symbol="c"):
-    sympy_expr = s
-    for si in set(coeffs.keys()):
-        if "c" in si:
-            sympy_expr = sympy_expr.subs(si, symbol)
-            sympy_expr = sympy_expr.subs(si, symbol)
-    return sympy_expr
 
 
 def tokenize(prefix_expr: list, word2id: dict) -> list:
@@ -188,7 +179,7 @@ def evaluate_and_wrap(eq, cfg, word2id, return_exprs=True, extrapolate=False, n_
     exprs = eq.expr
     curr_p = cfg.max_number_of_points
     # # Uncomment the code below if you have a specific skeleton from which you want to sample data as an example
-    # sk = sympy.sympify('c*sqrt(c*sin(c*x_1 + c) + c) + c')
+    # sk = sympy.sympify('c*log(c*cos(c*x0) + c) + c')
     # sk, _, _ = add_constant_identifier(sk)
     # coeff_dict = dict()
     # var = None

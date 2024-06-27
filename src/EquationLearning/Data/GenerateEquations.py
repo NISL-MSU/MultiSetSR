@@ -124,7 +124,7 @@ def creator(number_of_equations, eq_per_block, debug):
     eq_per_block = min(total_number // cpus_available, int(eq_per_block))
     print("There are {} equations per block. The progress bar will have this resolution".format(eq_per_block))
     warnings.filterwarnings("error")
-    env, param, config_dict = create_env(os.path.join(get_project_root(), "dataset_configuration.json"))
+    env, param, config_dict = create_env(os.path.join(get_project_root(), "EquationLearning/dataset_configuration.json"))
     if not debug:
         folder_path = Path(f"data/raw_datasets/{number_of_equations}")
     else:

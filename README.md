@@ -1,4 +1,4 @@
-[//]: # ([![Paper]&#40;https://img.shields.io/badge/Paper-OpenAccess-b31b1b.svg&#41;]&#40;https://www.mdpi.com/2072-4292/13/18/3649&#41;)
+[![Paper](https://img.shields.io/badge/arXiv-2406.17834-b31b1b.svg)](https://arxiv.org/abs/2406.17834)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NISL-MSU/MultiSetSR/blob/master/DemoMSSP.ipynb)
 
 # MSSP: Multi-Set Symbolic Skeleton Prediction for Symbolic Regression
@@ -34,8 +34,10 @@ The following libraries have to be installed:
 * [Git](https://git-scm.com/download/) 
 * [Pytorch](https://pytorch.org/)
 
-To install the package, run `pip install git+https://github.com/NISL-MSU/MultiSetSR` in the terminal (this option will be available after the paper acceptance). 
+To install the package, run `pip install git+https://github.com/NISL-MSU/MultiSetSR` in the terminal. 
 This will also install additional packages such as pymoo, sklearn, and tensorboard.
+
+You can also try the package on [Google Colab](https://colab.research.google.com/github/NISL-MSU/MultiSetSR/blob/master/DemoMSSP.ipynb).
 
 
 ## Usage
@@ -64,7 +66,7 @@ Use this Bibtex to cite this repository
 @INPROCEEDINGS{MultiSetSR,
 author="Giorgio Morales and John W. Sheppard",
 title="Univariate Skeleton Prediction in Multivariate Systems Using Transformers",
-booktitle="Machine Learning and Knowledge Discovery in Databases",
+booktitle="Machine Learning and Knowledge Discovery in Databases: Research Track. ECML PKDD 2024",
 year="2024",
 location = {Vilnius, Lithuania}
 }
