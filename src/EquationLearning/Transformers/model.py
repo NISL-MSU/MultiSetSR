@@ -205,7 +205,7 @@ class Model(nn.Module):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.cfg.lr)
         return optimizer
 
-    def inference(self, batch):
+    def inference(self, batch, beam_size):
         """Perform inference using beam search"""
         with torch.no_grad():
             #############################################################
@@ -237,28 +237,28 @@ class Model(nn.Module):
                 enc_output += sym_enc_output
 
             src_enc = enc_output
-            shape_enc_src = (self.cfg_inference.beam_size,) + src_enc.shape[1:]
+            shape_enc_src = (beam_size,) + src_enc.shape[1:]
             enc_src = src_enc.unsqueeze(1).expand(
-                (1, self.cfg_inference.beam_size) + src_enc.shape[1:]).contiguous().view(
+                (1, beam_size) + src_enc.shape[1:]).contiguous().view(
                 shape_enc_src)
 
             #############################################################
             # DECODER AND BEAM SEARCH
             #############################################################
-            generated = torch.zeros([self.cfg_inference.beam_size, self.cfg.length_eq], dtype=torch.long,
+            generated = torch.zeros([beam_size, self.cfg.length_eq], dtype=torch.long,
                                     device=self.dummy_param.device, )
             generated[:, 0] = 1  # Initialize with SOS symbol
             cache = {"slen": 0}
-            generated_hyps = BeamHypotheses(self.cfg_inference.beam_size, self.cfg.length_eq, 1.0, 1)
+            generated_hyps = BeamHypotheses(beam_size, self.cfg.length_eq, 1.0, 1)
             done = False
             # Beam Scores
-            beam_scores = torch.zeros(self.cfg_inference.beam_size, device=self.dummy_param.device, dtype=torch.long)
+            beam_scores = torch.zeros(beam_size, device=self.dummy_param.device, dtype=torch.long)
             beam_scores[1:] = -1e9
 
             cur_len = torch.tensor(1, device=self.dummy_param.device, dtype=torch.int64)
 
             # Initialize lengths tensor
-            lengths = torch.ones(self.cfg_inference.beam_size, device=self.dummy_param.device, dtype=torch.float32)
+            lengths = torch.ones(beam_size, device=self.dummy_param.device, dtype=torch.float32)
 
             # Repeat until maximum length is reached
             while cur_len < self.cfg.length_eq:
@@ -288,9 +288,9 @@ class Model(nn.Module):
                 n_words = scores.shape[-1]
                 # Select next words with scores
                 _scores = scores + beam_scores[:, None].expand_as(scores)
-                _scores = _scores.view(self.cfg_inference.beam_size * n_words)
+                _scores = _scores.view(beam_size * n_words)
 
-                next_scores, next_words = torch.topk(_scores, 2 * self.cfg_inference.beam_size, dim=0, largest=True,
+                next_scores, next_words = torch.topk(_scores, 2 * beam_size, dim=0, largest=True,
                                                      sorted=True)
                 done = done or generated_hyps.is_done(next_scores.max().item())
                 next_sent_beam = []
@@ -308,12 +308,12 @@ class Model(nn.Module):
                         next_sent_beam.append((value, word_id, beam_id))
 
                     # The beam for next step is full
-                    if len(next_sent_beam) == self.cfg_inference.beam_size:
+                    if len(next_sent_beam) == beam_size:
                         break
 
                 # Update next beam content
                 if len(next_sent_beam) == 0:
-                    next_sent_beam = [(0, self.trg_pad_idx, 0)] * self.cfg_inference.beam_size  # pad the batch
+                    next_sent_beam = [(0, self.trg_pad_idx, 0)] * beam_size  # pad the batch
 
                 beam_scores = torch.tensor([x[0] for x in next_sent_beam], device=self.dummy_param.device)
                 beam_words = torch.tensor([x[1] for x in next_sent_beam], device=self.dummy_param.device)

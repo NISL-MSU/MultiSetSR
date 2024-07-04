@@ -554,10 +554,7 @@ class Generator(object):
 
         if str(eq_sympy_infix) in ['c*log(c*cos(c*x_1 + c) + c) + c', 'c*log(c*cos(c*x_1) + c) + c', 'c*log(c*cos(c + x_1) + c) + c', 'c*log(c*sin(c*x_1 + c) + c) + c', 'c*log(c*sin(c*x_1) + c) + c', 'c*log(c*sin(c + x_1) + c) + c']:
             if random.random() < 0.5:
-                if random.random() < 0.5:
-                    eq_sympy_infix = sp.sympify('c + c/(c + cos(c*x_1))')
-                else:
-                    eq_sympy_infix = sp.sympify('c + c/(c + cos(c*x_1))')
+                eq_sympy_infix = sp.sympify('c + c/(c + cos(c*x_1 + c))')
         elif str(eq_sympy_infix) in ['c*sqrt(c + c*cos(c*x_1)) + c', 'c*sqrt(c + c*cos(c*x_1 + c)) + c', 'c*sqrt(c + cos(c*x_1 + c)) + c',
                                      'c*sqrt(c + c*sin(c*x_1) + c) + c', 'c*sqrt(c + c*sin(c*x_1 + c)) + c', 'c*sqrt(c + sin(c*x_1 + c)) + c']:
             if random.random() < 0.5:
