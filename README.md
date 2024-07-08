@@ -1,3 +1,6 @@
+[![Paper](https://img.shields.io/badge/arXiv-2406.17834-b31b1b.svg)](https://arxiv.org/abs/2406.17834)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NISL-MSU/MultiSetSR/blob/master/DemoMSSP.ipynb)
+
 # MSSP: Multi-Set Symbolic Skeleton Prediction for Symbolic Regression
 
 ## Description
@@ -13,8 +16,7 @@ and outputs a common skeleton expression, as follows:
 </p>
 
 We present a novel transformer model called "Multi-Set Transformer" to solve the MSSP problem. The model is pre-trained 
-on a large dataset of synthetic symbolic expressions using an entropy-based loss function. The 
-identification process of the functional form between each variable and the system's response is viewed as a sequence 
+on a large dataset of synthetic symbolic expressions. The identification process of the functional form between each variable and the system's response is viewed as a sequence 
 of MSSP problems:
 
 <p align="center">
@@ -32,8 +34,10 @@ The following libraries have to be installed:
 * [Git](https://git-scm.com/download/) 
 * [Pytorch](https://pytorch.org/)
 
-To install the package, run `pip install git+https://github.com/NISL-MSU/MultiSetSR` in the terminal (this option will be available after the paper acceptance). 
+To install the package, run `pip install git+https://github.com/NISL-MSU/MultiSetSR` in the terminal. 
 This will also install additional packages such as pymoo, sklearn, and tensorboard.
+
+You can also try the package on [Google Colab](https://colab.research.google.com/github/NISL-MSU/MultiSetSR/blob/master/DemoMSSP.ipynb).
 
 
 ## Usage
@@ -62,7 +66,7 @@ Use this Bibtex to cite this repository
 @INPROCEEDINGS{MultiSetSR,
 author="Giorgio Morales and John W. Sheppard",
 title="Univariate Skeleton Prediction in Multivariate Systems Using Transformers",
-booktitle="Machine Learning and Knowledge Discovery in Databases",
+booktitle="Machine Learning and Knowledge Discovery in Databases: Research Track. ECML PKDD 2024",
 year="2024",
 location = {Vilnius, Lithuania}
 }

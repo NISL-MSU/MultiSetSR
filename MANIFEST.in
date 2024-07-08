@@ -1,0 +1,4 @@
+recursive-include src/EquationLearning/saved_models *
+recursive-include src/EquationLearning/Transformers *
+include src/EquationLearning/*.json
+include src/EquationLearning/Data/data/Q1/training/metadata.h5

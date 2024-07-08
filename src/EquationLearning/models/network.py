@@ -3,7 +3,7 @@ import numpy as np
 from abc import ABC
 import torch.nn as nn
 from torch import stack, cat
-from src.EquationLearning.models.functions import get_function
+from EquationLearning.models.functions import get_function
 
 
 class MLP(nn.Module, ABC):

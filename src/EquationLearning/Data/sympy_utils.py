@@ -2,7 +2,6 @@
 # The "add_additive_constants" was removed, bugs were fixed, and the method was improved
 
 import sympy as sp
-from sympy.parsing.sympy_parser import parse_expr
 
 
 def simplify(ff, seconds):
@@ -293,6 +292,15 @@ def modify_trig_expr(xp):
 
     new_xp = xp.func(*new_args)
     return new_xp
+
+
+def constants_to_placeholder(s, coeffs, symbol="c"):
+    sympy_expr = s
+    for si in set(coeffs.keys()):
+        if "c" in si:
+            sympy_expr = sympy_expr.subs(si, symbol)
+            sympy_expr = sympy_expr.subs(si, symbol)
+    return sympy_expr
 
 
 def numeric_to_placeholder(expr, var=None):

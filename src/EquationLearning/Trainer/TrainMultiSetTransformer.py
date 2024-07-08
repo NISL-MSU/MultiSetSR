@@ -4,12 +4,12 @@ import torch
 import warnings
 import omegaconf
 from torch import nn
-from src.utils import *
+from EquationLearning.utils import *
 from torch import optim
 from torch.nn.utils.rnn import pad_sequence
 from torch.utils.tensorboard import SummaryWriter
-from src.EquationLearning.Transformers.model import Model
-from src.EquationLearning.Transformers.GenerateTransformerData import Dataset, de_tokenize
+from EquationLearning.Transformers.model import Model
+from EquationLearning.Transformers.GenerateTransformerData import Dataset, de_tokenize
 
 
 def open_pickle(path):
@@ -41,7 +41,7 @@ def seq2equation(tokenized, id2word, printFlag=False):
     prefix = de_tokenize(tokenized, id2word)
     if printFlag:
         print("Prefix notation: " + str(prefix))
-    env, param, config_dict = create_env(os.path.join(get_project_root(), "dataset_configuration.json"))
+    env, param, config_dict = create_env(os.path.join(get_project_root(), "EquationLearning//dataset_configuration.json"))
     infix = env.prefix_to_infix(prefix, coefficients=env.coefficients, variables=env.variables)
     return infix
 
@@ -75,8 +75,8 @@ class TransformerTrainer:
 
     def _config_datasets(self):
         # Configuration datasets
-        self.sampledData_train_path = 'src/EquationLearning/Data/sampled_data/' + self.cfg.dataset + '/training'
-        self.sampledData_val_path = 'src/EquationLearning/Data/sampled_data/' + self.cfg.dataset + '/validation'
+        self.sampledData_train_path = 'EquationLearning/Data/sampled_data/' + self.cfg.dataset + '/training'
+        self.sampledData_val_path = 'EquationLearning/Data/sampled_data/' + self.cfg.dataset + '/validation'
         self.data_train_path = self.cfg.train_path
         self.training_dataset = Dataset(self.data_train_path, self.cfg.dataset_train, mode="train")
         self.word2id = self.training_dataset.word2id
@@ -84,13 +84,13 @@ class TransformerTrainer:
 
     def _init_model(self):
         try:  # Read config yaml
-            self.cfg = omegaconf.OmegaConf.load("src/EquationLearning/Transformers/config.yaml")
+            self.cfg = omegaconf.OmegaConf.load("EquationLearning/Transformers/config.yaml")
         except FileNotFoundError:
             self.cfg = omegaconf.OmegaConf.load("../Transformers/config.yaml")
         self._config_datasets()
 
         # Name structure: "Model{dim_hidden}-batch_{batch_size}-{dataset_name}"
-        self.model_name = 'src/EquationLearning/models/saved_models/Model' + str(self.cfg.architecture.dim_hidden) + \
+        self.model_name = 'EquationLearning/saved_models/saved_MSTs/Model' + str(self.cfg.architecture.dim_hidden) + \
                           '-batch_' + str(self.cfg.batch_size) + '-' + self.cfg.dataset
 
         return Model(cfg=self.cfg.architecture, cfg_inference=self.cfg.inference, word2id=self.word2id,
@@ -331,7 +331,7 @@ class TransformerTrainer:
                             seq2equation(list(skeletons_block[step].cpu().numpy())[1:], self.id2word))
                         print("Target: " + str(infixT) + " . Pred: " + str(infix))
                 cc += 1
-                with open('src/EquationLearning/models/saved_models/validation_performance.txt', 'w') as file:
+                with open('EquationLearning/saved_models/saved_MSTs/validation_performance.txt', 'w') as file:
                     file.write(str(L1v / (5000 * cc)))
 
             # Aggregate loss terms in the batch
@@ -343,7 +343,7 @@ class TransformerTrainer:
                     torch.save(self.model.module.state_dict(), self.model_name)
                 else:
                     torch.save(self.model.state_dict(), self.model_name)
-                with open('src/EquationLearning/models/saved_models/validation_performance.txt', 'w') as file:
+                with open('EquationLearning/saved_models/saved_MSTs/validation_performance.txt', 'w') as file:
                     file.write(str(loss))
             print('[%d] validation loss: %.5f. Best validation loss: %.5f' % (epoch + 1, loss, prev_loss))
 

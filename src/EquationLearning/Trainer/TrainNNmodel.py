@@ -1,8 +1,8 @@
 import torch
-from src.utils import *
+from EquationLearning.utils import *
 from sklearn.model_selection import KFold
-from src.EquationLearning.models.NNModel import NNModel
-from src.EquationLearning.Data.GenerateDatasets import DataLoader, InputData
+from EquationLearning.models.NNModel import NNModel
+from EquationLearning.Data.GenerateDatasets import DataLoader, InputData
 
 
 class Trainer:
@@ -47,9 +47,9 @@ class Trainer:
         root = get_project_root()
         folder = ''
         if self.name != '':
-            folder = os.path.join(root, "src//EquationLearning//models//saved_NNs//" + self.name)
-            if not os.path.exists(os.path.join(root, "src//EquationLearning//models//saved_NNs//" + self.name)):
-                os.mkdir(os.path.join(root, "src//EquationLearning//models//saved_NNs//" + self.name))
+            folder = os.path.join(root, "EquationLearning//saved_models//saved_NNs//" + self.name)
+            if not os.path.exists(os.path.join(root, "EquationLearning//saved_models//saved_NNs//" + self.name)):
+                os.mkdir(os.path.join(root, "EquationLearning//saved_models//saved_NNs//" + self.name))
             if not os.path.exists(folder):
                 os.mkdir(folder)
 
@@ -88,7 +88,7 @@ class Trainer:
 
 
 if __name__ == '__main__':
-    names = ['E5']
+    names = ['E4']
     for nme in names:
         data_loader = DataLoader(name=nme)
         predictor = Trainer(dataset=data_loader.dataset, modelType=data_loader.modelType, name=data_loader.name)

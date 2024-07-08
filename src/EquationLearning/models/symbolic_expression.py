@@ -1,7 +1,7 @@
 import sympy
 import torch
-from src.EquationLearning.models.network import NN, HiddenLayer
-from src.EquationLearning.models.functions import get_sym_function
+from EquationLearning.models.network import NN, HiddenLayer
+from EquationLearning.models.functions import get_sym_function
 
 
 def get_weights_bias_layer(module):

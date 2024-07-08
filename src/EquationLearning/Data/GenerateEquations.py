@@ -3,7 +3,6 @@ import time
 import h5py
 import types
 import click
-import signal
 import pickle
 import copyreg
 import warnings
@@ -14,11 +13,11 @@ import multiprocessing
 from pathlib import Path
 from itertools import chain
 from sympy import lambdify, sympify
-from src.EquationLearning.Data import dclasses
-from src.EquationLearning.Data import generator
-from src.utils import create_env, H5FilesCreator
-from src.utils import code_unpickler, code_pickler, get_project_root
-from src.EquationLearning.Data.sympy_utils import remove_dummy_constants
+from EquationLearning.Data import dclasses
+from EquationLearning.Data import generator
+from EquationLearning.utils import create_env, H5FilesCreator
+from EquationLearning.utils import code_unpickler, code_pickler, get_project_root
+from EquationLearning.Data.sympy_utils import remove_dummy_constants
 
 
 class Pipepile:
@@ -125,7 +124,7 @@ def creator(number_of_equations, eq_per_block, debug):
     eq_per_block = min(total_number // cpus_available, int(eq_per_block))
     print("There are {} equations per block. The progress bar will have this resolution".format(eq_per_block))
     warnings.filterwarnings("error")
-    env, param, config_dict = create_env(os.path.join(get_project_root(), "dataset_configuration.json"))
+    env, param, config_dict = create_env(os.path.join(get_project_root(), "EquationLearning/dataset_configuration.json"))
     if not debug:
         folder_path = Path(f"data/raw_datasets/{number_of_equations}")
     else:

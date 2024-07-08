@@ -2,25 +2,25 @@ import sys
 import torch
 import omegaconf
 import sympy as sp
-from src.utils import *
-from src.EquationLearning.models.NNModel import NNModel
-from src.EquationLearning.Transformers.model import Model
-from src.EquationLearning.Optimization.CoefficientFitting import FitGA
-from src.EquationLearning.Data.GenerateDatasets import DataLoader, InputData
-from src.EquationLearning.Transformers.GenerateTransformerData import Dataset
-from src.EquationLearning.Trainer.TrainMultiSetTransformer import seq2equation
-from src.EquationLearning.Optimization.FindDependentCoefficients import CheckDependency
-from src.EquationLearning.models.utilities_expressions import expr2skeleton, avoid_operations_between_constants, \
+from EquationLearning.utils import *
+from EquationLearning.models.NNModel import NNModel
+from EquationLearning.Transformers.model import Model
+from EquationLearning.Optimization.CoefficientFitting import FitGA
+from EquationLearning.Data.GenerateDatasets import DataLoader, InputData
+from EquationLearning.Transformers.GenerateTransformerData import Dataset
+from EquationLearning.Trainer.TrainMultiSetTransformer import seq2equation
+from EquationLearning.models.utilities_expressions import expr2skeleton, avoid_operations_between_constants, \
                                                               count_nodes, remove_coeffs
 
 
 class MSSP:
 
-    def __init__(self, dataset: InputData, bb_model):
+    def __init__(self, dataset: InputData, bb_model, n_candidates=None):
         """Distills symbolic skeleton expressions given an experimental dataset
         :param: dataset: An InputData object
         :param bb_model: Black-box prediction model that was trained to capture the association between inputs and
                          outputs of the system (e.g., a feedforward neural-network)
+        :param n_candidates: Number of candidate skeletons that are generated
         """
         # Define problem
         self.X, self.Y, self.var_names, self.types = dataset.X, dataset.Y, dataset.names, dataset.types
@@ -31,10 +31,11 @@ class MSSP:
         self.symbols = sp.symbols("{}:{}".format('x', self.n_features))
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.bb_model = bb_model
+        self.root = get_project_root()
 
         # Read config yaml
         try:
-            self.cfg = omegaconf.OmegaConf.load("src/EquationLearning/Transformers/config.yaml")
+            self.cfg = omegaconf.OmegaConf.load(os.path.join(self.root, "EquationLearning/Transformers/config.yaml"))
         except FileNotFoundError:
             self.cfg = omegaconf.OmegaConf.load("../Transformers/config.yaml")
 
@@ -54,10 +55,14 @@ class MSSP:
         self.n_sets = self.cfg.architecture.number_of_sets
         self.n_samples = self.cfg.architecture.block_size
 
+        if n_candidates is None:
+            self.n_candidates = self.cfg.inference.beam_size
+        else:
+            self.n_candidates = n_candidates
+
     def _load_models(self):
-        root = get_project_root()
         # Load weights of MST
-        MST_path = os.path.join(root, "src//EquationLearning//models//saved_models/Model480-batch_20-Q1")
+        MST_path = os.path.join(self.root, "EquationLearning//saved_models//saved_MSTs/Model480-batch_20-Q1")
         self.model.load_state_dict(torch.load(MST_path))
         self.model.cuda()
 
@@ -88,12 +93,13 @@ class MSSP:
                     for ns in range(self.n_sets):
                         # Repeat the sampling process a few times and keep the one the looks more different from a line
                         R2s, XXs, YYs, valuess = [], [], [], []
-                        for it in range(20):
+                        for it in range(25):
                             # Sample random values for all the variables
                             values = np.zeros((len(self.symbols)))
                             for isy in range(len(self.symbols)):
                                 if self.types[isy] == 'continuous':
-                                    values[isy] = np.random.uniform(self.limits[isy][0], self.limits[isy][1])
+                                    rang = (self.limits[isy][1] - self.limits[isy][0])
+                                    values[isy] = np.random.uniform(self.limits[isy][0] + rang*.05, self.limits[isy][1] - rang*.05)
                                 else:
                                     range_values = np.linspace(self.limits[isy][0], self.limits[isy][1], 100)
                                     values[isy] = np.random.choice(range_values)
@@ -113,7 +119,7 @@ class MSSP:
                             YYs.append(Y.copy())
                             valuess.append(values.copy())
                         sorted_indices = np.argsort(np.array(R2s))
-                        ind = sorted_indices[7]
+                        ind = sorted_indices[8]
                         best_X, best_Y, best_values = XXs[ind], YYs[ind], valuess[ind]
                         Ys[:, ns] = best_Y
                         Xs[:, ns] = best_X
@@ -134,14 +140,14 @@ class MSSP:
                 Xs = (Xs - np.min(Xs)) * scaling_factor - 10
                 # Xs = (Xs - np.mean(Xs))  # Xs = (Xs - np.min(Xs)) * scaling_factor - 10
                 XY_block = torch.zeros((1, self.n_samples, 2, self.n_sets)).to(self.device)
-                Xs, Ys = torch.from_numpy(Xs), torch.from_numpy(Ys)
+                Xs, Ys = torch.from_numpy(Xs), torch.from_numpy(Ys_real)
                 Xs = Xs.to(self.device)
                 Ys = Ys.to(self.device)
                 XY_block[0, :, 0, :] = Xs
                 XY_block[0, :, 1, :] = Ys
 
                 # Perform Multi-Set Skeleton Prediction
-                preds = self.model.inference(XY_block)
+                preds = self.model.inference(XY_block, self.n_candidates)
                 pred_skeletons = []
                 for ip, pred in enumerate(preds):
                     try:
@@ -158,24 +164,19 @@ class MSSP:
                 pred_skeletons = sorted(pred_skeletons, key=lambda expr: count_nodes(expr))
                 for ip, skeleton in enumerate(pred_skeletons):
                     # Fit coefficients of the estimated skeletons
+                    # skeleton = sp.sympify(str(skeleton).replace('cos', 'sin'))
                     skeleton = avoid_operations_between_constants(sp.expand(skeleton))
                     problem = FitGA(remove_coeffs(skeleton), Xi, Yi, [np.min(Xi), np.max(Xi)], [-20, 20], max_it=100,
                                     loss_MSE=False)
                     est_expr, corr = problem.run()
-                    print("\tSkeleton: " + str(skeleton) + ". Correlation: " + str(corr) + ". Expr: " + str(est_expr))
+                    print("\tSkeleton: " + str(skeleton) + ". Correlation: " + str(abs(corr)) + ". Expr: " + str(est_expr))
                     if abs(best_corr - corr) > 0.002:
                         best_corr = corr
-                        best_sk = expr2skeleton(est_expr)
-                        if abs(corr) > 0.999:  # If correlation is very high, assume this is the best
+                        best_sk = expr2skeleton(2 * est_expr + 1)
+                        if abs(corr) > 0.998:  # If correlation is very high, assume this is the best
                             break
                 print('-----------------------------------------------------------')
                 print("Selected skeleton: " + str(best_sk) + "\n")
-
-                # Cross-variable Dependency Identification
-                check_dependency = CheckDependency(skeleton=best_sk, t=iv, list_vars=self.symbols,
-                                                   gen_func=self.bb_model,
-                                                   v_limits=self.limits, c_limits=[-50, 50], types=self.types)
-                best_sk, _ = check_dependency.run()
 
                 self.univariate_skeletons.append(best_sk)
 
@@ -196,7 +197,7 @@ if __name__ == '__main__':
     # Define NN and load weights
     ###########################################
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    folder = os.path.join(get_project_root(), "src//EquationLearning//models//saved_NNs//" + datasetName)
+    folder = os.path.join(get_project_root(), "EquationLearning//saved_models//saved_NNs//" + datasetName)
     filepath = folder + "//weights-NN-" + datasetName
     nn_model = None
     if os.path.exists(filepath.replace("weights", "NNModel") + '.pth'):
@@ -215,5 +216,5 @@ if __name__ == '__main__':
     ###########################################
     # Get skeletons
     ###########################################
-    regressor = MSSP(dataset=data, bb_model=nn_model)
+    regressor = MSSP(dataset=data, bb_model=nn_model, n_candidates=5)
     print(regressor.get_skeletons())

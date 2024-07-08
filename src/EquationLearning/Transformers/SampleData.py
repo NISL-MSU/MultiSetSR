@@ -1,9 +1,7 @@
-import numpy as np
 import omegaconf
 from tqdm import trange
-from src.utils import *
-from src.EquationLearning.Transformers.GenerateTransformerData import Dataset, evaluate_and_wrap, de_tokenize
-import matplotlib.pyplot as plt
+from EquationLearning.utils import *
+from EquationLearning.Transformers.GenerateTransformerData import Dataset, evaluate_and_wrap, de_tokenize
 
 
 def create_pickle_from_data(block, path, idx):
@@ -108,14 +106,12 @@ class SampleData:
                 Xs, Ys, _ = self.sample_domain(sampled_data[0], sampled_data[1], sampled_data[-1])
                 means, std = np.mean(Ys, axis=0), np.std(Ys, axis=0)
                 Ys = (Ys - means) / std
-                if np.isnan(Ys).any() or np.min(std) < 0.0001 or 'E' in sampled_data[2] or (Ys > 100000).any():
-                    print()
 
                 count += 1
                 print(sampled_data[-2])
                 batch.append(sampled_data)
                 if count % 5000 == 0:
-                    create_pickle_from_data(batch, "src/EquationLearning/Data/sampled_data/" + self.cfg.dataset +
+                    create_pickle_from_data(batch, "EquationLearning/Data/sampled_data/" + self.cfg.dataset +
                                             "/training", n_batch)  # /mnt/data0/data/H5datasets/sampled_data/
                     n_batch += 1
                     batch = []
