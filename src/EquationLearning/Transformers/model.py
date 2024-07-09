@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from .set_transformer import PMA
 from .set_encoder import SetEncoder
 from .beam_search import BeamHypotheses
-# from .sym_encoder import SymEncoder
+from .sym_encoder import SymEncoder
 
 
 class Model(nn.Module):
@@ -35,11 +35,11 @@ class Model(nn.Module):
         self.eq = None
         self.loss = loss
 
-        self.sym_encoder = None
-        # if priors:
-        #     self.sym_encoder = SymEncoder(cfg=self.cfg)
-
         self.dummy_param = nn.Parameter(torch.empty(0))  # Turnaround to allow multi-GPU training
+
+        self.sym_encoder = None
+        if priors:
+            self.sym_encoder = SymEncoder(cfg=self.cfg, dummy_param=self.dummy_param)
 
     def set_train(self):
         self.enc.train()
@@ -99,7 +99,7 @@ class Model(nn.Module):
         sym_batch, sym_enc_output = None, None
         if self.priors:
             sets_batch = batch[0].cuda()
-            sym_batch = batch[1]
+            sym_batch = batch[1].cuda()
         else:
             sets_batch = batch.cuda()
 
@@ -122,7 +122,7 @@ class Model(nn.Module):
         if self.priors:
             sym_enc_output = self.sym_encoder(sym_batch)
             # Merge outputs from symbolic and numeric encoders
-            enc_output += sym_enc_output
+            enc_output += sym_enc_output.to(self.dummy_param.device)
 
         output = self.decoder_transfomer(
             trg_.permute(1, 0, 2),

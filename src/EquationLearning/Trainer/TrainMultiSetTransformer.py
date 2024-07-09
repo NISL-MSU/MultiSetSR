@@ -75,8 +75,8 @@ class TransformerTrainer:
 
     def _config_datasets(self):
         # Configuration datasets
-        self.sampledData_train_path = 'EquationLearning/Data/sampled_data/' + self.cfg.dataset + '/training'
-        self.sampledData_val_path = 'EquationLearning/Data/sampled_data/' + self.cfg.dataset + '/validation'
+        self.sampledData_train_path = os.path.join(get_project_root(), 'EquationLearning/Data/sampled_data/' + self.cfg.dataset + '/training')
+        self.sampledData_val_path = os.path.join(get_project_root(), 'EquationLearning/Data/sampled_data/' + self.cfg.dataset + '/validation')
         self.data_train_path = self.cfg.train_path
         self.training_dataset = Dataset(self.data_train_path, self.cfg.dataset_train, mode="train")
         self.word2id = self.training_dataset.word2id
@@ -95,6 +95,16 @@ class TransformerTrainer:
 
         return Model(cfg=self.cfg.architecture, cfg_inference=self.cfg.inference, word2id=self.word2id,
                      loss=loss_sample)
+
+    def load_model(self, pretrained):
+        # Load pre-trained weights
+        if os.path.exists(self.model_name) and pretrained:
+            if torch.cuda.device_count() > 1:
+                self.model.module.load_state_dict(torch.load(self.model_name))
+            else:
+                self.model.load_state_dict(torch.load(self.model_name))
+        else:
+            warnings.warn('There was no model saved. Start training from scratch...')
 
     def sample_domain(self, Xs, Ys, equations):
         """Use a random domain (e.g., between -10 and 10, or -5 and 5, etc)"""
@@ -199,13 +209,7 @@ class TransformerTrainer:
         indexes = np.arange(len(train_files))
 
         # Load pre-trained weights
-        if os.path.exists(self.model_name) and pretrained:
-            if torch.cuda.device_count() > 1:
-                self.model.module.load_state_dict(torch.load(self.model_name))
-            else:
-                self.model.load_state_dict(torch.load(self.model_name))
-        else:
-            warnings.warn('There was no model saved. Start training from scratch...')
+        self.load_model(pretrained=pretrained)
 
         print("""""""""""""""""""""""""""""")
         print("Start training")
