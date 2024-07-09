@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+from torch.nn.utils.rnn import pad_sequence
 
 # Adapted from https://github.com/SymposiumOrganization/ControllableNeuralSymbolicRegression/blob/main/src/ControllableNesymres/architectures/sym_encoder.py
 
@@ -45,6 +46,13 @@ class SymEncoder(nn.Module):
         return trg_pad_mask
 
     def forward(self, batch):
+        # Pad batch of prior expressions
+        max_length = max(len(sk) for sk in batch)  # Find the maximum sequence length
+        # Pad the skeletons to match the maximum length
+        padded_tensors = [torch.cat((sk, torch.zeros(max_length - len(sk)).cuda())) for sk in batch]
+        # Combine the padded  prior expressions into a single tensor
+        batch = pad_sequence(padded_tensors, batch_first=True).type(torch.int).cuda()
+
         symbolic_conditioning = batch.long().to(self.dummy_param.device)
         # mask = self.make_src_mask(symbolic_conditioning)
 
