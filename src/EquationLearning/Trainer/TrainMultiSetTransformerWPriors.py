@@ -110,6 +110,13 @@ class TransformerTrainerwPrior(TransformerTrainer):
         # Check that there's no skeleton larger than the maximum length
         valid_inds = [i for i in range(len(skeletons_batch)) if
                       len(skeletons_batch[i]) < self.cfg.architecture.length_eq]
+
+        if torch.cuda.device_count() > 1:  # Ensure len(valid_inds) is a multiple of 4
+            valid_len = len(valid_inds)
+            if valid_len % 4 != 0:
+                valid_len = (valid_len // 4) * 4
+            valid_inds = valid_inds[:valid_len]
+
         XY_batch = XY_batch[valid_inds, :, :, :]
         un_ops_batch = un_ops_batch[valid_inds, :]
         skeletons_batch = [skeletons_batch[i] for i in valid_inds]
