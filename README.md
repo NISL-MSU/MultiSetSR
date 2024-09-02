@@ -64,10 +64,22 @@ Use this Bibtex to cite this repository
 
 ```
 @INPROCEEDINGS{MultiSetSR,
-author="Giorgio Morales and John W. Sheppard",
-title="Univariate Skeleton Prediction in Multivariate Systems Using Transformers",
-booktitle="Machine Learning and Knowledge Discovery in Databases: Research Track. ECML PKDD 2024",
+author="Morales, Giorgio
+and Sheppard, John W.",
+editor="Bifet, Albert
+and Daniu{\v{s}}is, Povilas
+and Davis, Jesse
+and Krilavi{\v{c}}ius, Tomas
+and Kull, Meelis
+and Ntoutsi, Eirini
+and Puolam{\"a}ki, Kai
+and {\v{Z}}liobait{\.{e}}, Indr{\.{e}}",
+title="Univariate Skeleton Prediction in Multivariate Systems Using Transformers",
+booktitle="Machine Learning and Knowledge Discovery in Databases. Research Track and Demo Track",
 year="2024",
-location = {Vilnius, Lithuania}
+publisher="Springer Nature Switzerland",
+address="Cham",
+pages="107--125",
+isbn="978-3-031-70371-3"
 }
 ```
