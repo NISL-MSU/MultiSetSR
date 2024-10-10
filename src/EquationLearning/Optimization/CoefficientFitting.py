@@ -101,7 +101,7 @@ class CoefficientFitting(Problem):
                     penalty = -(np.sum(csi == 0) + np.sum(csi == 1))/1000
                     error += er + penalty
                 else:
-                    error -= pearsonr(self.y_est, ys)[0]
+                    error -= abs(pearsonr(self.y_est, ys)[0])
                 # else:
                 #     error += np.mean(np.abs(self.y_est - ys)) * (2 - r)
             outs[si, 0] = error
@@ -114,7 +114,7 @@ class CoefficientFitting(Problem):
 
 class FitGA:
 
-    def __init__(self, skeleton, Xs, Ys, v_limits, c_limits, max_it=None, loss_MSE=True):
+    def __init__(self, skeleton, Xs, Ys, v_limits, c_limits, max_it=None, loss_MSE=True, biased_sol=None):
         """
         Given a univariate symbolic expression, find which coefficients are dependent on other functions
         :param skeleton: Symbolic skeleton generated for the t-th variable
@@ -124,6 +124,7 @@ class FitGA:
         :param c_limits: Limits of the values that all expression coefficients can take
         :param max_it: If not None, specify the maximum number of iterations for the GA
         :param loss_MSE: If True, we optimize the MSE, otherwise we optimize the correlation (PearsonR)
+        :param biased_sol: Biased initial population
         """
         self.skeleton = skeleton  # The skeleton is a function of variable x_t (the t-th variable in list_vars)
         self.Xs = Xs
@@ -135,20 +136,21 @@ class FitGA:
             self.termination = RobustTermination(MultiObjectiveSpaceTermination(tol=1e-4), period=25)
         else:
             self.termination = ('n_gen', max_it)
+        self.biased_sol = biased_sol
 
     def run(self):
-        def binary_tournament(pop, P, *args, **kwargs):
-            n_tournaments, n_competitors = P.shape
-            if n_competitors != 2:
-                raise Exception("Only pressure=2 allowed for binary tournament!")
-            S = np.full(n_tournaments, -1, dtype=int)
-            for i in range(n_tournaments):
-                a, b = P[i]
-                if pop[a].F < pop[b].F:
-                    S[i] = a
-                else:
-                    S[i] = b
-            return S
+        # def binary_tournament(pop, P, *args, **kwargs):
+        #     n_tournaments, n_competitors = P.shape
+        #     if n_competitors != 2:
+        #         raise Exception("Only pressure=2 allowed for binary tournament!")
+        #     S = np.full(n_tournaments, -1, dtype=int)
+        #     for i in range(n_tournaments):
+        #         a, b = P[i]
+        #         if pop[a].F < pop[b].F:
+        #             S[i] = a
+        #         else:
+        #             S[i] = b
+        #     return S
 
         # Create the tournament selection
         # selection = TournamentSelection(pressure=2, func_comp=binary_tournament)
@@ -156,10 +158,18 @@ class FitGA:
         # Fit coefficients
         problem = CoefficientFitting(skeleton=self.skeleton, x_values=self.Xs, y_est=self.Ys, climits=self.c_limits,
                                      loss_MSE=self.loss_MSE)
-        algorithm = GA(pop_size=200)
+        pop_size = 200
+        if self.biased_sol is not None:
+            # Create a population with the biased solution and the remaining random solutions
+            Xin = np.random.uniform(low=self.c_limits[0], high=self.c_limits[1], size=(pop_size - 1, len(self.biased_sol)))
+            initial_population = np.vstack([np.tile(self.biased_sol, (1, 1)), Xin])
+            np.random.shuffle(initial_population)
+            algorithm = GA(pop_size=pop_size, biased_initialization=self.biased_sol)
+        else:
+            algorithm = GA(pop_size=200)
         res = minimize(problem, algorithm, self.termination, seed=1, verbose=False)
         resX = np.round(res.X, 6)
-        resX[np.abs(resX) <= 0.00001] = 0
+        # resX[np.abs(resX) <= 0.00001] = 0
         fs = None
         if len(self.skeleton.args) > 0:
             fs = set_args(self.skeleton, list(resX))
@@ -177,8 +187,8 @@ class FitGA:
 
         if len(self.skeleton.args) > 0:
             if self.loss_MSE:
-                return fs, np.mean(np.abs(self.Ys - ys))
+                return fs, np.mean(np.abs(self.Ys - ys)), resX
             else:
-                return fs, -pearsonr(self.Ys, ys)[0]
+                return fs, -pearsonr(self.Ys, ys)[0], resX
         else:
             return resX, res.F

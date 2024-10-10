@@ -381,3 +381,60 @@ def remove_coeffs(skeleton):
         skeleton = terms
 
     return skeleton
+
+
+SYMPY_OPERATORS = {
+        # Elementary functions
+        sp.Pow: "pow",
+        sp.exp: "exp",
+        sp.log: "ln",
+        sp.Abs: 'abs',
+        # Trigonometric Functions
+        sp.sin: "sin",
+        sp.cos: "cos",
+        sp.tan: "tan",
+        # Trigonometric Inverses
+        sp.asin: "asin",
+        sp.acos: "acos",
+        sp.atan: "atan",
+        # Hyperbolic Functions
+        sp.sinh: "sinh",
+        sp.cosh: "cosh",
+        sp.tanh: "tanh",
+    }
+
+
+def check_if_inside_unary_ops(depend_var, skeleton, ops=None):
+    """
+    Determine inside which operators of the given skeleton there is a coefficient that depends on the variable depend_var
+    """
+    if ops is None:
+        ops = []
+
+    for arg in skeleton.args:
+        if arg.is_number or isinstance(arg, sp.Symbol):
+            continue
+        elif depend_var in str(arg):
+            if arg.func in list(SYMPY_OPERATORS.keys()):
+                if len(arg.args) == 1:
+                    if depend_var in str(arg.args):
+                        # If the unary operator contains a coefficient that depends on the variable under analysis, add it
+                        ops.append(SYMPY_OPERATORS[arg.func])
+                        # And keep going deeper and check if there's an inner unary operator that contains the same dependency
+                        ops = check_if_inside_unary_ops(depend_var, arg, ops=ops)
+                if len(arg.args) == 2:
+                    if depend_var in str(arg.args[0]):
+                        ops.append(SYMPY_OPERATORS[arg.func])
+                        ops = check_if_inside_unary_ops(depend_var, arg, ops=ops)
+                    if depend_var in str(arg.args[1]):
+                        ops.append(SYMPY_OPERATORS[arg.func])
+                        ops = check_if_inside_unary_ops(depend_var, arg, ops=ops)
+            else:
+                ops = check_if_inside_unary_ops(depend_var, arg, ops=ops)
+
+    return ops
+
+
+oops = check_if_inside_unary_ops('f1', sp.sympify('cm_2*sin(f1*x0 + f1) + f1*x0 + f1'))
+print()
+
