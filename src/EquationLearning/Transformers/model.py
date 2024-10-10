@@ -34,6 +34,8 @@ class Model(nn.Module):
         self.dropout = nn.Dropout(cfg.dropout)
         self.eq = None
         self.loss = loss
+        # Extract the tokens corresponding to mathematical operators
+        self.operators_tokens = [self.word2id[n] for n in list(self.word2id.keys()) if not (n.isnumeric() or n == 'x_1' or len(n) == 1)]
 
         self.dummy_param = nn.Parameter(torch.empty(0))  # Turnaround to allow multi-GPU training
 
@@ -140,7 +142,7 @@ class Model(nn.Module):
             for bi in range(output.shape[1]):
                 out = output[:, bi, :].contiguous().view(-1, output.shape[-1])
                 tokenized = skeleton[bi, :][1:].contiguous().view(-1)
-                L1s = self.loss(out, tokenized.long())
+                L1s = self.loss(out, tokenized.long(), operators_tokens=None)
                 L1 += L1s
             return output2, z_sets, L1
         else:
@@ -205,7 +207,7 @@ class Model(nn.Module):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.cfg.lr)
         return optimizer
 
-    def inference(self, batch, beam_size):
+    def inference(self, batch, beam_size, diversity_penalty=1):
         """Perform inference using beam search"""
         with torch.no_grad():
             #############################################################
@@ -286,6 +288,14 @@ class Model(nn.Module):
                 scores = F.log_softmax(output[:, -1:, :], dim=-1).squeeze(1)
 
                 n_words = scores.shape[-1]
+
+                # Add diversity penalty
+                diversity_penalty_matrix = torch.zeros_like(scores)
+                for i in range(beam_size):
+                    diversity_penalty_matrix[i, generated[i, :cur_len]] += diversity_penalty
+
+                scores -= diversity_penalty_matrix
+
                 # Select next words with scores
                 _scores = scores + beam_scores[:, None].expand_as(scores)
                 _scores = _scores.view(beam_size * n_words)

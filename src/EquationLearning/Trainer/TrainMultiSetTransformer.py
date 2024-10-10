@@ -46,11 +46,24 @@ def seq2equation(tokenized, id2word, printFlag=False):
     return infix
 
 
-def loss_sample(output, trg):
-    """Loss function that combines cross-entropy and information entropy for a single sample"""
+def loss_sample(output, trg, operators_tokens, prior_ops=None, penalty_factor=0.5):
+    """Loss function for a single sample"""
     ce = nn.CrossEntropyLoss(ignore_index=0)
     ce.cuda()
-    return ce(output, trg)
+    if prior_ops is None:
+        return ce(output, trg)
+    else:
+        _, predicted_tokens = torch.max(output, dim=1)
+
+        predicted_set = set(predicted_tokens.tolist())
+        prior_ops_set = set(prior_ops)
+        total_ops_set = set(operators_tokens)
+
+        # Calculate penalization
+        penalized_tokens = predicted_set.intersection(total_ops_set) - prior_ops_set
+        penalization = len(penalized_tokens) * penalty_factor
+
+        return ce(output, trg) + penalization
 
 
 class TransformerTrainer:
@@ -81,6 +94,8 @@ class TransformerTrainer:
         self.training_dataset = Dataset(self.data_train_path, self.cfg.dataset_train, mode="train")
         self.word2id = self.training_dataset.word2id
         self.id2word = self.training_dataset.id2word
+        # Extract the tokens corresponding to mathematical operators
+        self.operators_tokens = [self.word2id[n] for n in list(self.word2id.keys()) if not (n.isnumeric() or n == 'x_1' or len(n) == 1)]
 
     def _init_model(self):
         try:  # Read config yaml
@@ -220,7 +235,7 @@ class TransformerTrainer:
             np.random.shuffle(indexes)
 
             batch_count = 0
-            for b_ind in indexes:  # Block loop (each block contains 8000 inputs)
+            for b_ind in indexes[:0]:  # Block loop (each block contains 8000 inputs)
                 # Read block
                 block = open_h5(train_files[b_ind])
                 input_block, skeletons_block, xpr_block = self._process_block(block)
@@ -262,7 +277,11 @@ class TransformerTrainer:
                         for bi in range(output.shape[1]):
                             out = output[:, bi, :].contiguous().view(-1, output.shape[-1])
                             tokenized = skeletons_batch[bi, :][1:].contiguous().view(-1)
-                            L1s = loss_sample(out, tokenized.long())
+                            # if len(input_batch) == 2:
+                            #     L1s = loss_sample(out, tokenized.long(),
+                            #                       operators_tokens=self.operators_tokens, prior_ops=input_batch[1])
+                            # else:
+                            L1s = loss_sample(out, tokenized.long(), operators_tokens=None)
                             L1 += L1s
 
                     loss = L1 / len(valid_inds)
@@ -289,7 +308,7 @@ class TransformerTrainer:
             # Validation step
             #########################################################################
             indexes2 = np.arange(len(val_files))
-            batch_val_size = 1
+            batch_val_size = 20
             if torch.cuda.device_count() > 1:
                 self.model.module.set_eval()
             else:
@@ -325,7 +344,11 @@ class TransformerTrainer:
                     for bi in range(output.shape[1]):
                         out = output[:, bi, :].contiguous().view(-1, output.shape[-1])
                         tokenized = skeletons_batch[bi, :][1:].contiguous().view(-1)
-                        L1s = loss_sample(out, tokenized.long())
+                        # if len(input_batch) == 2:
+                        #     L1s = loss_sample(out, tokenized.long(),
+                        #                       operators_tokens=self.operators_tokens, prior_ops=input_batch[1])
+                        # else:
+                        L1s = loss_sample(out, tokenized.long(), operators_tokens=None)
                         L1v += L1s
                         iv += 1
                         res = output.cpu().numpy()[:, 0, :]

@@ -204,11 +204,14 @@ def find_dependent_coeffs(x_values, skeleton, exprs, coeffs=None):
                         next_arg = n_arg
                         break
                 next_exprs.append(next_arg)
-                if 'x' not in str(next_arg.free_symbols):
-                    ys.append(np.repeat(float(next_arg), len(x_values), axis=0))
-                else:
-                    fs_lambda = sp.lambdify(sympy.flatten(next_arg.free_symbols), next_arg)
-                    ys.append(fs_lambda(x_values))
+                try:
+                    if 'x' not in str(next_arg.free_symbols):
+                        ys.append(np.repeat(float(next_arg), len(x_values), axis=0))
+                    else:
+                        fs_lambda = sp.lambdify(sympy.flatten(next_arg.free_symbols), next_arg)
+                        ys.append(fs_lambda(x_values))
+                except:
+                    print()
 
         # Check if there's at least one column that differs from the rest
         go_deeper = False  # check_difference(np.array(ys).T)
@@ -285,3 +288,4 @@ if __name__ == '__main__':
 
     skel, _, _ = add_constant_identifier(sympy.sympify('c*x1 + c*sin(c*x1 + c) + c'))
     cs = find_dependent_coeffs(np.random.uniform(limits[0], limits[1], size=500), skel, exprsv)
+    print()
