@@ -1,6 +1,5 @@
 [![Paper](https://img.shields.io/badge/arXiv-2406.17834-b31b1b.svg)](https://arxiv.org/abs/2406.17834)
 [![Open In Colab (MSSP)](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NISL-MSU/MultiSetSR/blob/master/DemoMSSP.ipynb)
-[![Open In Colab (SeTGAP)](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NISL-MSU/MultiSetSR/blob/master/DemoSeTGAP.ipynb)
 
 # Decomposable Neuro-evolutionary Symbolic Regression
 
@@ -19,10 +18,10 @@ sets of input--response pairs, where all sets correspond to the same functional 
 and outputs a common skeleton expression, as follows:
 
 <p align="center">
-  <img src="figs/MSSP_definition.jpg" alt="alt text" width="400">
+  <img src="figs/MSSP_definition.png" alt="alt text" width="400">
 </p>
 
-We present a novel transformer model called "Multi-Set Transformer" to solve the MSSP problem. The model is pre-trained 
+The first component of SeTGAP is a novel transformer model called "Multi-Set Transformer" to solve the MSSP problem. The model is pre-trained 
 on a large dataset of synthetic symbolic expressions. The identification process of the functional form between each variable and the system's response is viewed as a sequence 
 of MSSP problems:
 
@@ -32,11 +31,7 @@ of MSSP problems:
 
 Our univariate skeleton prediction process can be viewed as an explainability method that produces skeletons to explain the function approximated by the regression model. 
 **This process allows for a deeper understanding of how individual variables contribute to the system's behavior** and facilitates more insightful insights into the model's behavior. 
-
-Therefore, the first component of the SeTGAP framework employs the Multi-Set Transformer to generate multiple univariate skeleton candidates per variable.
-A GA-based selection process then filters out low-quality skeletons, retaining only the most informative ones.
-Then, they are merged through an incremental GP-based procedure, which ensures that the merged expressions remain interpretable and aligned with the original structures.
-Finally, a GA refines the numerical coefficients of the resulting multivariate expression.
+Ultimately, the obtained multivariate expressions that approximate the system's underlying function serve as **explanations of the model's computed function**.  
 
 
 ## Installation
