@@ -216,10 +216,12 @@ class Model(nn.Module):
             # Inputs are handled differently if the model uses symbolic inputs as priors
             sym_batch, sym_enc_output = None, None
             if self.priors:
-                sets_batch = batch[0].cuda()
+                sets_batch = batch[0]
                 sym_batch = batch[1]
             else:
-                sets_batch = batch.cuda()
+                sets_batch = batch
+            if torch.cuda.is_available():
+                sets_batch = sets_batch.cuda()
 
             # Separate input sets and apply the encoder layer to each one
             n_sets = sets_batch.shape[-1]
