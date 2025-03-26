@@ -140,7 +140,7 @@ if __name__ == '__main__':
     ###########################################
     # Import data
     ###########################################
-    datasetName = 'E4'
+    datasetName = 'E6'
     data_loader = DataLoader(name=datasetName)
     data = data_loader.dataset
 
