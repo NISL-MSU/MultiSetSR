@@ -17,17 +17,13 @@ To do this, we introduce a new SR problem called Multi-Set symbolic skeleton pre
 sets of input--response pairs, where all sets correspond to the same functional form but use different equation constants, 
 and outputs a common skeleton expression, as follows:
 
-<p align="center">
-  <img src="figs/MSSP_definition.png" alt="alt text" width="400">
-</p>
 
-The first component of SeTGAP is a novel transformer model called "Multi-Set Transformer" to solve the MSSP problem. The model is pre-trained 
-on a large dataset of synthetic symbolic expressions. The identification process of the functional form between each variable and the system's response is viewed as a sequence 
-of MSSP problems:
-
-<p align="center">
-  <img src="figs/Skeleton.png" alt="alt text" width="500">
-</p>
+<div style="display: flex; justify-content: center;">
+  <figure style="text-align: center;">
+    <img src="figs/MSSP_definition.png" alt="figure" width="75%" style="margin-left: auto; margin-right: auto; display: block;">
+    <figcaption>An example of an MSSP problem.</figcaption>
+  </figure>
+</div>
 
 Our univariate skeleton prediction process can be viewed as an explainability method that produces skeletons to explain the function approximated by the regression model. 
 **This process allows for a deeper understanding of how individual variables contribute to the system's behavior** and facilitates more insightful insights into the model's behavior. 
