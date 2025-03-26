@@ -107,6 +107,42 @@ class MLP3(nn.Module, ABC):
         return self.out(x)
 
 
+class MLP4(nn.Module, ABC):
+    """Defines conventional NN architecture"""
+
+    def __init__(self, input_features: int = 10, output_size: int = 1):
+        """
+        Initialize NN
+        :param input_features: Input shape of the network.
+        :param output_size: Output shape of the network.
+        """
+        super(MLP4, self).__init__()
+        self.hidden_layer1 = nn.Sequential(
+            nn.Linear(in_features=input_features, out_features=200), nn.ReLU())
+        self.hidden_layer2 = nn.Sequential(
+            nn.Linear(in_features=200, out_features=500), nn.ReLU())
+        self.hidden_layer3 = nn.Sequential(
+            nn.Linear(in_features=500, out_features=500), nn.ReLU())
+        self.hidden_layer4 = nn.Sequential(
+            nn.Linear(in_features=500, out_features=500), nn.ReLU())
+        self.hidden_layer5 = nn.Sequential(
+            nn.Linear(in_features=500, out_features=100), nn.ReLU())
+        self.hidden_layer6 = nn.Sequential(
+            nn.Linear(in_features=100, out_features=50), nn.ReLU())
+
+        # Number of outputs depends on the method
+        self.out = nn.Linear(50, output_size)
+
+    def forward(self, x):
+        x = self.hidden_layer1(x)
+        x = self.hidden_layer2(x)
+        x = self.hidden_layer3(x)
+        x = self.hidden_layer4(x)
+        x = self.hidden_layer5(x)
+        x = self.hidden_layer6(x)
+        return self.out(x)
+
+
 class HiddenLayer(nn.Module):
     """Defines the structure of a hidden layer"""
 

@@ -1,3 +1,0 @@
-c + c*(c + c*x0)^2
-c*sqrt(c*x1 + c) + c
-c*sin(c*x2 + c) + c

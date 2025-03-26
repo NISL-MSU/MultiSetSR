@@ -1,2 +1,0 @@
-c*x0 + c*sin(c*x0 + c) + c
-c*x1 + c*sin(c*x1 + c) + c

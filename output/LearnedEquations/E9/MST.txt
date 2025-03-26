@@ -1,2 +1,0 @@
-c + log(c*x0**2 + c)
-c + log(c*x1 + c)

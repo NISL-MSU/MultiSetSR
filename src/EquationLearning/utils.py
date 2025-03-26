@@ -20,8 +20,8 @@ def get_project_root() -> Path:
 def test_linearity(X, Y):
     """Fit linear regression model and calculate R2. If R2 is close to 1, it's a sign of linearity"""
     model = LinearRegression()
-    model.fit(X[:, None], Y)
-    Y_pred = model.predict(X[:, None])
+    model.fit(X, Y)
+    Y_pred = model.predict(X)
     return r2_score(Y, Y_pred)
 
 

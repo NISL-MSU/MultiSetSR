@@ -1,2 +1,0 @@
-c*sin(c*x0) + c
-c*sin(c*exp(c*x1))

@@ -2,7 +2,6 @@ import random
 
 from EquationLearning.utils import *
 from tqdm import trange
-from torch import optim
 from EquationLearning.models.network import *
 
 np.random.seed(7)  # Initialize seed to get reproducible results
@@ -59,14 +58,18 @@ class NNModel:
             elif NNtype == "NN2":
                 network = MLP2(input_features=self.n_features,
                                output_size=self.output_size)
-            else:
+            elif NNtype == "NN3":
                 network = MLP3(input_features=self.n_features,
+                               output_size=self.output_size)
+            else:
+                network = MLP4(input_features=self.n_features,
                                output_size=self.output_size)
         else:
             network = loaded_NN
         network.to(self.device)
 
         # Training parameters
+        from torch import optim
         optimizer = optim.Adadelta(network.parameters(), lr=0.05)
 
         self.model = NNObject(network, criterion, optimizer)
@@ -202,7 +205,7 @@ class NNModel:
         return np.mean(preds_MC, axis=1)
 
     def loadModel(self, path):
-        self.model.network.load_state_dict(torch.load(path))
+        self.model.network.load_state_dict(torch.load(path, map_location=self.device))
 
     def saveModel(self, path):
         torch.save(self.model.network, path)

@@ -101,11 +101,11 @@ class TransformerTrainer:
         try:  # Read config yaml
             self.cfg = omegaconf.OmegaConf.load("EquationLearning/Transformers/config.yaml")
         except FileNotFoundError:
-            self.cfg = omegaconf.OmegaConf.load("../Transformers/config.yaml")
+            self.cfg = omegaconf.OmegaConf.load("src/EquationLearning/Transformers/config.yaml")
         self._config_datasets()
 
         # Name structure: "Model{dim_hidden}-batch_{batch_size}-{dataset_name}"
-        self.model_name = 'EquationLearning/saved_models/saved_MSTs/Model' + str(self.cfg.architecture.dim_hidden) + \
+        self.model_name = 'src/EquationLearning/saved_models/saved_MSTs/Model' + str(self.cfg.architecture.dim_hidden) + \
                           '-batch_' + str(self.cfg.batch_size) + '-' + self.cfg.dataset
 
         return Model(cfg=self.cfg.architecture, cfg_inference=self.cfg.inference, word2id=self.word2id,
@@ -241,7 +241,7 @@ class TransformerTrainer:
             np.random.shuffle(indexes)
 
             batch_count = 0
-            for b_ind in indexes[:0]:  # Block loop (each block contains 8000 inputs)
+            for b_ind in indexes:  # Block loop
                 # Read block
                 block = open_h5(train_files[b_ind])
                 input_block, skeletons_block, xpr_block = self._process_block(block)
@@ -283,10 +283,6 @@ class TransformerTrainer:
                         for bi in range(output.shape[1]):
                             out = output[:, bi, :].contiguous().view(-1, output.shape[-1])
                             tokenized = skeletons_batch[bi, :][1:].contiguous().view(-1)
-                            # if len(input_batch) == 2:
-                            #     L1s = loss_sample(out, tokenized.long(),
-                            #                       operators_tokens=self.operators_tokens, prior_ops=input_batch[1])
-                            # else:
                             L1s = loss_sample(out, tokenized.long(), operators_tokens=None)
                             L1 += L1s
 
@@ -322,6 +318,7 @@ class TransformerTrainer:
             L1v, L2v, iv = 0, 0, 0
 
             cc = 0
+            np.random.shuffle(indexes2)
             for b_ind in indexes2:  # Block loop (each block contains 1000 inputs)
                 # Read block
                 block = open_h5(val_files[b_ind])
@@ -350,19 +347,18 @@ class TransformerTrainer:
                     for bi in range(output.shape[1]):
                         out = output[:, bi, :].contiguous().view(-1, output.shape[-1])
                         tokenized = skeletons_batch[bi, :][1:].contiguous().view(-1)
-                        # if len(input_batch) == 2:
-                        #     L1s = loss_sample(out, tokenized.long(),
-                        #                       operators_tokens=self.operators_tokens, prior_ops=input_batch[1])
-                        # else:
                         L1s = loss_sample(out, tokenized.long(), operators_tokens=None)
                         L1v += L1s
                         iv += 1
                         res = output.cpu().numpy()[:, 0, :]
                         max_indices = np.argmax(res, axis=1)
-                        infix = sympy.sympify(seq2equation(max_indices, self.id2word))
-                        infixT = sympy.sympify(
-                            seq2equation(list(skeletons_block[step].cpu().numpy())[1:], self.id2word))
-                        print("Target: " + str(infixT) + " . Pred: " + str(infix))
+                        try:
+                            infix = sympy.sympify(seq2equation(max_indices, self.id2word))
+                            infixT = sympy.sympify(
+                                seq2equation(list(skeletons_block[step].cpu().numpy())[1:], self.id2word))
+                            print("Step: " + str(step) + "Target: " + str(infixT) + " . Pred: " + str(infix))
+                        except:
+                            continue
                 cc += 1
                 with open('EquationLearning/saved_models/saved_MSTs/validation_performance.txt', 'w') as file:
                     file.write(str(L1v / (5000 * cc)))
