@@ -21,7 +21,6 @@ and outputs a common skeleton expression, as follows:
 <div style="display: flex; justify-content: center;">
   <figure style="text-align: center;">
     <img src="figs/MSSP_definition.png" alt="figure" width="75%" style="margin-left: auto; margin-right: auto; display: block;">
-    <figcaption>An example of an MSSP problem.</figcaption>
   </figure>
 </div>
 
