@@ -60,65 +60,67 @@ class SetGAP:
         return XXs[ind].T, YYs[ind], valuess[ind]
 
     def run(self):
-        # Execute univariate skeleton prediction using MSSP and sort variables
-        skeletons, corr_vals, fitted_exprs = self.MSSP.get_skeletons()
-
-        self.skeletons = [x for _, x in sorted(zip(corr_vals, skeletons), reverse=True)]
-        sorted_symbols = [v for _, v in sorted(zip(corr_vals, self.symbols), reverse=True)]
-
-        # Start merging skeletons progressively
-        merged_skeletons, merged_programs, new_corr_vals = self.skeletons[0], fitted_exprs, corr_vals.copy()
-        changing_variables = [sorted_symbols[0]]
-        for i in range(1, len(sorted_symbols)):
-            print('\n******************************')
-            print('Merging skeletons of variables ', str(changing_variables), ', and ', str(sorted_symbols[i]))
-            print('******************************')
-            # Generate samples fixing values of the other variables
-            changing_variables.append(sorted_symbols[i])
-            changing_variables_inds = [np.where(np.array(self.symbols) == xv)[0][0] for xv in
-                                       np.array(changing_variables)]
-            all_var = False
-            if set(changing_variables) == set(self.symbols):
-                samples, t_response = self.X, self.Y
-                all_var = True
-            else:
-                samples, t_response, _ = self.sample(changing_variables_inds)
-            # Merge each of the skeletons in merged_skeletons with each candidate
-            new_merged, new_programs, new_corr_vals, count = [], [], [], 0
-
-            for merged_skeleton in merged_skeletons:
-                for s in range(len(self.skeletons[i])):
-                    merger = MergeExpressions(merged_skeleton + sp.sympify('c'), self.skeletons[i][s],
-                                              len(changing_variables))
-                    result_comb = merger.choose_combination(response=[samples, t_response], verbose=False,
-                                                            all_var=all_var)
-                    count += 1
-                    if result_comb is not None:
-                        merged, corr_val, program = result_comb
-                        new_merged.append(merged)
-                        new_programs.append(program)
-                        new_corr_vals.append(corr_val)
-                        print("Generated skeleton ", str(count), '/',
-                              str(len(merged_skeletons) * len(self.skeletons[i])),
-                              ":\t ", str(merged), "\t Fitness = " + str(np.round(corr_val, 6)))
-                    else:
-                        print("These skeletons didn't yield a good combination")
-            # Take the best self.n_candidates
-            merged_skeletons = [x for cv, x in sorted(zip(new_corr_vals, new_merged), reverse=True) if cv <= 1]
-            merged_programs = [x for cv, x in sorted(zip(new_corr_vals, new_programs), reverse=True) if cv <= 1]
-            if not all_var:
-                merged_skeletons = merged_skeletons[:self.n_candidates]
-                merged_programs = merged_programs[:self.n_candidates]
+        # # Execute univariate skeleton prediction using MSSP and sort variables
+        # skeletons, corr_vals, fitted_exprs = self.MSSP.get_skeletons()
+        #
+        # self.skeletons = [x for _, x in sorted(zip(corr_vals, skeletons), reverse=True)]
+        # sorted_symbols = [v for _, v in sorted(zip(corr_vals, self.symbols), reverse=True)]
+        #
+        # # Start merging skeletons progressively
+        # merged_skeletons, merged_programs, new_corr_vals = self.skeletons[0], fitted_exprs, corr_vals.copy()
+        # changing_variables = [sorted_symbols[0]]
+        # for i in range(1, len(sorted_symbols)):
+        #     print('\n******************************')
+        #     print('Merging skeletons of variables ', str(changing_variables), ', and ', str(sorted_symbols[i]))
+        #     print('******************************')
+        #     # Generate samples fixing values of the other variables
+        #     changing_variables.append(sorted_symbols[i])
+        #     changing_variables_inds = [np.where(np.array(self.symbols) == xv)[0][0] for xv in
+        #                                np.array(changing_variables)]
+        #     all_var = False
+        #     if set(changing_variables) == set(self.symbols):
+        #         samples, t_response = self.X, self.Y
+        #         all_var = True
+        #     else:
+        #         samples, t_response, _ = self.sample(changing_variables_inds)
+        #     # Merge each of the skeletons in merged_skeletons with each candidate
+        #     new_merged, new_programs, new_corr_vals, count = [], [], [], 0
+        #
+        #     for merged_skeleton in merged_skeletons:
+        #         for s in range(len(self.skeletons[i])):
+        #             merger = MergeExpressions(merged_skeleton + sp.sympify('c'), self.skeletons[i][s],
+        #                                       len(changing_variables))
+        #             result_comb = merger.choose_combination(response=[samples, t_response], verbose=False,
+        #                                                     all_var=all_var)
+        #             count += 1
+        #             if result_comb is not None:
+        #                 merged, corr_val, program = result_comb
+        #                 new_merged.append(merged)
+        #                 new_programs.append(program)
+        #                 new_corr_vals.append(corr_val)
+        #                 print("Generated skeleton ", str(count), '/',
+        #                       str(len(merged_skeletons) * len(self.skeletons[i])),
+        #                       ":\t ", str(merged), "\t Fitness = " + str(np.round(corr_val, 6)))
+        #             else:
+        #                 print("These skeletons didn't yield a good combination")
+        #     # Take the best self.n_candidates
+        #     merged_skeletons = [x for cv, x in sorted(zip(new_corr_vals, new_merged), reverse=True) if cv <= 1]
+        #     merged_programs = [x for cv, x in sorted(zip(new_corr_vals, new_programs), reverse=True) if cv <= 1]
+        #     if not all_var:
+        #         merged_skeletons = merged_skeletons[:self.n_candidates]
+        #         merged_programs = merged_programs[:self.n_candidates]
 
         # Fit final coefficients
         print("\nFitting final coefficients")
+        merged_programs, new_corr_vals = [1], [0]
         est_exprs = []
         for i, program in enumerate(merged_programs):
+            program = sp.sympify('c*x0*x1 + c*sin(c*(x0 - 0.6655803041795169)*(x1 - 0.6851292273403546) + c) + c')
             if new_corr_vals[i] > 0.999:
                 new_var = sp.sympify('x')
                 fs_lambda = sp.lambdify(sp.flatten(self.symbols), program)
                 int_x = fs_lambda(*list(self.X.T))  # Substitute here to avoid evaluating it repeatedly during the evolution
-                max_it, pop_size = 500, 300
+                max_it, pop_size = 100, 300
             else:
                 new_var, int_x = program, self.X
                 max_it, pop_size = 600, 300

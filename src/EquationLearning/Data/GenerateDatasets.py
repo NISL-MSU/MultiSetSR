@@ -124,7 +124,7 @@ class DataLoader:
         self.expr = ((symb[0] / ((symb[1]/10) * 1.7 ** 2)) ** 2) * sp.cos(symb[2] * (sp.pi / 180))
 
     def E1(self, n=10000):  # S4 in "Informed Equation Learning" (Werner et. al, 2021)
-        np.random.seed(8)
+        np.random.seed(10)
         # Define features
         if not self.extrapolation:
             x1 = np.random.uniform(-5, 5, size=n)
