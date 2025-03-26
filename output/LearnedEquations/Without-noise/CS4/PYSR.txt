@@ -1,0 +1,10 @@
+sqrt(x0) * log(x1**2)
+(tan(sinh(sinh(cosh(tanh(cosh(x1) * 0.3094641))))) + 7.703132) / ((x0 + 8.765664) / x0)
+log(x1 * x1) * sqrt(x0)
+sqrt(x0) * log(x1 * x1)
+log(x1 * x1) * sqrt(x0)
+sqrt(x0) * log(x1 * x1)
+log(x1 * x1) * sqrt(x0)
+sqrt(x0) * log(x1 * x1)
+sqrt(x0) * log(x1 * x1)
+(tanh(2.4503145 + sqrt(exp(cosh(x1 / -4.7917967) / -0.4920436))) * (sqrt(x0) * log(sinh(sqrt(log(cosh(x1 / 2.6238515)))) * 3.7112253))) * 2.0150216

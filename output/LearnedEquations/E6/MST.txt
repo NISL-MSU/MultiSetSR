@@ -1,3 +1,0 @@
-c*tanh(c*x0) + c
-c*Abs(x1) + c
-c*cos(c*(c + x2)**2) + c

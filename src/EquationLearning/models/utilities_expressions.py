@@ -113,6 +113,61 @@ def get_op_constant(xp, c):
         else:
             continue
 
+    return True
+
+
+def get_all_op_constant(xp, c, ops=None):
+    """Extract all the operators in which the specified constant name is inside
+    :param xp: Symbolic expression
+    :param c: Constant name
+    :param ops: Current identified ops"""
+    args = xp.args
+    if ops is None:
+        ops = [str(xp.func)]
+
+    for arg in args:
+        if str(c) in str(arg):
+            if arg.is_Symbol and str(arg) == str(c):
+                return ops
+            else:  # If it's composed, explore a lower level of the tree
+                if isinstance(arg, sp.Pow):  # In case it's Pow, return the exponent too
+                    ops.append(str(arg.func) + str(arg.args[1]))
+                else:  # It will return the first unary operation the constant is in
+                    ops.append(str(arg.func))
+                return get_all_op_constant(arg, c, ops=ops)
+        else:
+            continue
+
+
+def find_node_in_ops(xp, ops, prev_ops=None, sols=None):
+    """Find a node in a expression tree that is inside the specified list of operations
+    :param xp: Symbolic expression
+    :param ops: List of operations
+    :param prev_ops: Previous operations
+    :param sols: Current identified node solutions"""
+    if prev_ops is None:
+        sols = []
+        if str(xp.func) == ops[0]:
+            if ops == [str(xp.func)]:
+                return [xp]
+            else:
+                return find_node_in_ops(xp, ops, prev_ops=[str(xp.func)], sols=sols)
+        else:
+            return None
+
+    args = xp.args
+    for arg in args:
+        if str(arg.func) == ops[len(prev_ops)]:
+            prev_ops_temp = prev_ops.copy()
+            prev_ops_temp.append(str(arg.func))
+            if ops == prev_ops_temp:
+                sols.append(arg)
+            elif len(ops) > len(prev_ops_temp):
+                sols = find_node_in_ops(arg, ops, prev_ops=prev_ops_temp, sols=sols)
+        else:
+            continue
+    return sols
+
 
 def add_constant_identifier(sk, cm_counter=1, ca_counter=1):
     """Label each coefficient of a skeleton expression"""
@@ -122,7 +177,7 @@ def add_constant_identifier(sk, cm_counter=1, ca_counter=1):
     for arg in args:
         if arg.is_number:  # If it's a number, add it to the list
             new_args.append(arg)
-        elif isinstance(arg, sp.Symbol) and str(arg) == 'c':
+        elif isinstance(arg, sp.Symbol) and 'c' in str(arg):
             if isinstance(sk, sp.Add):
                 new_args.append(sp.sympify('ca_' + str(ca_counter)))
                 ca_counter += 1
@@ -137,6 +192,55 @@ def add_constant_identifier(sk, cm_counter=1, ca_counter=1):
 
     new_xp = sk.func(*new_args)
     return new_xp, cm_counter, ca_counter
+
+
+def multi_div(sk):
+    """Multiply elements from the dividend by a constant"""
+    args = sk.args
+    new_args = []
+
+    for arg in args:
+        if arg.is_number:  # If it's a number, add it to the list
+            new_args.append(arg)
+        elif isinstance(arg, sp.Pow):
+            base = arg.args[0]
+            if arg.args[1] < 0 and isinstance(arg.args[0], sp.Add):
+                base = 0
+                for argsum in arg.args[0].args:
+                    base += avoid_operations_between_constants(sp.sympify('c') * argsum)
+            new_args.append(base ** arg.args[1])
+        elif isinstance(arg, sp.Symbol):
+            new_args.append(arg)
+        else:  # If it's composed, explore a lower level of the tree
+            new_args.append(multi_div(arg))
+
+    new_xp = sk.func(*new_args)
+    return new_xp
+
+
+def change_sign_k_constant(sk, k, c_counter=1):
+    """Change sign of the k-th constant or symbol of expr"""
+    args = sk.args
+    new_args = []
+
+    for arg in args:
+        if arg.is_number:  # If it's a number, add it to the list
+            new_args.append(arg)
+            c_counter += 1
+        elif isinstance(arg, sp.Symbol) and 'x' in str(arg):
+            if k == c_counter:
+                arg = -arg
+            new_args.append(arg)
+            c_counter += 1
+        elif isinstance(arg, sp.Symbol):
+            new_args.append(arg)
+            c_counter += 1
+        else:  # If it's composed, explore a lower level of the tree
+            deep_xp, c_counter = change_sign_k_constant(arg, k=k, c_counter=c_counter)
+            new_args.append(deep_xp)
+
+    new_xp = sk.func(*new_args)
+    return new_xp, c_counter
 
 
 def remove_constant_identifier(sk):
@@ -241,14 +345,11 @@ def _avoid_operations_between_constants(xp):
                 va = args2
             t_args = [va, sympy.sympify("1")]
 
-    if isinstance(xp, sp.exp):  # If it's a power function, ignore the power and focus only on the base
+    if isinstance(xp, sp.exp):  # If it's an exp function, ignore the power and focus only on the base
         args1 = args[0]
         if (args1.is_number or (
                 isinstance(args1, sp.Symbol) and ("cm" in str(args1) or "ca" in str(args1) or "c" in str(args1)))):
-            va = None
-            if isinstance(args1, sp.Symbol) and ("cm" in str(args1) or "ca" in str(args1) or "c" in str(args1)):
-                va = args1
-            t_args = sympy.sympify("0")
+            t_args = tuple([sympy.sympify("0")])
 
     if isinstance(xp, sp.Mul) or isinstance(xp, sp.Add):
         t_args = []
@@ -334,19 +435,73 @@ def count_placeholders(expr):
     return count
 
 
+def count_variables(expr):
+    expr = parse_expr(str(expr))
+    count = 0
+    for atom in expr.atoms():
+        if str(atom).startswith('x') or str(atom).startswith('cm_'):
+            count += 1
+    return count
+
+
 def expr2skeleton(expr):
     """Compare the coefficients of a skeleton to a known expression and remove useless coefficients"""
-    args_expr = get_args(expr)
-    args_expr = [e if abs(e) > 0.001 else 0 for e in args_expr]
-    expr = set_args(expr, args_expr)
+    # args_expr = get_args(expr)
+    # args_expr = [e if abs(e) > 0.001 else 0 for e in args_expr]
+    # expr = set_args(expr, args_expr)
     return numeric_to_placeholder(expr)
 
 
-def count_nodes(expr):
+def count_nodes0(expr):
     node_count = 0
     for _ in sp.preorder_traversal(expr):
         node_count += 1
     return node_count
+
+
+def count_nodes(exprr):
+    unary_ops = 0
+    binary_ops = 0
+
+    # Define a helper function to traverse the expression
+    def traverse(expr):
+        nonlocal unary_ops, binary_ops
+
+        # Check if the expression is an operation
+        if isinstance(expr, sp.Basic):
+            if isinstance(expr, sp.Add):
+                binary_ops += 1
+            if isinstance(expr, sp.Mul) or isinstance(expr, sp.Pow):
+                if not(isinstance(expr, sp.Mul) and any([('c' in str(arg) and arg.is_Symbol and len(expr.args) == 2) for arg in expr.args])):
+                    binary_ops += 1
+                    if isinstance(expr, sp.Mul):
+                        binary_ops += len(expr.args)
+                for arg in expr.args:
+                    traverse(arg)
+            elif isinstance(expr, sp.Function):
+                unary_ops += 1
+                for arg in expr.args:
+                    traverse(arg)
+            elif isinstance(expr, sp.Derivative):
+                unary_ops += 1
+                traverse(expr.args[0])
+                for sym in expr.args[1:]:
+                    if isinstance(sym, tuple):
+                        unary_ops += len(sym)
+                    else:
+                        unary_ops += 1
+            # elif isinstance(expr, sp.Rational):
+            #     # Rational is a binary operation (numerator/denominator)
+            #     binary_ops += 1
+            # elif isinstance(expr, sp.Number):
+            #     # Numbers are not operations
+            #     pass
+            else:
+                for arg in expr.args:
+                    traverse(arg)
+
+    traverse(exprr)
+    return unary_ops + binary_ops
 
 
 def remove_coeffs(skeleton):
@@ -354,30 +509,93 @@ def remove_coeffs(skeleton):
     if isinstance(skeleton, sp.Add):
         terms = 0
         for arg in args:
-            if isinstance(arg, sp.Symbol) and str(arg) == 'c':
+            if isinstance(arg, sp.Symbol) and 'c' in str(arg):
                 terms += 0
             else:
                 terms += arg
         skeleton = terms
 
-    args = skeleton.args
-    if isinstance(skeleton, sp.Add) and all([isinstance(arg, sp.Mul) for arg in args]) and all([str(arg)[:2] == 'c*' for arg in args]):
-        terms = 0
-        for ia, arg in enumerate(args):
-            if ia == 0:
-                terms += sp.sympify(str(arg)[2:])
-            else:
-                terms += arg
-        skeleton = terms
+    # args = skeleton.args
+    # if isinstance(skeleton, sp.Add) and all([isinstance(arg, sp.Mul) for arg in args]) and all(['c' in str(arg)[:2] for arg in args]):
+    #     terms = 0
+    #     for ia, arg in enumerate(args):
+    #         if ia == 0:
+    #             terms += sp.sympify(arg.args[1])
+    #         else:
+    #             terms += arg
+    #     skeleton = terms
 
     args = skeleton.args
     if isinstance(skeleton, sp.Mul) and len(args) == 2:
         terms = 1
         for arg in args:
-            if isinstance(arg, sp.Symbol) and str(arg) == 'c':
+            if isinstance(arg, sp.Symbol) and 'c' in str(arg):
                 terms *= 1
             else:
                 terms *= arg
         skeleton = terms
 
     return skeleton
+
+
+SYMPY_OPERATORS = {
+        # Elementary functions
+        sp.Pow: "pow",
+        sp.exp: "exp",
+        sp.log: "ln",
+        sp.Abs: 'abs',
+        # Trigonometric Functions
+        sp.sin: "sin",
+        sp.cos: "cos",
+        sp.tan: "tan",
+        # Trigonometric Inverses
+        sp.asin: "asin",
+        sp.acos: "acos",
+        sp.atan: "atan",
+        # Hyperbolic Functions
+        sp.sinh: "sinh",
+        sp.cosh: "cosh",
+        sp.tanh: "tanh",
+    }
+
+
+def check_if_inside_unary_ops(depend_var, skeleton, ops=None):
+    """
+    Determine inside which operators of the given skeleton there is a coefficient that depends on the variable depend_var
+    """
+    if ops is None:
+        ops = []
+
+    for arg in skeleton.args:
+        if arg.is_number or isinstance(arg, sp.Symbol):
+            continue
+        elif depend_var in str(arg):
+            if arg.func in list(SYMPY_OPERATORS.keys()):
+                if len(arg.args) == 1:
+                    if depend_var in str(arg.args):
+                        # If the unary operator contains a coefficient that depends on the variable under analysis, add it
+                        ops.append(SYMPY_OPERATORS[arg.func])
+                        # And keep going deeper and check if there's an inner unary operator that contains the same dependency
+                        ops = check_if_inside_unary_ops(depend_var, arg, ops=ops)
+                if len(arg.args) == 2:
+                    if depend_var in str(arg.args[0]):
+                        ops.append(SYMPY_OPERATORS[arg.func])
+                        ops = check_if_inside_unary_ops(depend_var, arg, ops=ops)
+                    if depend_var in str(arg.args[1]):
+                        ops.append(SYMPY_OPERATORS[arg.func])
+                        ops = check_if_inside_unary_ops(depend_var, arg, ops=ops)
+            else:
+                ops = check_if_inside_unary_ops(depend_var, arg, ops=ops)
+
+    return ops
+
+
+# oops = check_if_inside_unary_ops('f1', sp.sympify('cm_2*sin(f1*x0 + f1) + f1*x0 + f1'))
+
+# Example usage
+# x, y = sp.symbols('x y')
+# expr = sp.sin(x) + x**2 - sp.log(y)
+# expr0 = sp.sympify('cm_1*x0 + cm_2*x2 + cm_3*x0**2 + cm_4*x2**2 + cm_5*x0**4 + cm_6*x2**4')
+# print(count_nodes(expr0))
+# expr1 = sp.sympify('cm_1*x0 + cm_2*x2**2 + cm_3*x0**4 + cm_4*x2**4 + cm_5*x0**2*x2')
+# print(count_nodes(expr1))

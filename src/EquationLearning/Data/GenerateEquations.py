@@ -86,11 +86,7 @@ class Pipepile:
         if infix == 'ca_0 + cm_0*(ca_1 + cm_1*x_1)':
             infix = 'ca_0 + cm_0*x_1'
         # Try to convert infix back to prefix to check if there's an error
-        try:
-            _ = self.env.sympy_to_prefix(sympify(infix))
-            # print(infix)
-        except:
-            print()
+        _ = self.env.sympy_to_prefix(sympify(infix))
         eq = lambdify(
             self.fun_args,
             constants_expression,

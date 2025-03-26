@@ -1,0 +1,10 @@
+(tanh(cosh(x0) - 1.0369) + tanh(cosh(x1) - 1.0381))
+(cosh(tanh(x0)) + ((cosh(tanh(tanh(x1 * tanh(x1)))) * 1.6405656) + -2.7019193)) * 2.0357502
+((tanh(x1 / tanh(sinh(x1 * 1.8749421))) + -1.5620353) + cosh(tanh(x0))) * 2.0460548
+((tanh(sqrt(tanh(cosh(x1))) * cosh(0.86877173 * x0)) * 4.4039297) * tanh(cosh(x1 * 0.86877173))) + -2.4272797
+sinh(tanh(cosh(x1 * 0.89534545)) + ((cosh(tanh(x0 * sinh(tanh(sinh(x0))))) * 0.4058644) + 0.6897999)) + -3.0314062
+sinh(sinh(sinh(tanh(sinh((cosh(tanh(x1 * tanh(x1))) * cosh(tanh(x0 * tanh(x0)))) + -0.7182549)))))
+log(0.9755438 / (cos(tanh(sinh(x1) * -0.81207514)) * cos(tanh(tanh(sinh(sinh(x0))) * (x0 * -1.0941308))))) * 1.6444764
+log(sinh((1.1839207 / sinh(cosh(x1))) + (cosh(tanh(x0)) * -1.9753344)) * -0.7053123)
+((tan(sinh(tanh(tanh(cosh(x0)) * cosh(cosh(tan(tanh(x1))) * 0.8267627)))) * cosh(tanh(x0))) + -1.1964924) * 0.8000561
+log(tan(sqrt(tanh(cosh(x1) * tanh(sqrt(cosh(x0)))) * (tanh(cosh(x0)) * 2.0796168))) + -0.6349793)

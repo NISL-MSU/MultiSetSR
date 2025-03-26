@@ -1,1 +1,0 @@
-(tanh(cosh(x0) - 1.0369) + tanh(cosh(x1) - 1.0381))

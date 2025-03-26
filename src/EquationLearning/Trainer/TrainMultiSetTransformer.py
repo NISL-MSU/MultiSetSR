@@ -46,11 +46,24 @@ def seq2equation(tokenized, id2word, printFlag=False):
     return infix
 
 
-def loss_sample(output, trg):
-    """Loss function that combines cross-entropy and information entropy for a single sample"""
+def loss_sample(output, trg, operators_tokens, prior_ops=None, penalty_factor=0.5):
+    """Loss function for a single sample"""
     ce = nn.CrossEntropyLoss(ignore_index=0)
     ce.cuda()
-    return ce(output, trg)
+    if prior_ops is None:
+        return ce(output, trg)
+    else:
+        _, predicted_tokens = torch.max(output, dim=1)
+
+        predicted_set = set(predicted_tokens.tolist())
+        prior_ops_set = set(prior_ops)
+        total_ops_set = set(operators_tokens)
+
+        # Calculate penalization
+        penalized_tokens = predicted_set.intersection(total_ops_set) - prior_ops_set
+        penalization = len(penalized_tokens) * penalty_factor
+
+        return ce(output, trg) + penalization
 
 
 class TransformerTrainer:
@@ -81,16 +94,18 @@ class TransformerTrainer:
         self.training_dataset = Dataset(self.data_train_path, self.cfg.dataset_train, mode="train")
         self.word2id = self.training_dataset.word2id
         self.id2word = self.training_dataset.id2word
+        # Extract the tokens corresponding to mathematical operators
+        self.operators_tokens = [self.word2id[n] for n in list(self.word2id.keys()) if not (n.isnumeric() or n == 'x_1' or len(n) == 1)]
 
     def _init_model(self):
         try:  # Read config yaml
             self.cfg = omegaconf.OmegaConf.load("EquationLearning/Transformers/config.yaml")
         except FileNotFoundError:
-            self.cfg = omegaconf.OmegaConf.load("../Transformers/config.yaml")
+            self.cfg = omegaconf.OmegaConf.load("src/EquationLearning/Transformers/config.yaml")
         self._config_datasets()
 
         # Name structure: "Model{dim_hidden}-batch_{batch_size}-{dataset_name}"
-        self.model_name = 'EquationLearning/saved_models/saved_MSTs/Model' + str(self.cfg.architecture.dim_hidden) + \
+        self.model_name = 'src/EquationLearning/saved_models/saved_MSTs/Model' + str(self.cfg.architecture.dim_hidden) + \
                           '-batch_' + str(self.cfg.batch_size) + '-' + self.cfg.dataset
 
         return Model(cfg=self.cfg.architecture, cfg_inference=self.cfg.inference, word2id=self.word2id,
@@ -193,6 +208,12 @@ class TransformerTrainer:
         skeletons_batch = [skeletons_block[i] for i in batch_inds]
         # Check that there's no skeleton larger than the maximum length
         valid_inds = [i for i in range(len(skeletons_batch)) if len(skeletons_batch[i]) < self.cfg.architecture.length_eq]
+
+        if torch.cuda.device_count() > 1:  # Ensure len(valid_inds) is a multiple of 4
+            valid_len = len(valid_inds)
+            if valid_len % 4 != 0:
+                valid_len = (valid_len // 4) * 4
+            valid_inds = valid_inds[:valid_len]
         XY_batch = XY_batch[valid_inds, :, :, :]
         skeletons_batch = [skeletons_batch[i] for i in valid_inds]
         return XY_batch, skeletons_batch, valid_inds
@@ -220,7 +241,7 @@ class TransformerTrainer:
             np.random.shuffle(indexes)
 
             batch_count = 0
-            for b_ind in indexes:  # Block loop (each block contains 8000 inputs)
+            for b_ind in indexes:  # Block loop
                 # Read block
                 block = open_h5(train_files[b_ind])
                 input_block, skeletons_block, xpr_block = self._process_block(block)
@@ -262,7 +283,7 @@ class TransformerTrainer:
                         for bi in range(output.shape[1]):
                             out = output[:, bi, :].contiguous().view(-1, output.shape[-1])
                             tokenized = skeletons_batch[bi, :][1:].contiguous().view(-1)
-                            L1s = loss_sample(out, tokenized.long())
+                            L1s = loss_sample(out, tokenized.long(), operators_tokens=None)
                             L1 += L1s
 
                     loss = L1 / len(valid_inds)
@@ -289,7 +310,7 @@ class TransformerTrainer:
             # Validation step
             #########################################################################
             indexes2 = np.arange(len(val_files))
-            batch_val_size = 1
+            batch_val_size = 20
             if torch.cuda.device_count() > 1:
                 self.model.module.set_eval()
             else:
@@ -297,6 +318,7 @@ class TransformerTrainer:
             L1v, L2v, iv = 0, 0, 0
 
             cc = 0
+            np.random.shuffle(indexes2)
             for b_ind in indexes2:  # Block loop (each block contains 1000 inputs)
                 # Read block
                 block = open_h5(val_files[b_ind])
@@ -325,15 +347,18 @@ class TransformerTrainer:
                     for bi in range(output.shape[1]):
                         out = output[:, bi, :].contiguous().view(-1, output.shape[-1])
                         tokenized = skeletons_batch[bi, :][1:].contiguous().view(-1)
-                        L1s = loss_sample(out, tokenized.long())
+                        L1s = loss_sample(out, tokenized.long(), operators_tokens=None)
                         L1v += L1s
                         iv += 1
                         res = output.cpu().numpy()[:, 0, :]
                         max_indices = np.argmax(res, axis=1)
-                        infix = sympy.sympify(seq2equation(max_indices, self.id2word))
-                        infixT = sympy.sympify(
-                            seq2equation(list(skeletons_block[step].cpu().numpy())[1:], self.id2word))
-                        print("Target: " + str(infixT) + " . Pred: " + str(infix))
+                        try:
+                            infix = sympy.sympify(seq2equation(max_indices, self.id2word))
+                            infixT = sympy.sympify(
+                                seq2equation(list(skeletons_block[step].cpu().numpy())[1:], self.id2word))
+                            print("Step: " + str(step) + "Target: " + str(infixT) + " . Pred: " + str(infix))
+                        except:
+                            continue
                 cc += 1
                 with open('EquationLearning/saved_models/saved_MSTs/validation_performance.txt', 'w') as file:
                     file.write(str(L1v / (5000 * cc)))

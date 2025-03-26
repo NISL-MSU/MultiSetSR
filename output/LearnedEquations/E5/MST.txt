@@ -1,4 +1,0 @@
-c*sin(c*x0 + c) + c
-c*sin(c*x1 + c) + c
-c*sin(c*x2 + c) + c
-c*exp(c*x3) + c
