@@ -1,1 +1,10 @@
 2
+tanh(x1)/cos(tanh(x0))
+1.14784343336993*sqrt(sqrt(abs(x0))*sqrt(abs(x1))) - 0.105452690249623
+1.10770752109184*sqrt(sqrt(abs(x0))*sqrt(abs(x1)))
+1.07011262695028*(abs(x0*x1))**(1/4)
+1.10202942754219*(abs(x0*x1))**(1/4)
+tanh((x0 + 0.504)*tanh(x0)) + tanh(x1**2 - 0.0169983625226255)
+0.829*abs(x0)**(1/4)/cos(tanh(x1))
+exp(tanh(tanh(log(0.864130364232904*sqrt(abs(x0))*sqrt(abs(x1))))))
+2.03665987780041*tanh(0.520737941224138*sqrt(abs(x0))*sqrt(abs(x1)))

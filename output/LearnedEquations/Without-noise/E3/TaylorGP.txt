@@ -1,9 +1,9 @@
 0.225*x0*exp(x0)
--x0 - sqrt(-x0 - 0.86804289681887*sqrt(exp(x0)) + exp(x0)) + exp(x0) - cos(sqrt(cos(x1/x0))) + 0.092
-0.346*exp(x0)*log(1.34839972492648*sqrt(-0.247*x0 + exp(x0) - 0.247*sqrt(exp(sqrt(sin(x1)))))) + 0.107
--x0 - sqrt(sqrt(x0) - x0 - 0.784927700684155*sqrt(exp(x0) - 0.0832532662979533) + exp(x0)) + exp(x0)
--x0 - sqrt(sqrt(x0) - x0 - 0.837854402626136*sqrt(exp(x0)) + exp(x0)) + exp(x0)
--sqrt(x0) - x0 + exp(x0) + tanh(x0 + sqrt(exp(x0) - 0.977401134826864) - exp(x0) + 0.977401134826864) - 0.506
+-x0 - sqrt(abs(-x0 - 0.86804289681887*sqrt(exp(x0)) + exp(x0))) + exp(x0) - cos(sqrt(abs(cos(x1/x0)))) + 0.092
+0.346*exp(x0)*log(abs(1.34839972492648*sqrt(-0.247*x0 + exp(x0) - 0.247*sqrt(exp(sqrt(abs(sin(x1)))))))) + 0.107
+-x0 - sqrt(abs(sqrt(abs(x0)) - x0 - 0.784927700684155*sqrt(abs(exp(x0) - 0.0832532662979533)) + exp(x0))) + exp(x0)
+-x0 - sqrt(abs(sqrt(abs(x0)) - x0 - 0.837854402626136*sqrt(exp(x0)) + exp(x0))) + exp(x0)
+-sqrt(abs(x0)) - x0 + exp(x0) + tanh(x0 + sqrt(abs(exp(x0) - 0.977401134826864)) - exp(x0) + 0.977401134826864) - 0.506
 -2*x0 + exp(x0) - 0.362790290808114
 -0.611673953092179*sqrt(exp(x0)*exp(2*tanh(x0))) + exp(x0)
 -x0 + exp(x0) + cos(x0) - 0.815314420066598

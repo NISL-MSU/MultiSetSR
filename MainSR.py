@@ -9,7 +9,7 @@ if __name__ == '__main__':
     import torch
     from EquationLearning.models.NNModel import NNModel
 
-    datasetNames = ['E1']
+    datasetNames = ['E6']
     noise = 0
     noise_name = ''
     if noise > 0:
@@ -50,5 +50,5 @@ if __name__ == '__main__':
         ###########################################
         # Get Estimated Multivariate Expressions
         ###########################################
-        regressor = SetGAP(dataset=data, bb_model=nn_model, n_candidates=4)
+        regressor = SetGAP(dataset=data, bb_model=nn_model, n_candidates=2)
         results = regressor.run()

@@ -1,1 +1,10 @@
 -sin(0.343*x2**2)/(-sqrt(abs(x2)) + sin(sqrt(abs(x2))))
+tanh(x0) + 0.327 + 4.83091787439614*sin(x2)/x2
+x1*sin(x2)/(x2*tanh(x1)) + cos(x2) + tanh(x0)
+(sqrt(abs(x1)) - log(abs(x2)))*(cos(x2) + 0.604) + cos(x2) + tanh(0.142*x0)
+x1*sin(x2)/(x2*tanh(x1)) - 1.18483412322275*cos(exp(sqrt(abs(x2))))
+-1.18483412322275*cos(exp(sqrt(abs(x2)))) + 4.85436893203884*sin(x2)/x2
+x1*sin(x2)/(x2*tanh(x1)) + cos(x2) + tanh(x0)
+cos(x2) + 0.422 + 5.6497175141243*log(sqrt(abs(x1)))*sin(x2)/x2
+cos(x2) + tanh(x0) + 7.4074074074074*log(sqrt(abs(x1)))*sin(x2)/x2
+cos(x2) + tanh(x0) + 4.95049504950495*sin(x2)/x2

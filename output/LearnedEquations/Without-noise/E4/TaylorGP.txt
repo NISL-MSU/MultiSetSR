@@ -1,10 +1,10 @@
 0.288*x0**2
-sqrt(x0)*log(x0) + x2 - exp(tanh(log(x2)))
-x0 + x2 - sqrt(sqrt(x0)*sqrt(x2)) + 0.778
-sqrt(x0)*log(x0) + x2/tanh(x2) - 1.57118816882988
-sqrt(x0)*log(x0/tanh(x0)) + x2/tanh(x2) - 1.79731510103402
-sqrt(x2*(sqrt(x0)*x2 - log(x2) - 0.553)/tanh(x2))*sqrt(log(x0))
-0.756*sqrt(x0)*log(x0) + 0.756*x2*tanh(x2)
-(sqrt(x2) - sin(x0))*exp(tanh(log(sqrt(x0)*sqrt(x2))))
+sqrt(abs(x0))*log(abs(x0)) + x2 - exp(tanh(log(abs(x2))))
+x0 + x2 - sqrt(sqrt(abs(x0))*sqrt(abs(x2))) + 0.778
+sqrt(abs(x0))*log(abs(x0)) + x2/tanh(x2) - 1.57118816882988
+sqrt(abs(x0))*log(abs(x0/tanh(x0))) + x2/tanh(x2) - 1.79731510103402
+sqrt(abs(x2*(sqrt(abs(x0))*x2 - log(abs(x2)) - 0.553)/tanh(x2)))*sqrt(log(abs(x0)))
+0.756*sqrt(abs(x0))*log(abs(x0)) + 0.756*x2*tanh(x2)
+(sqrt(abs(x2)) - sin(x0))*exp(tanh(log(sqrt(abs(x0))*sqrt(abs(x2)))))
 x0 + 0.118*x2**2 - 0.412320781743425
 x0 + x2 - 2

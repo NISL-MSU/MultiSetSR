@@ -1,1 +1,10 @@
 sqrt(abs(x1)) - x1**2
+sqrt(abs(x1)) - 0.974*x1**2 + 0.00803217169726427
+sqrt(abs(x1)) - 0.974*x1**2
+sqrt(abs(x1)) - 0.9738*x1**2
+sqrt(abs(x1)) - x1**2
+-x1**2 + log(abs(-x1**2 + log(abs(-x1**2 + sqrt(abs(x1*(0.073 - x1)))))))
+-x1**2 + log(abs(-x1**2 + log(abs(-x1**2 + 0.828251169633946*sqrt(abs(-x1**2))))))
+-x1**2 + log(abs(-x1**2 + log(abs(-x1**2 + log(abs(-x1**2 - 0.943))))))
+-x1**2 + log(abs(-x1**2 + (sqrt(abs(x1)) - x1**2 + sqrt(abs(x1 - 0.479*tanh(exp(-0.538*x1**2)))))/(-x1**2 - 0.392)))
+-x1**2 + 0.802496105909555*sqrt(abs(-x1**2 - sin(x0)))

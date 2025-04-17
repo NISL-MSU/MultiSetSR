@@ -53,6 +53,12 @@ class InputData:
         else:
             self.limits = [(np.min(self.X[:, xdim]), np.max(self.X[:, xdim])) for xdim in range(self.X.shape[1])]
 
+        if self.X.ndim > 1:
+            self.values = [-1] * self.n_features
+            for xdim in range(self.n_features):
+                if self.types[xdim] == 'discrete':
+                    self.values[xdim] = np.unique(self.X[:, xdim])
+
 
 class DataLoader:
     """Class used to load or generate datasets used for equation learning"""
@@ -124,7 +130,7 @@ class DataLoader:
         self.expr = ((symb[0] / ((symb[1]/10) * 1.7 ** 2)) ** 2) * sp.cos(symb[2] * (sp.pi / 180))
 
     def E1(self, n=10000):  # S4 in "Informed Equation Learning" (Werner et. al, 2021)
-        np.random.seed(8)
+        np.random.seed(1)
         # Define features
         if not self.extrapolation:
             x1 = np.random.uniform(-5, 5, size=n)
@@ -199,7 +205,7 @@ class DataLoader:
                      100 * (symb[3] - symb[2] ** 2) ** 2) / 10000
 
     def E5(self, n=50000):  # Ours
-        np.random.seed(10)
+        np.random.seed(1)
         # Define features
         if not self.extrapolation:
             x1 = np.random.uniform(-10, 10, size=n)

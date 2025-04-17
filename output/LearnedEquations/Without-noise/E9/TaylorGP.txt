@@ -1,1 +1,10 @@
 log(0.788/abs(x0)) - 2.36006694402861*exp(-x1)
+-sqrt(abs(x0 + 0.119)) - 0.906*log(abs(x0)) + log(abs(x1))*tanh(x1)
+-sqrt(abs(log(abs(0.568/x0)))) - log(abs(x0)) + tanh(log(abs(x1)))
+0.26*x1 - sqrt(abs(log(abs(-0.593/x0)) + log(abs(tanh(x1/x0))))) + log(abs(0.984/x0))
+-sqrt(abs(log(abs(0.603/x0)))) - log(abs(x0)) + tanh(log(abs(x1)))
+-1.618*sqrt(abs(x0)) + sqrt(abs(x1)) - 0.68261797407804*log(abs(x0))
+0.26*x1 - sqrt(abs(log(abs(-0.593/x0)) + log(abs(tanh(x1/x0))))) + log(abs(0.952/x0))
+-sqrt(abs(log(abs(-0.792/x0)) + log(abs(tanh(x1/x0))))) + log(abs(-0.764/x0)) + tanh(x1)
+-sqrt(abs(-sqrt(abs(x0)) + log(abs(-0.873/x0)) + tanh(x1))) - log(abs(x0)) + tanh(x1) - 0.298
+-1.48588410104012*sqrt(abs(x0)) + log(sqrt(abs(x1/x0))) + 0.889

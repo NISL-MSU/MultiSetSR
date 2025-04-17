@@ -7,4 +7,4 @@ sqrt(x0) * log(x1 * x1)
 log(x1 * x1) * sqrt(x0)
 sqrt(x0) * log(x1 * x1)
 sqrt(x0) * log(x1 * x1)
-(tanh(2.4503145 + sqrt(exp(cosh(x1 / -4.7917967) / -0.4920436))) * (sqrt(x0) * log(sinh(sqrt(log(cosh(x1 / 2.6238515)))) * 3.7112253))) * 2.0150216
+(tanh(2.4503145 + sqrt(exp(cosh(x1 / -4.7917967) / -0.4920436))) * (sqrt(abs(x0)) * log(abs(sinh(sqrt(abs(log(abs(cosh(x1 / 2.6238515))))))) * 3.7112253))) * 2.0150216

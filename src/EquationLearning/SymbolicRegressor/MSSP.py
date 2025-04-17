@@ -27,7 +27,7 @@ class MSSP:
         self.target_function = dataset.expr
         if self.target_function != '':
             self.f_lambdified = sp.lambdify(sp.utilities.iterables.flatten(sp.sympify(dataset.names)), dataset.expr)
-        self.limits, self.n_features = dataset.limits, dataset.n_features
+        self.limits, self.n_features, self.unique_vals = dataset.limits, dataset.n_features, dataset.values
         self.symbols = sp.symbols("{}:{}".format('x', self.n_features))
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.bb_model = bb_model
@@ -98,11 +98,14 @@ class MSSP:
                             values[isy] = np.random.uniform(self.limits[isy][0] + rang * .05,
                                                             self.limits[isy][1] - rang * .05)
                         else:
-                            range_values = np.linspace(self.limits[isy][0], self.limits[isy][1], 100)
-                            values[isy] = np.random.choice(range_values)
+                            # range_values = np.linspace(self.limits[isy][0], self.limits[isy][1], 100)
+                            values[isy] = np.random.choice(self.unique_vals[isy])
                     values = np.repeat(values[:, None], self.n_samples, axis=1)
                     # Sample values of the variable that is being analyzed
-                    sample = np.random.uniform(self.limits[iv][0], self.limits[iv][1], self.n_samples)
+                    if self.types[iv] == 'continuous':
+                        sample = np.random.uniform(self.limits[iv][0], self.limits[iv][1], self.n_samples)
+                    else:
+                        sample = np.random.choice(np.array(self.unique_vals[iv]), self.n_samples)
                     values[iv, :] = sample
                     # Estimate the response of the generated set
                     Y = np.array(self.bb_model.evaluateFold(values.T, batch_size=values.shape[1]))[:, 0]
