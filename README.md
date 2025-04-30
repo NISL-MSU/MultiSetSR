@@ -136,10 +136,10 @@ dataset = InputData(X=X, Y=Y, names=names, types=types)
 
 **Train a NN**
 
-Unlike the previous example, we haven't trained a NN for this problem so let's train it now. 
+Unlike the previous example, we haven't trained a NN for this problem, so let's train it now. 
 If you're not satisfied with the validation MSE, you can try increasing the number of epochs or try a different architecture. 
 By default, we use the `modelType='NN'`; if you need less complexity, try `modelType='NN2'`; or if you need more complexity, try `modelType='NN3'`.
-You can always train a model with your own architecture, save it as a `.pth` file and load it here as we did in the previous example.
+You can always train a model with your own architecture, save it as a `.pth` file, and load it here as we did in the previous example.
 
 ```python
 from EquationLearning.Trainer.TrainNNmodel import Trainer
@@ -155,11 +155,11 @@ predictor.train(batch_size=128, epochs=3000, printProcess=False)
 Now, SeTGAP is executed as we did before:
 
 ```python
-regressor = SetGAP(dataset=data, bb_model=nn_model, n_candidates=2)
+regressor = SetGAP(dataset=dataset, bb_model=predictor.model, n_candidates=3)
 results = regressor.run()
 ```
 
-As a bonus, if you're only interested in discovering what are the functional forms that relate each system variable and the system's response,
+As a bonus, if you're only interested in discovering what the functional forms are that relate each system variable and the system's response,
 you can run the univariate skeleton generator (MSSP) alone:
 
 ```python
