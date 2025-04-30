@@ -5,7 +5,7 @@ from joblib import Parallel, delayed, cpu_count
 from tqdm import trange
 from scipy.stats import pearsonr
 from EquationLearning.utils import *
-from src.EquationLearning.models.utilities_expressions import *
+from EquationLearning.models.utilities_expressions import *
 
 import warnings
 
