@@ -86,26 +86,23 @@ class SetGAP:
             # Merge each of the skeletons in merged_skeletons with each candidate
             new_merged, new_programs, new_corr_vals, count = [], [], [], 0
 
-            flag = True
             for merged_skeleton in merged_skeletons:
-                if flag:
-                    for s in range(len(self.skeletons[i])):
-                        merger = MergeExpressions(merged_skeleton + sp.sympify('c'), self.skeletons[i][s],
-                                                  len(changing_variables))
-                        result_comb = merger.choose_combination(response=[samples, t_response], verbose=False,
-                                                                all_var=all_var)
-                        count += 1
-                        if result_comb is not None:
-                            merged, corr_val, program = result_comb
-                            new_merged.append(merged)
-                            new_programs.append(program)
-                            new_corr_vals.append(corr_val)
-                            print("Generated skeleton ", str(count), '/',
-                                  str(len(merged_skeletons) * len(self.skeletons[i])),
-                                  ":\t ", str(merged), "\t Fitness = " + str(np.round(corr_val, 6)))
-                            flag = False
-                        else:
-                            print("These skeletons didn't yield a good combination")
+                for s in range(len(self.skeletons[i])):
+                    merger = MergeExpressions(merged_skeleton + sp.sympify('c'), self.skeletons[i][s],
+                                              len(changing_variables))
+                    result_comb = merger.choose_combination(response=[samples, t_response], verbose=False,
+                                                            all_var=all_var)
+                    count += 1
+                    if result_comb is not None:
+                        merged, corr_val, program = result_comb
+                        new_merged.append(merged)
+                        new_programs.append(program)
+                        new_corr_vals.append(corr_val)
+                        print("Generated skeleton ", str(count), '/',
+                              str(len(merged_skeletons) * len(self.skeletons[i])),
+                              ":\t ", str(merged), "\t Fitness = " + str(np.round(corr_val, 6)))
+                    else:
+                        print("These skeletons didn't yield a good combination")
             # Take the best self.n_candidates
             merged_skeletons = [x for cv, x in sorted(zip(new_corr_vals, new_merged), reverse=True) if cv <= 1]
             merged_programs = [x for cv, x in sorted(zip(new_corr_vals, new_programs), reverse=True) if cv <= 1]
