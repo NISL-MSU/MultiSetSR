@@ -63,18 +63,20 @@ class InputData:
 class DataLoader:
     """Class used to load or generate datasets used for equation learning"""
 
-    def __init__(self, name=None, extrapolation: bool = False, noise: float = 0):
+    def __init__(self, name=None, extrapolation: bool = False, noise: float = 0, seed: int = 0):
         """
         Initialize DataLoader class
         :param name: Dataset name
         :param extrapolation: If True, generate extrapolation data
         :param noise: Noise level that is applied to the input variables N(0, noise)
+        :param seed: Random seed
         """
         self.X, self.Y, self.names = np.zeros(0), np.zeros(0), None
         self.expr, self.cfg, self.types = None, None, []
         self.extrapolation = extrapolation
         self.name = name
         self.noise = noise
+        self.seed = seed
 
         if name == 'E10':
             name = 'CS1'
@@ -111,7 +113,7 @@ class DataLoader:
                                  expr=self.expr)
 
     def Y1(self, n=100000):  # Youseff's equation
-        np.random.seed(1)
+        np.random.seed(self.seed)
         # Define features
         if not self.extrapolation:
             x1 = np.random.uniform(-50, 50, size=n)
@@ -130,7 +132,7 @@ class DataLoader:
         self.expr = ((symb[0] / ((symb[1]/10) * 1.7 ** 2)) ** 2) * sp.cos(symb[2] * (sp.pi / 180))
 
     def E1(self, n=10000):  # S4 in "Informed Equation Learning" (Werner et. al, 2021)
-        np.random.seed(1)
+        np.random.seed(self.seed)
         # Define features
         if not self.extrapolation:
             x1 = np.random.uniform(-5, 5, size=n)
@@ -147,7 +149,7 @@ class DataLoader:
         self.expr = (3.0375 * symb[0] * symb[1] + 5.5 * sp.sin(9/4 * (symb[0] - 2/3) * (symb[1] - 2/3))) / 5
 
     def E2(self, n=10000):  # Ours
-        np.random.seed(1)
+        np.random.seed(self.seed)
         # Define features
         if not self.extrapolation:
             x1 = np.random.uniform(-10, 10, size=n)
@@ -166,7 +168,7 @@ class DataLoader:
         self.expr = 5.5 + (1 - symb[0] / 4) ** 2 + (sp.sqrt(symb[1] + 10)) * sp.sin(symb[2] / 5)
 
     def E3(self, n=10000):  # A1 in "Informed Equation Learning" (Werner et. al, 2021)
-        np.random.seed(1)
+        np.random.seed(self.seed)
         # Define features
         if not self.extrapolation:
             x1 = np.random.uniform(-3, 3, size=n)
@@ -183,7 +185,7 @@ class DataLoader:
         self.expr = (1.5 * sp.exp(1.5 * symb[0]) + 5 * sp.cos(3 * symb[1]))/10
 
     def E4(self, n=50000):  # Rosenbrock 4-D
-        np.random.seed(1)
+        np.random.seed(self.seed)
         # Define features
         if not self.extrapolation:
             x1 = np.random.uniform(-5, 5, size=n)
@@ -205,7 +207,7 @@ class DataLoader:
                      100 * (symb[3] - symb[2] ** 2) ** 2) / 10000
 
     def E5(self, n=50000):  # Ours
-        np.random.seed(1)
+        np.random.seed(self.seed)
         # Define features
         if not self.extrapolation:
             x1 = np.random.uniform(-10, 10, size=n)
@@ -226,7 +228,7 @@ class DataLoader:
         self.expr = sp.sin(symb[0] + symb[1] * symb[2]) + sp.exp(1.2 * symb[3])
 
     def E6(self, n=50000):  # Ours
-        np.random.seed(1)
+        np.random.seed(self.seed)
         # Define features
         if not self.extrapolation:
             x1 = np.random.uniform(-10, 10, size=n)
@@ -245,7 +247,7 @@ class DataLoader:
         self.expr = sp.tanh(symb[0] / 2) + (sp.Abs(symb[1])) * sp.cos(symb[2] ** 2 / 5)
 
     def E7(self, n=50000):  # S0 in "Informed Equation Learning" paper
-        np.random.seed(1)
+        np.random.seed(self.seed)
         # Define features
         if not self.extrapolation:
             x1 = np.random.uniform(-5, 5, size=n)
@@ -262,7 +264,7 @@ class DataLoader:
         self.expr = (1 - symb[1]**2) / (sp.sin(2 * np.pi * symb[0]) + 1.5)
 
     def E8(self, n=50000):  # S5 in "Informed Equation Learning" (Werner et. al, 2021)
-        np.random.seed(1)
+        np.random.seed(self.seed)
         # Define features
         if not self.extrapolation:
             x1 = np.random.uniform(-5, 5, size=n)
@@ -279,7 +281,7 @@ class DataLoader:
         self.expr = (symb[0])**4 / ((symb[0])**4 + 1) + (symb[1])**4 / ((symb[1])**4 + 1)
 
     def E9(self, n=50000):  # A2 in "Informed Equation Learning" (Werner et. al, 2021)
-        np.random.seed(1)
+        np.random.seed(self.seed)
         # Define features
         if not self.extrapolation:
             x1 = np.random.uniform(-5, 5, size=n)
@@ -296,7 +298,7 @@ class DataLoader:
         self.expr = sp.log(2 * symb[1] + 1) - sp.log(4 * symb[0] ** 2 + 1)
 
     def CS1(self, n=50000):  # CS1 in " The Metric is the Message" (Bertschinger et al., 2023)
-        np.random.seed(1)
+        np.random.seed(self.seed)
         # Define features
         if not self.extrapolation:
             x1 = np.random.uniform(-2, 2, size=n)
@@ -315,7 +317,7 @@ class DataLoader:
         self.expr = sp.sin(symb[0] * sp.exp(symb[1]))
 
     def CS2(self, n=50000):  # CS2 in " The Metric is the Message" (Bertschinger et al., 2023)
-        np.random.seed(1)
+        np.random.seed(self.seed)
         # Define features
         if not self.extrapolation:
             x1 = np.random.uniform(-5, 5, size=n)
@@ -332,7 +334,7 @@ class DataLoader:
         self.expr = symb[0] * sp.log(symb[1] ** 4)
 
     def CS3(self, n=50000):  # CS3 in " The Metric is the Message" (Bertschinger et al., 2023)
-        np.random.seed(1)
+        np.random.seed(self.seed)
         # Define features
         if not self.extrapolation:
             x1 = np.random.uniform(-10, 10, size=n)
@@ -349,7 +351,7 @@ class DataLoader:
         self.expr = 1 + symb[0] * sp.sin(1 / symb[1])
 
     def CS4(self, n=50000):  # CS4 in " The Metric is the Message" (Bertschinger et al., 2023)
-        np.random.seed(1)
+        np.random.seed(self.seed)
         # Define features
         if not self.extrapolation:
             x1 = np.random.uniform(0, 20, size=n)
@@ -366,7 +368,7 @@ class DataLoader:
         self.expr = sp.sqrt(symb[0]) * sp.log(symb[1] ** 2)
 
     def EX1(self, n=50000):
-        np.random.seed(1)
+        np.random.seed(self.seed)
         # Define features
         if not self.extrapolation:
             x1 = np.random.uniform(-5, 5, size=n)
@@ -385,7 +387,7 @@ class DataLoader:
         self.expr = (sp.Abs(symb[2])) / symb[0] * sp.exp(-1 / 2 * (symb[1] / symb[0]) ** 2)
 
     def EX2(self, n=10000):
-        np.random.seed(1)
+        np.random.seed(self.seed)
         # Define features
         if not self.extrapolation:
             x1 = np.random.uniform(-10, 10, size=n)
@@ -427,19 +429,19 @@ class DataLoader:
         self.names = ['x0']
 
     def U1(self):
-        np.random.seed(1)
+        np.random.seed(self.seed)
         filepath = str(get_project_root()) + '/src/EquationLearning/Data/univariate_datasets/U1.pkl'
         skeleton = 'c*x_1*log(c*x_1**2 + c) + c'
         self.loadGeneratedData(filepath, skeleton, xrange=[-10, 10])
 
     def U2(self):
-        np.random.seed(1)
+        np.random.seed(self.seed)
         filepath = str(get_project_root()) + '/src/EquationLearning/Data/univariate_datasets/U2.pkl'
         skeleton = 'c*(c*x_1 + c)**2*sin(c*x_1) + c'
         self.loadGeneratedData(filepath, skeleton, xrange=[-10, 10])
 
     def U3(self):
-        np.random.seed(1)
+        np.random.seed(self.seed)
         # filepath = str(get_project_root()) + '/src/EquationLearning/Data/univariate_datasets/U2.pkl'
         self.expr = sp.sympify('(x_1 + 1)**2/sin(x_1*x_2)')
         # Generate data by fixing values of x2
