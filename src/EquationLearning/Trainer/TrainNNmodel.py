@@ -92,7 +92,7 @@ class Trainer:
 
 
 if __name__ == '__main__':
-    names = ['Y1']  # E6  # CS1
+    names = ['SB3']  # E6  # CS1
     noise_level = 0  # 0.05
     for nme in names:
         data_loader = DataLoader(name=nme, noise=noise_level)

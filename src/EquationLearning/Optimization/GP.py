@@ -6,7 +6,7 @@ from tqdm import trange
 from scipy.stats import pearsonr
 from EquationLearning.utils import *
 from EquationLearning.models.utilities_expressions import *
-
+from EquationLearning.models.utilities_expressions import contains_div
 import warnings
 
 warnings.filterwarnings("ignore")
@@ -24,7 +24,10 @@ def simplify(expr, all_var=False):
     est_expr = expr.xreplace({n: n if abs(n) >= th else 0 for n in expr.atoms(sp.Number)})
 
     if not all_var:
-        est_expr = norm_func(sympy.expand(est_expr))
+        if contains_div(est_expr):
+            est_expr = norm_func(est_expr)
+        else:
+            est_expr = norm_func(sympy.expand(est_expr))
         args = np.array(get_args(est_expr))
         args[np.abs(args) <= th] = 0
         est_expr = set_args(est_expr, list(args))

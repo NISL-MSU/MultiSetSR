@@ -4,7 +4,8 @@ import numpy as np
 from EquationLearning.Optimization.GP import GP
 from EquationLearning.Data.math_rules import sk_equivalence
 from EquationLearning.models.utilities_expressions import add_constant_identifier, get_args, get_all_op_constant, \
-    find_node_in_ops, avoid_operations_between_constants, get_skeletons, expr2skeleton, remove_constant_identifier, set_args
+    find_node_in_ops, avoid_operations_between_constants, get_skeletons, expr2skeleton, remove_constant_identifier, \
+    set_args, is_div
 
 
 def add_constants(expr):
@@ -40,7 +41,7 @@ class MergeExpressions:
 
     def merge_base(self, exp1, exp2, inside_sum_with_const=False):
         """Generate a random combination of input skeletons"""
-
+        # print("Merging", exp1, " and ", exp2)
         if isinstance(exp1, sympy.Add) and isinstance(exp2, sympy.Add):
             # Check which sum has fewer arguments
             exp1_args = [sympy.sympify('cm_0') * op if not isinstance(op, sympy.Mul) and 'ca_' not in str(op) else op for op in exp1.args]
@@ -57,6 +58,7 @@ class MergeExpressions:
                 exp_short = temp
                 flag = True
 
+            # print("\tMerging sums. Line 5")
             for i, xp in enumerate(exp_short):
                 if (i == len(exp_short) - 1) and 'c' in str(xp) and len(exp_long) > 0:
                     # If there are elements from exp_long that have not been merged, merge them with the constant term
@@ -71,8 +73,10 @@ class MergeExpressions:
                         continue
                     [exp_long.remove(s_arg) for s_arg in selected_args]
                     if len(selected_args) == 1:
+                        # print("\t\tA compatible factor was found and selected for merging. Going for recursion. Line 14")
                         exp_short[i] = self.merge_base(exp_short[i], selected_args[0], inside_sum_with_const=flag)
                     else:
+                        # print("\tMerging multiple subtrees. Line 16")
                         exp_short[i] = exp_short[i] * sum(selected_args)
             exp1 = sum(exp_short)
         else:
@@ -80,6 +84,7 @@ class MergeExpressions:
             if exp1.is_symbol or exp2.is_symbol:
                 exp1 = avoid_operations_between_constants(exp1 * exp2)
             elif (exp1.func == exp2.func) and not isinstance(exp1, sympy.Mul):
+                # print("\tMerging compatible unary op. Going for recursion. Line 21")
                 # If the operators are exactly equal, just merge the arguments
                 if len(exp1.args) == 1:
                     exp1 = exp1.func(*[self.merge_base(exp1.args[0], exp2.args[0])])
@@ -89,60 +94,80 @@ class MergeExpressions:
                 else:
                     exp1 = exp1 * exp2
             elif (exp1.func == exp2.func) and isinstance(exp1, sympy.Mul):
-                # Extract operators in exp1 and exp2, compare them and check coincidences
-                exp1_args, exp2_args = [op for op in exp1.args], [op for op in exp2.args]
-                [exp_short, exp_long] = [exp1_args, exp2_args] if len(exp2_args) >= len(exp1_args) else [exp2_args, exp1_args]
-                const1 = [arg.is_symbol and 'cm_' in str(arg) for arg in exp_short]
-                const2 = [arg.is_symbol and 'cm_' in str(arg) for arg in exp_long]
 
-                if all([arg.is_symbol for arg in exp_short]):  # If there are only symbols, merge them by multiplying them
-                    exp_short, exp_long = [arg for arg in exp_short if not (arg.is_symbol and 'c' in str(arg))], [arg for arg in exp_long if not (arg.is_symbol and 'c' in str(arg))]
-                    if const1 and not const2:
-                        exp1 = avoid_operations_between_constants(sympy.sympify('c') * (sympy.prod(exp_short) + sympy.sympify('c')) * sympy.prod(exp_long))
-                    elif const2 and not const1:
-                        exp1 = avoid_operations_between_constants(sympy.sympify('c') * (sympy.prod(exp_long) + sympy.sympify('c')) * sympy.prod(exp_short))
-                    elif const1 and const2:
-                        exp1 = avoid_operations_between_constants(sympy.sympify('c') * (sympy.prod(exp_short) + sympy.sympify('c')) * (sympy.prod(exp_long) + sympy.sympify('c')))
+                if is_div(exp1) and is_div(exp2):
+                    if random.random() < 0.5:
+                        num1, den1 = exp1.as_numer_denom()
+                        num2, den2 = exp2.as_numer_denom()
+                        num = self.merge_base(num1, num2)
+                        den = self.merge_base(den1, den2)
+                        exp1 = num / den
                     else:
-                        exp1 = avoid_operations_between_constants(sympy.sympify('c') * exp1 * exp2)
-                else:
-                    # If there's a constant in exp_short, make sure it's the last listed argument
-                    if any(const1):
-                        temp = exp_short.copy()
-                        temp[const1.index(True)] = exp_short[-1]
-                        temp[-1] = exp_short[const1.index(True)]
-                        exp_short = temp
-                    flag = False
-                    for i, xp in enumerate(exp_short):
-                        if (i == len(exp_short) - 1) and 'cm_' in str(xp) and len(exp_long) > 0:
-                            # If there are elements from exp_long that have not been merged, merge them with the constant term
-                            if not inside_sum_with_const or \
-                                    (len(exp_long) == 1 and exp_long[0].is_symbol and 'c' in str(exp_long[0])):
-                                exp_short[i] = avoid_operations_between_constants(exp_short[i] * sympy.prod(exp_long))
-                            else:
-                                flag = True
-                                exp1 = avoid_operations_between_constants(
-                                    exp_short[i] * (sympy.prod(exp_short[0:i]) + sympy.sympify('c')) *
-                                    sympy.prod([ex + sympy.sympify('c') for ex in exp_long if not (ex.is_symbol and 'c' in str(ex))]))
+                        if random.random() < 0.5:
+                            exp1 = exp1 * exp2
                         else:
-                            # For each argument in exp_short, find compatible args in exp_long and choose one for merging
-                            compatible_args = [op for op in exp_long if op.func == xp.func]
-                            for op in compatible_args:
-                                if isinstance(op, sympy.Pow):
-                                    if abs(xp.args[1]) != abs(op.args[1]):
-                                        compatible_args.remove(op)
-                            if len(compatible_args) == 0:
-                                continue
-                            selected_arg = random.choice(compatible_args)
-                            if random.random() < 0.5:
-                                continue
-                            exp_long.remove(selected_arg)
-                            exp_short[i] = self.merge_base(exp_short[i], selected_arg)
-                    if not flag:
-                        exp1 = sympy.prod(exp_short)
+                            exp1 = exp1 + exp2
+                else:
+                    # Extract operators in exp1 and exp2, compare them and check coincidences
+                    exp1_args, exp2_args = [op for op in exp1.args], [op for op in exp2.args]
+                    [exp_short, exp_long] = [exp1_args, exp2_args] if len(exp2_args) >= len(exp1_args) else [exp2_args, exp1_args]
+                    const1 = [arg.is_symbol and 'cm_' in str(arg) for arg in exp_short]
+                    const2 = [arg.is_symbol and 'cm_' in str(arg) for arg in exp_long]
+
+                    if all([arg.is_symbol for arg in exp_short]):  # If there are only symbols, merge them by multiplying them
+                        # print("\tMerging mult of symbols. Line 24")
+                        exp_short, exp_long = [arg for arg in exp_short if not (arg.is_symbol and 'c' in str(arg))], [arg for arg in exp_long if not (arg.is_symbol and 'c' in str(arg))]
+                        if const1 and not const2:
+                            exp1 = avoid_operations_between_constants(sympy.sympify('c') * (sympy.prod(exp_short) + sympy.sympify('c')) * sympy.prod(exp_long))
+                        elif const2 and not const1:
+                            exp1 = avoid_operations_between_constants(sympy.sympify('c') * (sympy.prod(exp_long) + sympy.sympify('c')) * sympy.prod(exp_short))
+                        elif const1 and const2:
+                            exp1 = avoid_operations_between_constants(sympy.sympify('c') * (sympy.prod(exp_short) + sympy.sympify('c')) * (sympy.prod(exp_long) + sympy.sympify('c')))
+                        else:
+                            exp1 = avoid_operations_between_constants(sympy.sympify('c') * exp1 * exp2)
+                    else:
+                        # If there's a constant in exp_short, make sure it's the last listed argument
+                        if any(const1):
+                            temp = exp_short.copy()
+                            temp[const1.index(True)] = exp_short[-1]
+                            temp[-1] = exp_short[const1.index(True)]
+                            exp_short = temp
+                        flag = False
+                        # print("\tMerging multiplications. Line 27")
+                        for i, xp in enumerate(exp_short):
+                            if (i == len(exp_short) - 1) and 'cm_' in str(xp) and len(exp_long) > 0:
+                                # print("\t\tAnalyzing the last exShort factor. Combining with remaining exLong factors. Line 24")
+                                # If there are elements from exp_long that have not been merged, merge them with the constant term
+                                if not inside_sum_with_const or \
+                                        (len(exp_long) == 1 and exp_long[0].is_symbol and 'c' in str(exp_long[0])):
+                                    exp_short[i] = avoid_operations_between_constants(exp_short[i] * sympy.prod(exp_long))
+                                else:
+                                    flag = True
+                                    exp1 = avoid_operations_between_constants(
+                                        exp_short[i] * (sympy.prod(exp_short[0:i]) + sympy.sympify('c')) *
+                                        sympy.prod([ex + sympy.sympify('c') for ex in exp_long if not (ex.is_symbol and 'c' in str(ex))]))
+                            else:
+                                # For each argument in exp_short, find compatible args in exp_long and choose one for merging
+                                compatible_args = [op for op in exp_long if op.func == xp.func]
+                                for op in compatible_args:
+                                    if isinstance(op, sympy.Pow):
+                                        if abs(xp.args[1]) != abs(op.args[1]):
+                                            compatible_args.remove(op)
+                                if len(compatible_args) == 0:
+                                    continue
+                                selected_arg = random.choice(compatible_args)
+                                if random.random() < 0.5:
+                                    continue
+                                # print("\t\tA compatible factor was found and selected for merging. Going for recursion. Line 36")
+                                exp_long.remove(selected_arg)
+                                exp_short[i] = self.merge_base(exp_short[i], selected_arg)
+                        if not flag:
+                            # print("\t\tNo exLong factors remaining. Line 38")
+                            exp1 = sympy.prod(exp_short)
             elif isinstance(exp1, sympy.Add) or isinstance(exp2, sympy.Add):  # It's implicit that only one is a sum
                 exp1 = exp1 * exp2
         try:
+            # print("\t Merged exp: ", add_constant_identifier(exp1)[0])
             return add_constant_identifier(exp1)[0]
         except TypeError:
             return None
@@ -236,12 +261,12 @@ if __name__ == '__main__':
     # skl1 = sympy.sympify('c*x1 + c*tan(c*x1 + c)*sin(c*x1^2 + c) + c*tan(c*x1 + c)*sin(c*x1 + c) + c')
     # skl2 = sympy.sympify('c*x2^2 + c*tan(c*x2 + c)*sin(c*x2 + c) + c*tan(c*x2^2 + c)*sin(c*x2 + c) + c')
 
-    # skl1 = sympy.sympify('c*tan(c*x1)*sin(c*x1^2)*sin(c*log(x1) + c*sqrt(x1))')
-    # skl2 = sympy.sympify('c*tan(c*x2)*sin(c*x2)')
+    # skl1 = sympy.sympify('c*x1^3 + c*tan(c*x1*log(c*x1))*sin(c*x1^2)*sin(c*exp(x1) + c*sqrt(x1))')
+    # skl2 = sympy.sympify('c*x2^2 + c*tan(c*x2*log(c*x2))*sin(c*x2)')
 
-    skl1 = sympy.sympify('c*sin(c*x0) + c')
-    skl2 = sympy.sympify('c*sin(c*exp(c*x1)) + c')
+    skl1 = sympy.sympify('(c*x0 + c) / (c*x0**2 + c) + c')
+    skl2 = sympy.sympify('(c*x1 + c) / (c*x1**2 + c) + c')
 
     merger = MergeExpressions(skl1, skl2, 2)
-    [print(merger.merge()) for _ in range(100)]
+    # [print(merger.merge()) for _ in range(500)]
     # merger.choose_combination(response=[samples, t_response])

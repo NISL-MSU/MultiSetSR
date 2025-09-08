@@ -11,10 +11,11 @@ class FeynmanReader:
         :arg name: Equation name. E.g., 'I.6.2'"""
         # Set directory path
         self.problem = name
-        self.path = str(get_project_root().parent) + '/Feynman_with_units/'
+        self.path = str(get_project_root().parent.parent) + '/Feynman_with_units/'
         self.path_eq = self.path + name
         self.X, self.Y, self.names = self.read_data()
         self.expr = self.get_expression()
+        self.types = ['continuous'] * self.X.shape[1]
 
     def read_data(self):
         """Read data from CSV file"""

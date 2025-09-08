@@ -50,10 +50,14 @@ def sk_equivalence(expr):
     if 'log(c*Abs(x) + c)'.replace('x', xvar) in expr:
         expr = expr.replace('log(c*Abs(x) + c)'.replace('x', xvar), 'log(c + Abs(x))'.replace('x', xvar))
 
-    # 4 exp equivalence
-    # if 'c*exp(c*x)'.replace('*x', '*' + xvar) in expr:
-    #     expr = expr.replace('c*exp(c*x)'.replace('*x', '*' + xvar), 'c*exp(x)'.replace('(x', '(' + xvar))
-
-    # 2. ... TODO: Include other type of equivalences
+    # 4. Manage division
+    if 'c/(c*x**2 + c)'.replace('x', xvar) in expr:
+        expr = expr.replace('c/(c*x**2 + c)'.replace('x', xvar), '(c*x + c)/(c*x**2 + c)'.replace('x', xvar))
+    if 'c/(c*x**2 + c*x + c)'.replace('x', xvar) in expr:
+        expr = expr.replace('c/(c*x**2 + c*x + c)'.replace('x', xvar), '(c*x + c)/(c*x**2 + c*x + c)'.replace('x', xvar))
+    if 'c/(c*x**3 + c)'.replace('x', xvar) in expr:
+        expr = expr.replace('c/(c*x**3 + c)'.replace('x', xvar), '(c*x + c)/(c*x**3 + c*x + c)'.replace('x', xvar))
+    if 'c/(c*x**4 + c)'.replace('x', xvar) in expr:
+        expr = expr.replace('c/(c*x**4 + c)'.replace('x', xvar), '(c*x + c)/(c*x**4 + c*x + c)'.replace('x', xvar))
 
     return sp.sympify(expr)

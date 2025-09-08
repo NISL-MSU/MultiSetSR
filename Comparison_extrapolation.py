@@ -23,7 +23,7 @@ def format_sympy_expr(expr_str):
     )
 
     # Convert to LaTeX string
-    return f"${sp.latex(exprr)}$"
+    return f"${sp.latex(exprr, mode='plain', fold_short_frac=True, symbol_names={})}$"
     # except Exception as e:
     #     # Return raw string if parsing fails
     #     return expr_str
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     ####################################
     # Parameters
     ####################################
-    names = ['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E11', 'E12', 'E13']
+    names = ['E1', 'E2', 'E3', 'E4', 'E5', 'E6', 'E7', 'E8', 'E9', 'E10', 'E11', 'E12', 'E13', 'SB1', 'SB2', 'SB3', 'SB4']
     noise = 0
     iteration = 0
     noise_suff = '/Without-noise/'
@@ -99,7 +99,7 @@ if __name__ == "__main__":
         noise_suff = '/Noise_' + str(noise) + '/'
 
     # Methods
-    methods = ['NN', 'PYSR', 'TaylorGP', 'NESYMRES', 'E2E', 'TPSR', 'MST']
+    methods = ['NN', 'PYSR', 'TaylorGP', 'NESYMRES', 'E2E', 'TPSR', 'MST', 'uDSR', 'SETGAP']
 
     ####################################
     # Analyze one variable at a time

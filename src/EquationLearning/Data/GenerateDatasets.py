@@ -87,9 +87,9 @@ class DataLoader:
         elif name == 'E13':
             name = 'CS4'
 
-        if "Y" in name or "U" in name or "E" in name or "CS" in name:
+        if "SB" in name or "Y" in name or "U" in name or "E" in name or "CS" in name:
             self.modelType = "NN"
-            if "CS" in name or name in ['E1', 'E4', 'E5', 'E9']:
+            if "CS" in name or name in ['E1', 'E4', 'E5', 'E9', 'SB2', 'SB3', 'SB4']:
                 self.modelType = "NN3"
             if "Y" in name:
                 self.modelType = "NN4"
@@ -101,7 +101,7 @@ class DataLoader:
         else:  # If not one of the previous names, it probably comes from the Feynman database
             try:
                 Freader = FeynmanReader(name)
-                self.X, self.Y, self.names, self.expr = Freader.X, Freader.Y, Freader.names, Freader.expr
+                self.X, self.Y, self.names, self.expr, self.types = Freader.X, Freader.Y, Freader.names, Freader.expr, Freader.types
                 self.modelType = "NN"
             except FileNotFoundError:
                 sys.exit('The provided dataset name does not exist')
@@ -130,6 +130,78 @@ class DataLoader:
         self.types = ['continuous', 'continuous', 'discrete']
         symb = sp.symbols("{}:{}".format('x', 3))
         self.expr = ((symb[0] / ((symb[1]/10) * 1.7 ** 2)) ** 2) * sp.cos(symb[2] * (sp.pi / 180))
+
+    def SB1(self, n=100000):  # SRBenchmark++
+        np.random.seed(self.seed)
+        # Define features
+        if not self.extrapolation:
+            x1 = np.random.uniform(-5, 5, size=n)
+            x2 = np.random.uniform(-5, 5, size=n)
+        else:
+            x1 = sample_exclude(-10, 10, n, -5, 5)
+            x2 = sample_exclude(-10, 10, n, -5, 5)
+        self.X = np.array([x1, x2]).T
+        # Calculate output
+        self.Y = 0.4 * x1 * x2 - 1.5 * x1 + 2.5 * x2 + 1
+        self.names = ['x0', 'x1']
+        self.types = ['continuous', 'continuous']
+        symb = sp.symbols("{}:{}".format('x', 2))
+        self.expr = 0.4 * symb[0] * symb[1] - 1.5 * symb[0] + 2.5 * symb[1] + 1
+
+    def SB2(self, n=100000):  # SRBenchmark++
+        np.random.seed(self.seed)
+        # Define features
+        if not self.extrapolation:
+            x1 = np.random.uniform(-5, 5, size=n)
+            x2 = np.random.uniform(-5, 5, size=n)
+            x3 = np.random.uniform(-5, 5, size=n)
+        else:
+            x1 = sample_exclude(-10, 10, n, -5, 5)
+            x2 = sample_exclude(-10, 10, n, -5, 5)
+            x3 = sample_exclude(-10, 10, n, -5, 5)
+        self.X = np.array([x1, x2, x3]).T
+        # Calculate output
+        self.Y = 0.4 * x1 * x2 - 1.5 * x1 + 2.5 * x2 + 1 + np.log(30 * x3**2)
+        self.names = ['x0', 'x1', 'x2']
+        self.types = ['continuous', 'continuous', 'continuous']
+        symb = sp.symbols("{}:{}".format('x', 3))
+        self.expr = 0.4 * symb[0] * symb[1] - 1.5 * symb[0] + 2.5 * symb[1] + 1 + sp.log(30 * symb[2]**2)
+
+    def SB3(self, n=100000):  # SRBenchmark++
+        np.random.seed(self.seed)
+        # Define features
+        if not self.extrapolation:
+            x1 = np.random.uniform(-20, 20, size=n)
+            x2 = np.random.uniform(-20, 20, size=n)
+        else:
+            x1 = sample_exclude(-40, 40, n, -20, 20)
+            x2 = sample_exclude(-40, 40, n, -20, 20)
+        self.X = np.array([x1, x2]).T
+        # Calculate output
+        self.Y = (0.4 * x1 * x2 - 1.5 * x1 + 2.5 * x2 + 1) / (0.2 * (x1**2 + x2**2) + 1)
+        self.names = ['x0', 'x1']
+        self.types = ['continuous', 'continuous']
+        symb = sp.symbols("{}:{}".format('x', 2))
+        self.expr = (0.4 * symb[0] * symb[1] - 1.5 * symb[0] + 2.5 * symb[1] + 1) / (0.2 * (symb[0]**2 + symb[1]**2) + 1)
+
+    def SB4(self, n=100000):  # SRBenchmark++
+        np.random.seed(self.seed)
+        # Define features
+        if not self.extrapolation:
+            x1 = np.random.uniform(-20, 20, size=n)
+            x2 = np.random.uniform(-20, 20, size=n)
+        else:
+            x1 = sample_exclude(-40, 40, n, -20, 20)
+            x2 = sample_exclude(-40, 40, n, -20, 20)
+        self.X = np.array([x1, x2]).T
+        # Calculate output
+        self.Y = (0.4 * x1 * x2 - 1.5 * x1 + 2.5 * x2 + 1 + 5.5 * np.sin(x1 + x2)) /\
+                 (0.2 * (x1**2 + x2**2) + 1)
+        self.names = ['x0', 'x1']
+        self.types = ['continuous', 'continuous']
+        symb = sp.symbols("{}:{}".format('x', 2))
+        self.expr = (0.4 * symb[0] * symb[1] - 1.5 * symb[0] + 2.5 * symb[1] + 1 +
+                     5.5 * sp.sin(symb[0] + symb[1])) / (0.2 * (symb[0]**2 + symb[1]**2) + 1)
 
     def E1(self, n=10000):  # S4 in "Informed Equation Learning" (Werner et. al, 2021)
         np.random.seed(self.seed)

@@ -590,6 +590,27 @@ def check_if_inside_unary_ops(depend_var, skeleton, ops=None):
     return ops
 
 
+def is_div(expr):
+    """
+    Check if the given expression represents a multiplication
+    """
+    if expr.is_Mul:
+        for arg in expr.args:
+            if arg.is_Pow and arg.exp.is_Number and arg.exp < 0:
+                return True
+
+    if expr.is_Pow and expr.exp.is_Number and expr.exp < 0:
+        return True
+    return False
+
+
+def contains_div(e):
+    """True if expression or any subexpression contains a division."""
+    if is_div(e):
+        return True
+    return any(contains_div(arg) for arg in e.args)
+
+
 # oops = check_if_inside_unary_ops('f1', sp.sympify('cm_2*sin(f1*x0 + f1) + f1*x0 + f1'))
 
 # Example usage

@@ -119,7 +119,7 @@ class MSSP:
                     YYs.append(Y.copy())
                     valuess.append(values.copy())
                 sorted_indices = np.argsort(np.array(R2s))
-                ind = sorted_indices[7]
+                ind = sorted_indices[0]  # 7
                 best_X, best_Y, best_values = XXs[ind], YYs[ind], valuess[ind]
                 Ys[:, ns] = best_Y
                 Xs[:, ns] = best_X

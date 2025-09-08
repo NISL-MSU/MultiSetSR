@@ -118,12 +118,12 @@ class SetGAP:
                 new_var = sp.sympify('x')
                 fs_lambda = sp.lambdify(sp.flatten(self.symbols), program)
                 int_x = fs_lambda(*list(self.X.T))  # Substitute here to avoid evaluating it repeatedly during the evolution
-                max_it, pop_size = 500, 200
+                max_it, pop_size = 500, 300
             else:
                 new_var, int_x = program, self.X
-                max_it, pop_size = 600, 300
+                max_it, pop_size = 600, 400
             candidate = sp.sympify('cm_1') * new_var + sp.sympify('ca_1')
-            problem = FitGA(candidate, int_x, self.Y, [np.min(self.X), np.max(self.X)], [-20, 20], max_it=max_it,
+            problem = FitGA(candidate, int_x, self.Y, [np.min(self.X), np.max(self.X)], [-50, 50], max_it=max_it,
                             loss_MSE=True, pop_size=pop_size)
             est_expr, MSE, _ = problem.run()
             est_expr = est_expr.subs({str(new_var): str(program)})

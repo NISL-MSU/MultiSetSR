@@ -1,3 +1,5 @@
+import numpy as np
+
 from EquationLearning.SymbolicRegressor.SetGAP import SetGAP
 from EquationLearning.SymbolicRegressor.MSSP import *
 
@@ -10,6 +12,7 @@ if __name__ == '__main__':
     from EquationLearning.models.NNModel import NNModel
 
     datasetNames = ['E6']
+    seed = 1
     noise = 0
     noise_name = ''
     if noise > 0:
@@ -24,7 +27,7 @@ if __name__ == '__main__':
             datasetName = 'CS3'
         elif datasetName == 'E13':
             datasetName = 'CS4'
-        data_loader = DataLoader(name=datasetName, noise=noise)
+        data_loader = DataLoader(name=datasetName, noise=noise, seed=seed)
         data = data_loader.dataset
 
         ###########################################
@@ -50,5 +53,5 @@ if __name__ == '__main__':
         ###########################################
         # Get Estimated Multivariate Expressions
         ###########################################
-        regressor = SetGAP(dataset=data, bb_model=nn_model, n_candidates=2)
+        regressor = SetGAP(dataset=data, bb_model=nn_model, n_candidates=3)
         results = regressor.run()
