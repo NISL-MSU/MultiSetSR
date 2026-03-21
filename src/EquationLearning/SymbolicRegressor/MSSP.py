@@ -7,7 +7,7 @@ from EquationLearning.Optimization.CoefficientFitting import FitGA
 from EquationLearning.Data.GenerateDatasets import DataLoader, InputData
 from EquationLearning.Transformers.GenerateTransformerData import Dataset
 from EquationLearning.models.utilities_expressions import expr2skeleton, avoid_operations_between_constants, \
-                                                              count_nodes, remove_coeffs
+                                                              count_nodes, remove_coeffs, standardize_expression
 
 
 class MSSP:
@@ -72,7 +72,7 @@ class MSSP:
     def sample_sets(self, iv=0):
         Rs = np.zeros(self.n_sets)
         # Generate multiple sets of data where only the current variable is allowed to vary
-        if len(self.symbols) == 1:
+        if len(self.symbols) == 0:
             if len(self.X) > self.n_samples:
                 ra = np.arange(0, len(self.X))
                 np.random.shuffle(ra)
@@ -119,7 +119,7 @@ class MSSP:
                     YYs.append(Y.copy())
                     valuess.append(values.copy())
                 sorted_indices = np.argsort(np.array(R2s))
-                ind = sorted_indices[0]  # 7
+                ind = sorted_indices[2]  # 7
                 best_X, best_Y, best_values = XXs[ind], YYs[ind], valuess[ind]
                 Ys[:, ns] = best_Y
                 Xs[:, ns] = best_X
@@ -154,143 +154,186 @@ class MSSP:
     def get_skeletons(self):
         from EquationLearning.Trainer.TrainMultiSetTransformer import seq2equation
         """Retrieve the estimated symbolic equation"""
-        corr_vals, univ_sorted_exprs = [], []
+        perf_vals, univ_sorted_exprs = [], []
         # Analyze each variable and obtain univariate expressions
         for iv, va in enumerate(self.symbols):
-            np.random.seed(7)
-            print("********************************")
-            print("Analyzing variable " + str(va))
-            print("********************************")
-            pred_skeletons = []
-            Xi, Yi = None, None
-            reps = self.n_candidates
-            for ii in range(reps):
-                XY_block, Xi, Yi = self.pre_process_data(iv=iv)
+            if iv >= 7:
+                flag = False
+                pred_skeletons = []
+                # if iv == 0:
+                #     XY_block, Xi, Yi = self.pre_process_data(iv=iv)
+                #     pred_skeletons.append(sp.sympify('x0'))
+                #     flag = True
+                # elif iv == 1:
+                #     XY_block, Xi, Yi = self.pre_process_data(iv=iv)
+                #     pred_skeletons.append(sp.sympify('c*sin(c*x1 + c)'))
+                #     flag = True
+                # elif iv == 2:
+                #     XY_block, Xi, Yi = self.pre_process_data(iv=iv)
+                #     pred_skeletons.append(sp.sympify('c*sin(c*x2 + c)'))
+                #     flag = True
+                # elif iv == 3:
+                #     XY_block, Xi, Yi = self.pre_process_data(iv=iv)
+                #     pred_skeletons.append(sp.sympify('c/(c + x3)'))
+                #     flag = True
+                # else:
+                np.random.seed(7)
+                print("********************************")
+                print("Analyzing variable " + str(va))
+                print("********************************")
+                pred_skeletons = []
+                Xi, Yi = None, None
+                reps = self.n_candidates
+                for ii in range(reps):
+                    XY_block, Xii, Yii = self.pre_process_data(iv=iv)
+                    if ii == 0:
+                        Xi, Yi = Xii, Yii
 
-                # Perform Multi-Set Skeleton Prediction
-                cand = 2
-                preds = self.model.inference(XY_block, cand)
-                for ip, pred in enumerate(preds):
-                    try:
-                        tokenized = list(pred[1].cpu().numpy())[1:]
-                        skeleton = seq2equation(tokenized, self.id2word, printFlag=False)
-                        skeleton = sp.sympify(skeleton.replace('x_1', str(va)))
-                        skeleton = sk_equivalence(avoid_operations_between_constants(sp.expand(sp.sympify('c') * skeleton)))
-                        if skeleton in pred_skeletons:
-                            ct = 0
-                            while skeleton in pred_skeletons:
-                                XY_block, Xi, Yi = self.pre_process_data(iv=iv)
-                                preds = self.model.inference(XY_block, cand)
-                                for predd in preds:
-                                    tokenized = list(predd[1].cpu().numpy())[1:]
-                                    skeleton = seq2equation(tokenized, self.id2word, printFlag=False)
-                                    skeleton = sp.sympify(skeleton.replace('x_1', str(va)))
-                                    skeleton = sk_equivalence(avoid_operations_between_constants(sp.expand(sp.sympify('c') * skeleton)))
-                                    if skeleton not in pred_skeletons:
-                                        pred_skeletons.append(skeleton)
-                                        print('Predicted skeleton ' + str(len(pred_skeletons)) + ' for variable ' + str(va) + ': ' + str(skeleton))
-                                        break
-                                ct += 1
-                                if ct == 3:
+                    # Perform Multi-Set Skeleton Prediction
+                    cand = 4
+                    preds = self.model.inference(XY_block, cand)
+                    for ip, pred in enumerate(preds):
+                        try:
+                            tokenized = list(pred[1].cpu().numpy())[1:]
+                            skeleton = seq2equation(tokenized, self.id2word, printFlag=False)
+                            skeleton = sp.sympify(skeleton.replace('x_1', str(va)))
+                            skeleton = sk_equivalence(avoid_operations_between_constants(standardize_expression(remove_coeffs(skeleton))), alts=True)
+                            for skeleton_i in skeleton:
+                                skeleton_i = avoid_operations_between_constants(skeleton_i)
+                                if skeleton_i in pred_skeletons:
+                                    ct = 0
+                                    while skeleton_i in pred_skeletons:
+                                        breakloop = False
+                                        XY_block, Xii, Yii = self.pre_process_data(iv=iv)
+                                        preds = self.model.inference(XY_block, cand)
+                                        for predd in preds:
+                                            tokenized = list(predd[1].cpu().numpy())[1:]
+                                            skeleton = seq2equation(tokenized, self.id2word, printFlag=False)
+                                            skeleton = sp.sympify(skeleton.replace('x_1', str(va)))
+                                            skeleton = sk_equivalence(avoid_operations_between_constants(standardize_expression(remove_coeffs(skeleton))), alts=True)
+                                            for skeleton_i2 in skeleton:
+                                                skeleton_i2 = avoid_operations_between_constants(skeleton_i2)
+                                                if skeleton_i2 not in pred_skeletons:
+                                                    breakloop = True
+                                                    pred_skeletons.append(skeleton_i2)
+                                                    print('Predicted skeleton ' + str(len(pred_skeletons)) + ' for variable ' + str(va) + ': ' + str(skeleton_i2))
+                                        if breakloop:
+                                            break
+                                        ct += 1
+                                        if ct == 5:
+                                            break
+                                    if ct == 5:
+                                        continue
+                                else:
+                                    pred_skeletons.append(skeleton_i)
+                                    print('Predicted skeleton ' + str(len(pred_skeletons)) + ' for variable ' + str(va) + ': ' + str(skeleton_i))
+                        except:  # TypeError:
+                            print("Invalid response created by the model")
+
+                continue
+                print("\nChoosing the best skeleton... (skeletons ordered based on number of nodes)")
+                best_perf, best_sk = 0, ''
+                pred_skeletons = sorted(pred_skeletons, key=lambda expr: count_nodes(expr))
+                nodes_num = [0 for expr in pred_skeletons]
+                tested_skeletons, tested_skeletons_orig, perf_ind_vals, fitted_exprs = [], [], [], []
+                print(pred_skeletons)
+                for ip, skeleton in enumerate(pred_skeletons):
+                    print(skeleton)
+                    # Fit coefficients of the estimated skeletons
+                    if skeleton not in tested_skeletons_orig:
+                        try:
+                            nre = 200
+                            if flag:
+                                nre = 20
+                            problem = FitGA(remove_coeffs(skeleton), Xi, Yi, [np.min(Xi), np.max(Xi)], [-80, 80], max_it=nre,  # TODO None
+                                            loss_MSE=True, pop_size=400)
+                            est_expr, perf, _ = problem.run()
+                        except:
+                            continue
+
+                        # If the expression is a sum of arguments check that none of them is too small
+                        skeleton_orig = skeleton
+                        try:
+                            if isinstance(est_expr, sp.Add):
+                                new_st_expr = 0
+                                for arg in est_expr.args:
+                                    # Evaluate current arg
+                                    fs1 = sp.lambdify(va, arg)
+                                    ys1 = fs1(Xi)
+                                    # Evaluate current arg
+                                    other_f = 0
+                                    for other_args in est_expr.args:
+                                        if other_args != arg:
+                                            other_f += other_args
+                                    fs2 = sp.lambdify(va, other_f)
+                                    ys2 = fs2(Xi)
+                                    # Compare the valuation of current arg against that of the others
+                                    ratio = np.divide(ys1, ys2)
+                                    if np.mean(np.abs(ratio)) >= 0.015:
+                                        new_st_expr += arg
+                                est_expr = new_st_expr
+                            if len(str(expr2skeleton(est_expr))) >= len(str(remove_coeffs(skeleton))):
+                                skeleton = avoid_operations_between_constants(standardize_expression(remove_coeffs(skeleton)))
+                            else:
+                                skeleton = avoid_operations_between_constants(expr2skeleton(est_expr))
+                        except AttributeError:
+                            skeleton = avoid_operations_between_constants(skeleton)
+                        try:
+                            skeleton = avoid_operations_between_constants(sk_equivalence(skeleton))
+                        except IndexError:
+                            continue
+                        nodes_num[ip] = count_nodes(skeleton)
+                        skeleton = avoid_operations_between_constants(sp.expand(skeleton))
+                        print("\tSkeleton: " + str(skeleton) + ". Correlation: " + str(abs(perf)) + ". Expr: " + str(est_expr) + ". Perf: " + str((abs(perf) * 100 + nodes_num[ip]) / 100))
+                        perf = (abs(perf) * 100 + nodes_num[ip]) / 100
+                        if abs(perf) <= 10:  # Avoid including skeletons that obviously don't fit
+                            tested_skeletons_orig.append(skeleton_orig)
+                            tested_skeletons.append(skeleton)
+                            perf_ind_vals.append(-perf)
+                            fitted_exprs.append(est_expr)
+                        if not self.mult_outputs:
+                            if abs(best_perf - perf) > 0.002:
+                                best_perf = perf
+                                best_sk = expr2skeleton(2 * est_expr + 1)
+                                if 1 >= abs(perf) > 0.999:  # If perfelation is very high, assume this is the best
                                     break
-                            if ct == 3:
-                                continue
-                        else:
-                            pred_skeletons.append(skeleton)
-                            print('Predicted skeleton ' + str(len(pred_skeletons)) + ' for variable ' + str(va) + ': ' + str(skeleton))
-                    except:  # TypeError:
-                        print("Invalid response created by the model")
+                if not self.mult_outputs:
+                    print('-----------------------------------------------------------')
+                    print("Selected skeleton: " + str(best_sk) + "\n")
+                    self.univariate_skeletons.append(best_sk)
+                    perf_vals.append(abs(best_perf))
+                else:
+                    # Sort skeletons according to their perfelation values
+                    sorted_indices = sorted(range(len(corr_ind_vals)), key=lambda i: perf_ind_vals[i], reverse=True)
+                    sorted_skeletons = [tested_skeletons[i] for i in sorted_indices]
+                    sorted_expressions = [fitted_exprs[i] for i in sorted_indices]
+                    perf_ind_vals = sorted(perf_ind_vals, reverse=True)
+                    perf_ind_vals2, sorted_skeletons2, sorted_expressions2 = [], [], []
+                    n_sk = len(sorted_skeletons)
+                    n_candidates = self.n_candidates
+                    # n_candidates = 1
+                    if n_sk > n_candidates:
+                        n_sk = n_candidates
+                    i, fS = 0, True
+                    while len(sorted_skeletons2) < n_sk and i < len(sorted_skeletons):
+                        # if i == 0 and fS:  # Always includes the first skeleton that was generated
+                        #     sorted_skeletons2.append(tested_skeletons[0])
+                        #     sorted_expressions2.append(fitted_exprs[0])
+                        #     perf_ind_vals2.append(perf_ind_vals[0])
+                        #     fS = False
+                        #     continue
+                        if not any([str(sorted_skeletons[i]) == str(others) for others in sorted_skeletons2]):
+                            sorted_skeletons2.append(sorted_skeletons[i])
+                            sorted_expressions2.append(sorted_expressions[i])
+                            perf_ind_vals2.append(perf_ind_vals[i])
+                        i += 1
+                    perf_ind_vals, sorted_skeletons, sorted_expressions = perf_ind_vals2, sorted_skeletons2, sorted_expressions2
+                    self.univariate_skeletons.append(sorted_skeletons)
+                    univ_sorted_exprs.append(sorted_expressions)
+                    perf_vals.append(max(perf_ind_vals))
+                    print(sorted_skeletons)
 
-            print("\nChoosing the best skeleton... (skeletons ordered based on number of nodes)")
-            best_corr, best_sk = 0, ''
-            pred_skeletons = sorted(pred_skeletons, key=lambda expr: count_nodes(expr))
-            nodes_num = [count_nodes(expr) for expr in pred_skeletons]
-            tested_skeletons, tested_skeletons_orig, corr_ind_vals, fitted_exprs = [], [], [], []
-            for ip, skeleton in enumerate(pred_skeletons):
-                # Fit coefficients of the estimated skeletons
-                if skeleton not in tested_skeletons_orig:
-                    try:
-                        problem = FitGA(remove_coeffs(skeleton), Xi, Yi, [np.min(Xi), np.max(Xi)], [-20, 20], max_it=None,
-                                        loss_MSE=False)
-                        est_expr, corr, _ = problem.run()
-                    except:
-                        continue
-
-                    # If the expression is a sum of arguments check that none of them is too small
-                    skeleton_orig = skeleton
-                    try:
-                        if isinstance(est_expr, sp.Add):
-                            new_st_expr = 0
-                            for arg in est_expr.args:
-                                # Evaluate current arg
-                                fs1 = sp.lambdify(va, arg)
-                                ys1 = fs1(Xi)
-                                # Evaluate current arg
-                                other_f = 0
-                                for other_args in est_expr.args:
-                                    if other_args != arg:
-                                        other_f += other_args
-                                fs2 = sp.lambdify(va, other_f)
-                                ys2 = fs2(Xi)
-                                # Compare the valuation of current arg against that of the others
-                                ratio = np.divide(ys1, ys2)
-                                if np.mean(np.abs(ratio)) >= 0.01:
-                                    new_st_expr += arg
-                            est_expr = new_st_expr
-                        skeleton = expr2skeleton(est_expr)
-                    except AttributeError:
-                        skeleton = skeleton
-                    try:
-                        skeleton = sk_equivalence(skeleton)
-                    except IndexError:
-                        continue
-
-                    corr = (abs(corr) * 1000 - nodes_num[ip]) / 1000
-                    if 0.7 < abs(corr) <= 1 and abs(corr) not in corr_ind_vals:  # Avoid including skeletons that obviously don't fit
-                        tested_skeletons_orig.append(skeleton_orig)
-                        tested_skeletons.append(skeleton)
-                        corr_ind_vals.append(corr)
-                        fitted_exprs.append(est_expr)
-                    print("\tSkeleton: " + str(skeleton) + ". Correlation: " + str(abs(corr)) + ". Expr: " + str(est_expr) + ". Perf: " + str((abs(corr) * 1000 - nodes_num[ip]) / 1000))
-                    if not self.mult_outputs:
-                        if abs(best_corr - corr) > 0.002:
-                            best_corr = corr
-                            best_sk = expr2skeleton(2 * est_expr + 1)
-                            if 1 >= abs(corr) > 0.999:  # If correlation is very high, assume this is the best
-                                break
-            if not self.mult_outputs:
-                print('-----------------------------------------------------------')
-                print("Selected skeleton: " + str(best_sk) + "\n")
-                self.univariate_skeletons.append(best_sk)
-                corr_vals.append(abs(best_corr))
-            else:
-                # Sort skeletons according to their correlation values
-                sorted_skeletons = [x for _, x in sorted(zip(corr_ind_vals, tested_skeletons), reverse=True)]
-                sorted_expressions = [x for _, x in sorted(zip(corr_ind_vals, fitted_exprs), reverse=True)]
-                corr_ind_vals = sorted(corr_ind_vals, reverse=True)
-                corr_ind_vals2, sorted_skeletons2, sorted_expressions2 = [], [], []
-                n_sk = len(sorted_skeletons)
-                if n_sk > self.n_candidates:
-                    n_sk = self.n_candidates
-                i, fS = 0, True
-                while len(sorted_skeletons2) < n_sk and i < len(sorted_skeletons):
-                    # if i == 0 and fS:  # Always includes the first skeleton that was generated
-                    #     sorted_skeletons2.append(tested_skeletons[0])
-                    #     sorted_expressions2.append(fitted_exprs[0])
-                    #     corr_ind_vals2.append(corr_ind_vals[0])
-                    #     fS = False
-                    #     continue
-                    if not any([str(sorted_skeletons[i]) == str(others) for others in sorted_skeletons2]):
-                        sorted_skeletons2.append(sorted_skeletons[i])
-                        sorted_expressions2.append(sorted_expressions[i])
-                        corr_ind_vals2.append(corr_ind_vals[i])
-                    i += 1
-                corr_ind_vals, sorted_skeletons, sorted_expressions = corr_ind_vals2, sorted_skeletons2, sorted_expressions2
-                self.univariate_skeletons.append(sorted_skeletons)
-                univ_sorted_exprs.append(sorted_expressions)
-                corr_vals.append(max(corr_ind_vals))
-
-        return self.univariate_skeletons, corr_vals, univ_sorted_exprs
+        return self.univariate_skeletons, perf_vals, univ_sorted_exprs
 
 
 if __name__ == '__main__':

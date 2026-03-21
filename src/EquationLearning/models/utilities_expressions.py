@@ -73,10 +73,8 @@ def get_op(xp, n):
     ops = []
     for arg in args:
         if arg.is_number or (isinstance(arg, sp.Symbol) and 'c' in str(arg)):  # If it's a number, add it to the list
-            if n == 0:
+            if str(arg) == n:
                 return str(xp.func)
-            else:
-                n -= 1
         else:  # If it's composed, explore a lower level of the tree
             op = get_op(arg, n)
             if len(op) == 3:
@@ -416,11 +414,13 @@ def get_skeleton_var(expr, var, var_names, expand=True):
             skeleton = skeleton.subs(sp.sympify(v), sp.sympify('c'))
     skeleton2 = None
     if expand:
-        skeleton = sp.expand(skeleton)
+        skeleton = avoid_operations_between_constants(sp.expand(sp.expand(sympy.sympify('c') * skeleton)))
     while skeleton != skeleton2:
         skeleton2 = skeleton
-        skeleton = avoid_operations_between_constants(skeleton)
+        skeleton = avoid_operations_between_constants(sp.expand(sympy.sympify('c') * skeleton))
         skeleton = numeric_to_placeholder(skeleton, var=var)
+    if 'c' not in str(skeleton):
+        skeleton = skeleton * sp.sympify('c')
     if 'x' in str(skeleton):  # If there are no variables in the expression, skip adding identifiers
         skeleton = add_constant_identifier(skeleton)[0]
     return skeleton
@@ -611,8 +611,62 @@ def contains_div(e):
     return any(contains_div(arg) for arg in e.args)
 
 
-# oops = check_if_inside_unary_ops('f1', sp.sympify('cm_2*sin(f1*x0 + f1) + f1*x0 + f1'))
+def standardize_expression(expr):
+    if isinstance(expr, str):
+        expr = sp.sympify(expr)
 
+    c = sp.Symbol('c')
+
+    def process_term(term):
+        """Process a single term to ensure it has a 'c' multiplier."""
+        # If the term already has 'c' as a factor, keep it as is
+        if term.has(c):
+            # Check if c is already a multiplicative factor at the top level
+            if term.is_Mul:
+                factors = term.as_ordered_factors()
+                if c in factors:
+                    return term
+
+        # If term is just 'c', keep it
+        if term == c:
+            return term
+
+        # Otherwise, multiply by c
+        return c * term
+
+    def standardize_add(expr):
+        """Recursively standardize Add expressions."""
+        if expr.is_Add:
+            # Process each term in the sum
+            new_args = [process_term(standardize_recursive(arg)) for arg in expr.args]
+            return sp.Add(*new_args)
+        return expr
+
+    def standardize_recursive(expr):
+        """Recursively traverse and standardize the expression tree."""
+        if expr.is_Add:
+            return standardize_add(expr)
+        elif expr.is_Mul:
+            # Recursively process each factor
+            new_args = [standardize_recursive(arg) for arg in expr.args]
+            return sp.Mul(*new_args)
+        elif expr.is_Pow:
+            # Recursively process base and exponent
+            base = standardize_recursive(expr.base)
+            exp = standardize_recursive(expr.exp)
+            return sp.Pow(base, exp)
+        elif expr.is_Function:
+            # Recursively process function arguments
+            new_args = [standardize_recursive(arg) for arg in expr.args]
+            return expr.func(*new_args)
+        else:
+            # Atomic expressions (symbols, numbers, etc.)
+            return expr
+
+    return avoid_operations_between_constants(standardize_recursive(expr))
+
+
+# oops = check_if_inside_unary_ops('f1', sp.sympify('cm_2*sin(f1*x0 + f1) + f1*x0 + f1'))
 # Example usage
 # x, y = sp.symbols('x y')
 # expr = sp.sin(x) + x**2 - sp.log(y)
@@ -620,3 +674,7 @@ def contains_div(e):
 # print(count_nodes(expr0))
 # expr1 = sp.sympify('cm_1*x0 + cm_2*x2**2 + cm_3*x0**4 + cm_4*x2**4 + cm_5*x0**2*x2')
 # print(count_nodes(expr1))
+
+if __name__ == '__main__':
+    get_op(sp.sympify('cm_1*sin(ca_1 + cm_2*x2)'), 'cm_2')
+#     ss = get_skeletons(sp.sympify('sqrt(ca_2 + cm_2*x0**2*x1**2 + cm_3*(ca_3 + x0)*(ca_4 + x1))'), ['x0', 'x1'])

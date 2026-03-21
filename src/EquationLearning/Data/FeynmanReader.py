@@ -32,17 +32,21 @@ class FeynmanReader:
     def get_expression(self) -> sp.Expr:
         """Read the equation CSV file and returns it
         :return expr: A sympy expression with variables x0, x1, ..."""
+        # eq_path = str(str(get_project_root().parent.parent) + '/Feynman_with_units/') + '/FeynmanEquations.csv'
         eq_path = str(self.path) + '/FeynmanEquations.csv'
         eqs = pd.read_csv(eq_path, sep=',')
         # Find data regarding the specific Feynman problem
         eq_data = eqs[eqs['Filename'] == self.problem]
-        expr = sp.sympify(eq_data['Formula'].iat[0])
+        expr = sp.sympify(eq_data['Formula'].iat[0].replace('gamma', 'gamm').replace('beta', 'bet'))  # The word "gamma" can't be processed for some reason!
         # Replace original variable names with x0, x1,...
         for i in range(self.X.shape[1]):
-            vname = eq_data['v' + str(i + 1) + '_name'].iat[0]  # Get variable name of the i-th variable
+            if 'Dimensionless' in eq_path:
+                vname = (eq_data['var' + str(i + 1)].iat[0]).replace('gamma', 'gamm').replace('beta', 'bet')  # Get variable name of the i-th variable
+            else:
+                vname = (eq_data['v' + str(i + 1) + '_name'].iat[0]).replace('gamma', 'gamm').replace('beta', 'bet')  # Get variable name of the i-th variable
             expr = expr.subs(sp.sympify(vname), sp.sympify('x' + str(i)))
         return sp.sympify(expr)
 
 
 if __name__ == '__main__':
-    reader = FeynmanReader(name='I.6.2')
+    reader = FeynmanReader(name='II.34.29b')

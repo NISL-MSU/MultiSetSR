@@ -45,7 +45,7 @@ class CoefficientFitting(Problem):
         self.is_offset = np.zeros(self.n_coeff)
         for k in range(self.n_coeff):
             # Check if this argument is inside a sin or cos operation
-            ops = get_op(self.skeleton, k)
+            ops = get_op(self.skeleton, str(self.args[k]))
             if len(ops) >= 2:
                 if (('sin' in ops[-2]) or ('cos' in ops[-2]) or ('tan' in ops[-2])) and 'Add' in ops[-1]:
                     opt_variables[f"x{k:02}"] = Real(bounds=(-2*np.pi, 2*np.pi))
@@ -78,6 +78,7 @@ class CoefficientFitting(Problem):
             error = 0
             # Replace the coefficients
             csi = np.round(c[si, :], 6)
+
             if len(self.skeleton.args) > 0:
                 fs = self.skeleton
                 for ia, arg in enumerate(self.args):
@@ -117,7 +118,7 @@ class CoefficientFitting(Problem):
 class FitGA:
 
     def __init__(self, skeleton, Xs, Ys, v_limits, c_limits, max_it=None, loss_MSE=True, biased_sol=None, pop_size=200,
-                 seed=1, symbols_list=None):
+                 seed=1, symbols_list=None, corr_vals=0):
         """
         Given a univariate symbolic expression, find which coefficients are dependent on other functions
         :param skeleton: Symbolic skeleton generated for the t-th variable
@@ -129,6 +130,7 @@ class FitGA:
         :param loss_MSE: If True, we optimize the MSE, otherwise we optimize the correlation (PearsonR)
         :param biased_sol: Biased initial population
         :param pop_size: Population size
+        :param corr_vals: Correlation values of given epression
         """
         if 'c' not in str(skeleton):
             skeleton = sympy.sympify('c') * skeleton
@@ -139,6 +141,7 @@ class FitGA:
         self.c_limits = c_limits
         self.loss_MSE = loss_MSE
         self.seed = seed
+        self.corr_vals = corr_vals
         if max_it is None:
             self.termination = RobustTermination(MultiObjectiveSpaceTermination(tol=1e-6), period=40)
         else:
@@ -155,8 +158,11 @@ class FitGA:
 
     def run(self):
         # Fit coefficients
+        loss_MSE = False
+        if self.corr_vals == 1:
+            loss_MSE = self.loss_MSE
         problem = CoefficientFitting(skeleton=self.skeleton, x_values=self.Xs, y_est=self.Ys, climits=self.c_limits,
-                                     loss_MSE=self.loss_MSE, symbols_list=self.symbols_list)
+                                     loss_MSE=loss_MSE, symbols_list=self.symbols_list)
         np.random.seed(self.seed)
         if self.biased_sol is not None:
             # Create a population with the biased solution and the remaining random solutions
@@ -167,8 +173,8 @@ class FitGA:
         else:
             algorithm = GA(pop_size=self.pop_size)
         res = minimize(problem, algorithm, self.termination, seed=self.seed, verbose=False)
-        resX = np.round(res.X, 6)
-        resX[np.abs(resX) <= 0.0016] = 0
+        resX = res.X  # np.round(res.X, 10)
+        # resX[np.abs(resX) <= 0.0016] = 0
         fs = None
         if len(self.skeleton.args) > 0:
             fs = self.skeleton
@@ -192,10 +198,33 @@ class FitGA:
 
         if len(self.skeleton.args) > 0:
             if self.loss_MSE:
-                fs = simplify(fs, all_var=True)[0]
-                return fs, np.mean(np.abs(self.Ys - ys)), resX
+                if self.corr_vals < 1:
+                    new_var = sp.sympify('x')
+                    fs_lambda = sp.lambdify(sp.flatten(self.symbols_list), fs)
+                    if self.Xs.ndim > 1:
+                        fs_eval = fs_lambda(*list(self.Xs.T))
+                    else:
+                        fs_eval = fs_lambda(self.Xs)
+                    candidate = sp.sympify('cm_1') * new_var + sp.sympify('ca_1')
+                    problem = CoefficientFitting(skeleton=candidate, x_values=fs_eval, y_est=self.Ys,
+                                                 climits=self.c_limits, loss_MSE=True, symbols_list=[new_var])
+                    res = minimize(problem, algorithm, ('n_gen', 200), seed=self.seed, verbose=False)
+                    resX = res.X
+                    args = [ar for ar in candidate.free_symbols if 'c' in str(ar)]
+                    for ia, arg in enumerate(args):
+                        candidate = candidate.subs({arg: resX[ia]})
+                    fs = candidate.subs({str(new_var): str(fs)})
+                    fs_lambda = sp.lambdify(flatten(self.symbols_list), fs)
+                    if self.Xs.ndim > 1:
+                        ys = fs_lambda(*list(self.Xs.T))
+                    else:
+                        ys = fs_lambda(self.Xs)
+                    return fs, np.mean(np.abs(self.Ys - ys)), resX
+                else:
+                    return fs, np.mean(np.abs(self.Ys - ys)), resX
             else:
-                fs = simplify(norm_func(fs))[0]
+                if not isinstance(self.skeleton, sp.Pow):
+                    fs = simplify(norm_func(fs))[0]
                 if len(np.argwhere((np.isinf(ys)) | (np.isnan(ys)) | (np.abs(ys) > 10 ** 14))) > 0:
                     metric = 1000
                 else:

@@ -5,6 +5,7 @@ from joblib import Parallel, delayed, cpu_count
 from tqdm import trange
 from scipy.stats import pearsonr
 from EquationLearning.utils import *
+from EquationLearning.Data.math_rules import sk_equivalence
 from EquationLearning.models.utilities_expressions import *
 from EquationLearning.models.utilities_expressions import contains_div
 import warnings
@@ -18,9 +19,9 @@ warnings.filterwarnings("ignore")
 # NOTE: All these functions are located outside the class to improve parallelization
 def simplify(expr, all_var=False):
     if not all_var:
-        th = 0.0008
+        th = 0.008  # 0.0008
     else:
-        th = 0.0005
+        th = 0.005
     est_expr = expr.xreplace({n: n if abs(n) >= th else 0 for n in expr.atoms(sp.Number)})
 
     if not all_var:
@@ -34,7 +35,7 @@ def simplify(expr, all_var=False):
     else:
         est_expr = est_expr.xreplace({n: n if n != 1.0001 else 1 for n in expr.atoms(sp.Number)})
         est_expr = est_expr.xreplace({n: n if n != -1.0001 else -1 for n in expr.atoms(sp.Number)})
-    merged = avoid_operations_between_constants(expr2skeleton(est_expr))
+    merged = sk_equivalence(avoid_operations_between_constants(expr2skeleton(est_expr)))
 
     return est_expr, merged
 
@@ -144,7 +145,7 @@ def mutate_expression(expr, generation, fixed_population):
     mutated_expr = expr
     arg_ids_symb = []
     for arg_id in arg_ids:
-        ops = get_op(expr, arg_id)
+        ops = get_op(expr, str(expr_args[arg_id]))
         if isinstance(expr_args[arg_id], sp.Symbol):
             if not isinstance(ops, bool):
                 if not any([('sqr' in op) or ('log' in op) for op in ops]):
@@ -228,7 +229,7 @@ def crossover(expr1, expr2, p_crossover):
 class GP:
     def __init__(self, X, Y, init_population, univ_sks, max_generations, p_crossover, p_mutate, bounds=None, verbose=False, all_var=False):
         self.all_var = all_var
-        self.univ_sks = [add_constant_identifier(remove_coeffs(sk))[0] if ('c' in str(remove_coeffs(sk))) else sympy.sympify('c') * remove_coeffs(sk) for sk in univ_sks]
+        self.univ_sks = [add_constant_identifier(remove_coeffs(standardize_expression(sk)))[0] if ('c' in str(remove_coeffs(sk))) else add_constant_identifier(sympy.sympify('c') * remove_coeffs(standardize_expression(sk)))[0] for sk in univ_sks]
         self.max_generations = max_generations
         self.p_crossover = p_crossover
         self.p_mutate = p_mutate
@@ -304,6 +305,7 @@ class GP:
 
         start = time.time()
         best_sk = 0
+        final_counter = 0
         for self.generation in trange(self.max_generations):
 
             # Add fixed sub-expressions back after a fixing period
@@ -358,8 +360,11 @@ class GP:
                     ((self.generation > 250 and self.all_var) or (self.generation > 50 and not self.all_var)):
                 r_ind = np.where(check_final)[0][0]
                 if self.counters[r_ind] == 0:
-                    res_program, res_skeleton = simplify(self.best_program[r_ind], all_var=self.all_var)
-                    return res_skeleton, np.abs(self.best_fitness[r_ind]), res_program
+                    if final_counter <= 40:  # Run 40 extra epochs to refine selected skeleton
+                        final_counter += 1
+                    else:
+                        res_program, res_skeleton = simplify(self.best_program[r_ind], all_var=self.all_var)
+                        return res_skeleton, np.abs(self.best_fitness[r_ind]), res_program
             elif any(check_final) and self.generation > 150:
                 break
 
@@ -376,8 +381,9 @@ class GP:
             rem_inds = list(rem_inds)
             for isk, skk in enumerate(self.skeletons):
                 univ_sks = get_skeletons(skk, [str(ss) for ss in self.symbols_list])
-                if any([sk not in self.univ_sks for sk in [add_constant_identifier(remove_coeffs(sk))[0] if ('c' in str(remove_coeffs(sk))) else sympy.sympify('c') * remove_coeffs(sk) for sk in univ_sks]]):
+                if any([sk not in self.univ_sks for sk in [add_constant_identifier(remove_coeffs(standardize_expression(sk)))[0] if ('c' in str(remove_coeffs(sk))) else add_constant_identifier(sympy.sympify('c') * remove_coeffs(standardize_expression(sk)))[0] for sk in univ_sks]]):
                     rem_inds.append(isk)
+                    print("Discarded skeleton: ", skk)
 
             # REMOVE selected combinations
             rem_inds = np.unique(np.array(rem_inds))

@@ -8,7 +8,7 @@ from EquationLearning.Data.GenerateDatasets import DataLoader, InputData
 class Trainer:
     """Train NN model using cross-validation"""
 
-    def __init__(self, dataset: InputData, modelType: str = 'NN', name: str = '', noise: float = 0):
+    def __init__(self, dataset: InputData, modelType: str = 'NN', name: str = '', noise: float = 0, dimensions: bool = False):
         """
         Initialize Trainer class
         :param dataset: An InputData object.
@@ -27,6 +27,9 @@ class Trainer:
         self.model = self.reset_model()
         self.noise = noise
         self.noise_name = ''
+        self.dimension = ''
+        if dimensions:
+            self.dimension = '-without_units'
         if self.noise > 0:
             self.noise_name = '_noise-' + str(noise)
 
@@ -74,7 +77,7 @@ class Trainer:
             # Train the model using the current training-validation split
             filepath = None
             if self.name != '':
-                filepath = folder + "//weights-NN-" + self.name + self.noise_name
+                filepath = folder + "//weights-NN-" + self.name + self.noise_name + self.dimension
             if scratch or not os.path.exists(filepath):
                 _, val_mse = self.model.trainFold(Xtrain=Xtrain, Ytrain=Ytrain, Xval=Xval, Yval=Yval,
                                                   batch_size=batch_size, epochs=epochs, filepath=filepath,
@@ -92,7 +95,7 @@ class Trainer:
 
 
 if __name__ == '__main__':
-    names = ['SB3']  # E6  # CS1
+    names = ['III.10.19']  # E6  # CS1
     noise_level = 0  # 0.05
     for nme in names:
         data_loader = DataLoader(name=nme, noise=noise_level)

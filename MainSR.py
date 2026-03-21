@@ -1,5 +1,3 @@
-import numpy as np
-
 from EquationLearning.SymbolicRegressor.SetGAP import SetGAP
 from EquationLearning.SymbolicRegressor.MSSP import *
 
@@ -10,13 +8,16 @@ if __name__ == '__main__':
     ###########################################
     import torch
     from EquationLearning.models.NNModel import NNModel
-
     datasetNames = ['E6']
-    seed = 1
-    noise = 0
+    seed = 8
+    print("Seed ", seed)
+    noise = 0  # 0.01
+    print(datasetNames)
+    print(noise)
     noise_name = ''
     if noise > 0:
         noise_name = '_noise-' + str(noise)
+    dimensions = ''
 
     for datasetName in datasetNames:
         if datasetName == 'E10':
@@ -35,7 +36,7 @@ if __name__ == '__main__':
         ###########################################
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         folder = os.path.join(get_project_root(), "EquationLearning//saved_models//saved_NNs//" + datasetName)
-        filepath = folder + "//weights-NN-" + datasetName + noise_name
+        filepath = folder + "//weights-NN-" + datasetName + noise_name + dimensions
         nn_model = None
         if os.path.exists(filepath.replace("weights", "NNModel") + '.pth'):
             # If this file exists, it means we saved the whole model

@@ -1,6 +1,5 @@
 from EquationLearning.SymbolicRegressor.MSSP import *
 from EquationLearning.Merge.MergeExpressions import MergeExpressions
-from EquationLearning.Optimization.GP import simplify
 
 
 class SetGAP:
@@ -69,6 +68,7 @@ class SetGAP:
         # Start merging skeletons progressively
         merged_skeletons, merged_programs, new_corr_vals = self.skeletons[0], fitted_exprs, corr_vals.copy()
         changing_variables = [sorted_symbols[0]]
+        est_exprs = []
         for i in range(1, len(sorted_symbols)):
             print('\n******************************')
             print('Merging skeletons of variables ', str(changing_variables), ', and ', str(sorted_symbols[i]))
@@ -86,6 +86,8 @@ class SetGAP:
             # Merge each of the skeletons in merged_skeletons with each candidate
             new_merged, new_programs, new_corr_vals, count = [], [], [], 0
 
+            # merged_skeletons = [sp.sympify('c*(c + 1/(c*x3 + c))*(c*x0 + c)')]
+            # changing_variables = [sp.sympify('x0'), sp.sympify('x3'), sp.sympify('x2')]
             for merged_skeleton in merged_skeletons:
                 for s in range(len(self.skeletons[i])):
                     merger = MergeExpressions(merged_skeleton + sp.sympify('c'), self.skeletons[i][s],
@@ -112,22 +114,26 @@ class SetGAP:
 
         # Fit final coefficients
         print("\nFitting final coefficients")
-        est_exprs = []
+        if len(sorted_symbols) == 1:
+            merged_programs = merged_programs[0]
         for i, program in enumerate(merged_programs):
             if new_corr_vals[i] > 0.999:
                 new_var = sp.sympify('x')
                 fs_lambda = sp.lambdify(sp.flatten(self.symbols), program)
                 int_x = fs_lambda(*list(self.X.T))  # Substitute here to avoid evaluating it repeatedly during the evolution
-                max_it, pop_size = 500, 300
+                max_it, pop_size = 200, 400
             else:
                 new_var, int_x = program, self.X
-                max_it, pop_size = 600, 400
+                max_it, pop_size = 250, 400  # 600
             candidate = sp.sympify('cm_1') * new_var + sp.sympify('ca_1')
-            problem = FitGA(candidate, int_x, self.Y, [np.min(self.X), np.max(self.X)], [-50, 50], max_it=max_it,
-                            loss_MSE=True, pop_size=pop_size)
+            # candidate = new_var
+            problem = FitGA(candidate, int_x, self.Y, [np.min(self.X), np.max(self.X)], [-10000, 10000], max_it=max_it,
+                            loss_MSE=True, pop_size=pop_size, corr_vals=new_corr_vals[i])
             est_expr, MSE, _ = problem.run()
+            print(est_expr)
             est_expr = est_expr.subs({str(new_var): str(program)})
-            est_expr = sp.sympify(str((simplify(est_expr.simplify(), all_var=True)[0]).simplify()))
+            print(est_expr)
+            # est_expr = sp.sympify(str((simplify(est_expr.simplify(), all_var=True)[0]).simplify()))
             est_exprs.append(est_expr)
             print('\n******************************')
             print(f'Final estimated expression {i+1}/{len(merged_programs)}: ', str(est_expr), '. MSE = ', MSE)
@@ -140,7 +146,7 @@ if __name__ == '__main__':
     ###########################################
     # Import data
     ###########################################
-    datasetName = 'E6'
+    datasetName = 'I.6.2a'
     data_loader = DataLoader(name=datasetName)
     data = data_loader.dataset
 

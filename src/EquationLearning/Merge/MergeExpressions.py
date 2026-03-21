@@ -42,11 +42,15 @@ class MergeExpressions:
     def merge_base(self, exp1, exp2, inside_sum_with_const=False):
         """Generate a random combination of input skeletons"""
         # print("Merging", exp1, " and ", exp2)
-        if isinstance(exp1, sympy.Add) and isinstance(exp2, sympy.Add):
+        if (isinstance(exp1, sympy.Add) and isinstance(exp2, sympy.Add)) or (random.random() < 0.5 and any([argS.is_symbol and 'ca' in str(argS) for argS in exp2.args])):
             # Check which sum has fewer arguments
             exp1_args = [sympy.sympify('cm_0') * op if not isinstance(op, sympy.Mul) and 'ca_' not in str(op) else op for op in exp1.args]
             exp2_args = [sympy.sympify('cm_0') * op if not isinstance(op, sympy.Mul) and 'ca_' not in str(op) else op for op in exp2.args]
-            [exp_short, exp_long] = [exp1_args, exp2_args] if len(exp2_args) >= len(exp1_args) else [exp2_args, exp1_args]
+            if not isinstance(exp1, sympy.Add):
+                exp1_args = [sympy.sympify('cm_0'), exp1]
+                [exp_short, exp_long] = [exp1_args, exp2_args]
+            else:
+                [exp_short, exp_long] = [exp1_args, exp2_args] if len(exp2_args) >= len(exp1_args) else [exp2_args, exp1_args]
             random.shuffle(exp_short)
             random.shuffle(exp_long)
             const = [arg.is_symbol and 'c' in str(arg) for arg in exp_short]
@@ -114,7 +118,7 @@ class MergeExpressions:
                     const1 = [arg.is_symbol and 'cm_' in str(arg) for arg in exp_short]
                     const2 = [arg.is_symbol and 'cm_' in str(arg) for arg in exp_long]
 
-                    if all([arg.is_symbol for arg in exp_short]):  # If there are only symbols, merge them by multiplying them
+                    if all([arg.is_symbol for arg in exp_short]) and random.random() < 0.5:  # If there are only symbols, merge them by multiplying them
                         # print("\tMerging mult of symbols. Line 24")
                         exp_short, exp_long = [arg for arg in exp_short if not (arg.is_symbol and 'c' in str(arg))], [arg for arg in exp_long if not (arg.is_symbol and 'c' in str(arg))]
                         if const1 and not const2:
@@ -143,12 +147,17 @@ class MergeExpressions:
                                     exp_short[i] = avoid_operations_between_constants(exp_short[i] * sympy.prod(exp_long))
                                 else:
                                     flag = True
-                                    exp1 = avoid_operations_between_constants(
-                                        exp_short[i] * (sympy.prod(exp_short[0:i]) + sympy.sympify('c')) *
-                                        sympy.prod([ex + sympy.sympify('c') for ex in exp_long if not (ex.is_symbol and 'c' in str(ex))]))
+                                    if random.random() < 0.5:
+                                        exp1 = avoid_operations_between_constants(
+                                            exp_short[i] * (sympy.prod(exp_short[0:i]) + sympy.sympify('c')) *
+                                            sympy.prod([ex + sympy.sympify('c') for ex in exp_long if
+                                                        not (ex.is_symbol and 'c' in str(ex))]))
+                                    else:
+                                        exp1 = avoid_operations_between_constants(
+                                            sympy.prod(exp_short) * sympy.prod(exp_long))
                             else:
                                 # For each argument in exp_short, find compatible args in exp_long and choose one for merging
-                                compatible_args = [op for op in exp_long if op.func == xp.func]
+                                compatible_args = [op for op in exp_long if (op.func == xp.func or (isinstance(op, sympy.Add) and any([argS.is_symbol and 'ca' in str(argS) for argS in op.args])))]
                                 for op in compatible_args:
                                     if isinstance(op, sympy.Pow):
                                         if abs(xp.args[1]) != abs(op.args[1]):
@@ -168,7 +177,10 @@ class MergeExpressions:
                 exp1 = exp1 * exp2
         try:
             # print("\t Merged exp: ", add_constant_identifier(exp1)[0])
-            return add_constant_identifier(exp1)[0]
+            if exp1.is_symbol:
+                return exp1
+            else:
+                return add_constant_identifier(exp1)[0]
         except TypeError:
             return None
 
@@ -203,7 +215,8 @@ class MergeExpressions:
             # Make sure that this combination includes all variables that are being studied
             if self.merging_variables == len([sy for sy in comb.free_symbols if 'x' in str(sy)]):
                 combinations.append(comb)
-
+        combinations = combinations[0:200]
+        [print(com) for com in combinations]
         if len(combinations) == 0:
             return None
 
@@ -264,9 +277,12 @@ if __name__ == '__main__':
     # skl1 = sympy.sympify('c*x1^3 + c*tan(c*x1*log(c*x1))*sin(c*x1^2)*sin(c*exp(x1) + c*sqrt(x1))')
     # skl2 = sympy.sympify('c*x2^2 + c*tan(c*x2*log(c*x2))*sin(c*x2)')
 
-    skl1 = sympy.sympify('(c*x0 + c) / (c*x0**2 + c) + c')
-    skl2 = sympy.sympify('(c*x1 + c) / (c*x1**2 + c) + c')
+    # skl1 = sympy.sympify('c*x0*sin(c*x1 + c) + c*x0')
+    # skl2 = sympy.sympify('sin(c*x2 + c)')
+    skl1 = sympy.sympify('c*(c + 1/(c*x1*x2 + c))*(c*x0 + c)')
+    skl2 = sympy.sympify('c*log(c*x3 + c)**2')
 
-    merger = MergeExpressions(skl1, skl2, 2)
+    merger = MergeExpressions(skl1, skl2, 4)
+    merger.choose_combination()
     # [print(merger.merge()) for _ in range(500)]
     # merger.choose_combination(response=[samples, t_response])
