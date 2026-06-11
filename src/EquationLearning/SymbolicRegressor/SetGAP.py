@@ -69,6 +69,7 @@ class SetGAP:
         merged_skeletons, merged_programs, new_corr_vals = self.skeletons[0], fitted_exprs, corr_vals.copy()
         changing_variables = [sorted_symbols[0]]
         est_exprs = []
+
         for i in range(1, len(sorted_symbols)):
             print('\n******************************')
             print('Merging skeletons of variables ', str(changing_variables), ', and ', str(sorted_symbols[i]))
@@ -86,8 +87,6 @@ class SetGAP:
             # Merge each of the skeletons in merged_skeletons with each candidate
             new_merged, new_programs, new_corr_vals, count = [], [], [], 0
 
-            # merged_skeletons = [sp.sympify('c*(c + 1/(c*x3 + c))*(c*x0 + c)')]
-            # changing_variables = [sp.sympify('x0'), sp.sympify('x3'), sp.sympify('x2')]
             for merged_skeleton in merged_skeletons:
                 for s in range(len(self.skeletons[i])):
                     merger = MergeExpressions(merged_skeleton + sp.sympify('c'), self.skeletons[i][s],

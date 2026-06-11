@@ -1,7 +1,7 @@
 import sympy
 from types import CodeType
 from typing import List, Tuple
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 
 @dataclass
@@ -67,7 +67,7 @@ class DatasetDetails:
 @dataclass
 class BFGSParams:
     activated: bool = True
-    n_restarts: bool = 10
+    n_restarts: int = 10
     add_coefficients_if_not_existing: bool = False
     normalization_o: bool = False
     idx_remove: bool = True
@@ -84,5 +84,5 @@ class FitParams:
     rewrite_functions: list
     una_ops: list = None
     bin_ops: list = None
-    bfgs: BFGSParams = BFGSParams()
+    bfgs: BFGSParams = field(default_factory=BFGSParams)
     beam_size: int = 2

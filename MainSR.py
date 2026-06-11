@@ -8,8 +8,8 @@ if __name__ == '__main__':
     ###########################################
     import torch
     from EquationLearning.models.NNModel import NNModel
-    datasetNames = ['E6']
-    seed = 8
+    datasetNames = ['E1']
+    seed = 0
     print("Seed ", seed)
     noise = 0  # 0.01
     print(datasetNames)
@@ -40,7 +40,7 @@ if __name__ == '__main__':
         nn_model = None
         if os.path.exists(filepath.replace("weights", "NNModel") + '.pth'):
             # If this file exists, it means we saved the whole model
-            network = torch.load(filepath.replace("weights", "NNModel") + '.pth', map_location=device)
+            network = torch.load(filepath.replace("weights", "NNModel") + '.pth', map_location=device, weights_only=False)
             nn_model = NNModel(device=device, n_features=data.n_features, loaded_NN=network)
         elif os.path.exists(filepath):
             # If this file exists, initiate a model and load the weights

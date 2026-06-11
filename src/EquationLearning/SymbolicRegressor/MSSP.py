@@ -157,80 +157,61 @@ class MSSP:
         perf_vals, univ_sorted_exprs = [], []
         # Analyze each variable and obtain univariate expressions
         for iv, va in enumerate(self.symbols):
-            if iv >= 7:
-                flag = False
-                pred_skeletons = []
-                # if iv == 0:
-                #     XY_block, Xi, Yi = self.pre_process_data(iv=iv)
-                #     pred_skeletons.append(sp.sympify('x0'))
-                #     flag = True
-                # elif iv == 1:
-                #     XY_block, Xi, Yi = self.pre_process_data(iv=iv)
-                #     pred_skeletons.append(sp.sympify('c*sin(c*x1 + c)'))
-                #     flag = True
-                # elif iv == 2:
-                #     XY_block, Xi, Yi = self.pre_process_data(iv=iv)
-                #     pred_skeletons.append(sp.sympify('c*sin(c*x2 + c)'))
-                #     flag = True
-                # elif iv == 3:
-                #     XY_block, Xi, Yi = self.pre_process_data(iv=iv)
-                #     pred_skeletons.append(sp.sympify('c/(c + x3)'))
-                #     flag = True
-                # else:
-                np.random.seed(7)
-                print("********************************")
-                print("Analyzing variable " + str(va))
-                print("********************************")
-                pred_skeletons = []
-                Xi, Yi = None, None
-                reps = self.n_candidates
-                for ii in range(reps):
-                    XY_block, Xii, Yii = self.pre_process_data(iv=iv)
-                    if ii == 0:
-                        Xi, Yi = Xii, Yii
+            flag = False
+            pred_skeletons = []
+            np.random.seed(7)
+            print("********************************")
+            print("Analyzing variable " + str(va))
+            print("********************************")
+            pred_skeletons = []
+            Xi, Yi = None, None
+            reps = self.n_candidates
+            for ii in range(reps):
+                XY_block, Xii, Yii = self.pre_process_data(iv=iv)
+                if ii == 0:
+                    Xi, Yi = Xii, Yii
 
-                    # Perform Multi-Set Skeleton Prediction
-                    cand = 4
-                    preds = self.model.inference(XY_block, cand)
-                    for ip, pred in enumerate(preds):
-                        try:
-                            tokenized = list(pred[1].cpu().numpy())[1:]
-                            skeleton = seq2equation(tokenized, self.id2word, printFlag=False)
-                            skeleton = sp.sympify(skeleton.replace('x_1', str(va)))
-                            skeleton = sk_equivalence(avoid_operations_between_constants(standardize_expression(remove_coeffs(skeleton))), alts=True)
-                            for skeleton_i in skeleton:
-                                skeleton_i = avoid_operations_between_constants(skeleton_i)
-                                if skeleton_i in pred_skeletons:
-                                    ct = 0
-                                    while skeleton_i in pred_skeletons:
-                                        breakloop = False
-                                        XY_block, Xii, Yii = self.pre_process_data(iv=iv)
-                                        preds = self.model.inference(XY_block, cand)
-                                        for predd in preds:
-                                            tokenized = list(predd[1].cpu().numpy())[1:]
-                                            skeleton = seq2equation(tokenized, self.id2word, printFlag=False)
-                                            skeleton = sp.sympify(skeleton.replace('x_1', str(va)))
-                                            skeleton = sk_equivalence(avoid_operations_between_constants(standardize_expression(remove_coeffs(skeleton))), alts=True)
-                                            for skeleton_i2 in skeleton:
-                                                skeleton_i2 = avoid_operations_between_constants(skeleton_i2)
-                                                if skeleton_i2 not in pred_skeletons:
-                                                    breakloop = True
-                                                    pred_skeletons.append(skeleton_i2)
-                                                    print('Predicted skeleton ' + str(len(pred_skeletons)) + ' for variable ' + str(va) + ': ' + str(skeleton_i2))
-                                        if breakloop:
-                                            break
-                                        ct += 1
-                                        if ct == 5:
-                                            break
-                                    if ct == 5:
-                                        continue
-                                else:
-                                    pred_skeletons.append(skeleton_i)
-                                    print('Predicted skeleton ' + str(len(pred_skeletons)) + ' for variable ' + str(va) + ': ' + str(skeleton_i))
-                        except:  # TypeError:
-                            print("Invalid response created by the model")
+                # Perform Multi-Set Skeleton Prediction
+                cand = 4
+                preds = self.model.inference(XY_block, cand)
+                for ip, pred in enumerate(preds):
+                    try:
+                        tokenized = list(pred[1].cpu().numpy())[1:]
+                        skeleton = seq2equation(tokenized, self.id2word, printFlag=False)
+                        skeleton = sp.sympify(skeleton.replace('x_1', str(va)))
+                        skeleton = sk_equivalence(avoid_operations_between_constants(standardize_expression(remove_coeffs(skeleton))), alts=True)
+                        for skeleton_i in skeleton:
+                            skeleton_i = avoid_operations_between_constants(skeleton_i)
+                            if skeleton_i in pred_skeletons:
+                                ct = 0
+                                while skeleton_i in pred_skeletons:
+                                    breakloop = False
+                                    XY_block, Xii, Yii = self.pre_process_data(iv=iv)
+                                    preds = self.model.inference(XY_block, cand)
+                                    for predd in preds:
+                                        tokenized = list(predd[1].cpu().numpy())[1:]
+                                        skeleton = seq2equation(tokenized, self.id2word, printFlag=False)
+                                        skeleton = sp.sympify(skeleton.replace('x_1', str(va)))
+                                        skeleton = sk_equivalence(avoid_operations_between_constants(standardize_expression(remove_coeffs(skeleton))), alts=True)
+                                        for skeleton_i2 in skeleton:
+                                            skeleton_i2 = avoid_operations_between_constants(skeleton_i2)
+                                            if skeleton_i2 not in pred_skeletons:
+                                                breakloop = True
+                                                pred_skeletons.append(skeleton_i2)
+                                                print('Predicted skeleton ' + str(len(pred_skeletons)) + ' for variable ' + str(va) + ': ' + str(skeleton_i2))
+                                    if breakloop:
+                                        break
+                                    ct += 1
+                                    if ct == 3:
+                                        break
+                                if ct == 3:
+                                    continue
+                            else:
+                                pred_skeletons.append(skeleton_i)
+                                print('Predicted skeleton ' + str(len(pred_skeletons)) + ' for variable ' + str(va) + ': ' + str(skeleton_i))
+                    except:  # TypeError:
+                        print("Invalid response created by the model")
 
-                continue
                 print("\nChoosing the best skeleton... (skeletons ordered based on number of nodes)")
                 best_perf, best_sk = 0, ''
                 pred_skeletons = sorted(pred_skeletons, key=lambda expr: count_nodes(expr))
@@ -245,7 +226,7 @@ class MSSP:
                             nre = 200
                             if flag:
                                 nre = 20
-                            problem = FitGA(remove_coeffs(skeleton), Xi, Yi, [np.min(Xi), np.max(Xi)], [-80, 80], max_it=nre,  # TODO None
+                            problem = FitGA(remove_coeffs(skeleton), Xi, Yi, [np.min(Xi), np.max(Xi)], [-80, 80], max_it=None,  # nre
                                             loss_MSE=True, pop_size=400)
                             est_expr, perf, _ = problem.run()
                         except:
@@ -304,7 +285,7 @@ class MSSP:
                     perf_vals.append(abs(best_perf))
                 else:
                     # Sort skeletons according to their perfelation values
-                    sorted_indices = sorted(range(len(corr_ind_vals)), key=lambda i: perf_ind_vals[i], reverse=True)
+                    sorted_indices = sorted(range(len(perf_ind_vals)), key=lambda i: perf_ind_vals[i], reverse=True)
                     sorted_skeletons = [tested_skeletons[i] for i in sorted_indices]
                     sorted_expressions = [fitted_exprs[i] for i in sorted_indices]
                     perf_ind_vals = sorted(perf_ind_vals, reverse=True)
