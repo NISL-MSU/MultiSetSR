@@ -1,0 +1,15 @@
+matplotlib
+numpy
+opencv-python
+scipy
+statsmodels
+tqdm
+timeout_decorator
+h5py
+pymoo==0.6.0
+pyodbc
+regex
+tensorboard
+python-dotenv
+omegaconf
+pandas
