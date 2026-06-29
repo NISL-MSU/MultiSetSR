@@ -1,11 +1,11 @@
 [![Paper](https://img.shields.io/badge/arXiv-2406.17834-b31b1b.svg)](https://arxiv.org/abs/2406.17834)
 [![Open In Colab (MSSP)](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/NISL-MSU/MultiSetSR/blob/master/DemoMSSP.ipynb)
 
-# Decomposable Neuro-evolutionary Symbolic Regression
+# Decomposable Neural Symbolic Regression
 
 ## Description
 
-We present a method method called SeTGAP (**S**ymbolic R**e**gression using **T**ransformers, **G**enetic **A**lgorithms, and genetic **P**rogramming).
+We present a method called SeTGAP (**S**ymbolic R**e**gression using **T**ransformers, **G**enetic **A**lgorithms, and genetic **P**rogramming).
 Given a multivariate regression problem that can be expressed in terms of a mathematical equation, SeTGAP identifies univariate symbolic skeleton expressions for each explanatory variable, which are later merged to approximate the true underlying equation of the system.
 
 Our explainable SR method distills a trained "opaque" regression model into mathematical expressions that serve as explanations of the function approximated by the regression model.
