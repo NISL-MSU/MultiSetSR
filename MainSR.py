@@ -8,7 +8,7 @@ if __name__ == '__main__':
     ###########################################
     import torch
     from EquationLearning.models.NNModel import NNModel
-    datasetNames = ['E1']
+    datasetNames = ['E6']
     seed = 0
     print("Seed ", seed)
     noise = 0  # 0.01

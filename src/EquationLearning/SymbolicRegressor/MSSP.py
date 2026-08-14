@@ -158,7 +158,6 @@ class MSSP:
         # Analyze each variable and obtain univariate expressions
         for iv, va in enumerate(self.symbols):
             flag = False
-            pred_skeletons = []
             np.random.seed(7)
             print("********************************")
             print("Analyzing variable " + str(va))
@@ -172,7 +171,7 @@ class MSSP:
                     Xi, Yi = Xii, Yii
 
                 # Perform Multi-Set Skeleton Prediction
-                cand = 4
+                cand = 3
                 preds = self.model.inference(XY_block, cand)
                 for ip, pred in enumerate(preds):
                     try:
@@ -223,9 +222,6 @@ class MSSP:
                     # Fit coefficients of the estimated skeletons
                     if skeleton not in tested_skeletons_orig:
                         try:
-                            nre = 200
-                            if flag:
-                                nre = 20
                             problem = FitGA(remove_coeffs(skeleton), Xi, Yi, [np.min(Xi), np.max(Xi)], [-80, 80], max_it=None,  # nre
                                             loss_MSE=True, pop_size=400)
                             est_expr, perf, _ = problem.run()
@@ -292,7 +288,6 @@ class MSSP:
                     perf_ind_vals2, sorted_skeletons2, sorted_expressions2 = [], [], []
                     n_sk = len(sorted_skeletons)
                     n_candidates = self.n_candidates
-                    # n_candidates = 1
                     if n_sk > n_candidates:
                         n_sk = n_candidates
                     i, fS = 0, True

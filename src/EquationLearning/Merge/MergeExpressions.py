@@ -215,7 +215,7 @@ class MergeExpressions:
             # Make sure that this combination includes all variables that are being studied
             if self.merging_variables == len([sy for sy in comb.free_symbols if 'x' in str(sy)]):
                 combinations.append(comb)
-        combinations = combinations[0:200]
+        combinations = combinations  # If you run out of memory, try capping the number of candidates combinations[:200]
         [print(com) for com in combinations]
         if len(combinations) == 0:
             return None
@@ -279,10 +279,10 @@ if __name__ == '__main__':
 
     # skl1 = sympy.sympify('c*x0*sin(c*x1 + c) + c*x0')
     # skl2 = sympy.sympify('sin(c*x2 + c)')
-    skl1 = sympy.sympify('c*(c + 1/(c*x1*x2 + c))*(c*x0 + c)')
-    skl2 = sympy.sympify('c*log(c*x3 + c)**2')
-
-    merger = MergeExpressions(skl1, skl2, 4)
-    merger.choose_combination()
+    # skl1 = sympy.sympify('c*x0*x3*sin(c*x1 + c)**2.0 + c*x0*sin(c*x1 + c)')
+    # skl2 = sympy.sympify('c*sin(c*x2 + c)')
+    #
+    # merger = MergeExpressions(skl1, skl2, 4)
+    # merger.choose_combination()
     # [print(merger.merge()) for _ in range(500)]
     # merger.choose_combination(response=[samples, t_response])

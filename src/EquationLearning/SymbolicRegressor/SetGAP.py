@@ -125,13 +125,10 @@ class SetGAP:
                 new_var, int_x = program, self.X
                 max_it, pop_size = 250, 400  # 600
             candidate = sp.sympify('cm_1') * new_var + sp.sympify('ca_1')
-            # candidate = new_var
             problem = FitGA(candidate, int_x, self.Y, [np.min(self.X), np.max(self.X)], [-10000, 10000], max_it=max_it,
                             loss_MSE=True, pop_size=pop_size, corr_vals=new_corr_vals[i])
             est_expr, MSE, _ = problem.run()
-            print(est_expr)
             est_expr = est_expr.subs({str(new_var): str(program)})
-            print(est_expr)
             # est_expr = sp.sympify(str((simplify(est_expr.simplify(), all_var=True)[0]).simplify()))
             est_exprs.append(est_expr)
             print('\n******************************')

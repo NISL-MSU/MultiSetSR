@@ -7,7 +7,7 @@ import warnings
 import numpy as np
 from pathlib import Path
 # import matplotlib.pyplot as plt
-from sympy import sympify, lambdify
+from sympy import sympify, lambdify, Symbol
 from sympy.utilities.iterables import flatten
 from EquationLearning.Data.dclasses import Equation
 from EquationLearning.Data.generator import Generator
@@ -46,7 +46,13 @@ class Dataset:
             eq = load_eq(self.data_path, index, self.eqs_per_hdf)
             if 'cc' in eq.variables:
                 eq.variables.remove('cc')  # In case the dummy variable was not removed during the eq generation process
-            code = types.FunctionType(eq.code, globals=globals(), name="f")
+            if eq.code is not None:
+                code = types.FunctionType(eq.code, globals=globals(), name="f")
+            else:
+                # Dynamically recreate the executable function from equation variables and expression
+                symbols = [sympify(v) for v in eq.variables if v != 'cc']
+                code = lambdify(symbols, sympify(eq_string), "numpy")
+
             consts, initial_consts = sample_symbolic_constants(eq, self.cfg.constants)
             eq_string = str(eq.expr)
 

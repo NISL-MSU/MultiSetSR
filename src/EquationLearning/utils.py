@@ -142,8 +142,12 @@ def code_unpickler(data):
     return marshal.loads(data)
 
 
-def code_pickler(code):
-    return code_unpickler, (marshal.dumps(code),)
+def code_unpickler(data):
+    try:
+        return marshal.loads(data)
+    except (ValueError, TypeError):
+        # Return None when bytecode is incompatible with the current Python version
+        return None
 
 
 def load_eq_raw(path_folder, idx, num_eqs_per_set):
