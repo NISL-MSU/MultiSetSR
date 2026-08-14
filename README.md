@@ -5,7 +5,7 @@
 
 ## Description
 
-We present a method called SeTGAP (**S**ymbolic R**e**gression using **T**ransformers, **G**enetic **A**lgorithms, and genetic **P**rogramming).
+We present a method called [SeTGAP](https://openreview.net/forum?id=54EL928uCf) (**S**ymbolic R**e**gression using **T**ransformers, **G**enetic **A**lgorithms, and genetic **P**rogramming).
 Given a multivariate regression problem that can be expressed in terms of a mathematical equation, SeTGAP identifies univariate symbolic skeleton expressions for each explanatory variable, which are later merged to approximate the true underlying equation of the system.
 
 Our explainable SR method distills a trained "opaque" regression model into mathematical expressions that serve as explanations of the function approximated by the regression model.
@@ -197,6 +197,13 @@ To replicate the training process, download the datasets and paste them into the
 Use this Bibtex to cite this repository (*for SeTGAP, stay in tune, as it's currently under review*)
 
 ```
+@INPROCEEDINGS{SETGAP,
+author="Giorgio Morales and John W. Sheppard",
+title="Decomposable Neural Symbolic Regression",
+journal="Transactions on Machine Learning Research"
+year="2026",
+}
+
 @INPROCEEDINGS{MultiSetSR,
 author="Giorgio Morales and John W. Sheppard",
 title="Univariate Skeleton Prediction in Multivariate Systems Using Transformers",
